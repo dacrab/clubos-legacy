@@ -1,4 +1,4 @@
-import { cn, formatDate } from "@/lib/utils"
+import { formatDate } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -15,7 +15,6 @@ interface UpcomingPartiesProps extends React.HTMLAttributes<HTMLDivElement> {
 export function UpcomingParties({
   parties,
   className,
-  ...props
 }: UpcomingPartiesProps) {
   if (!parties?.length) {
     return (

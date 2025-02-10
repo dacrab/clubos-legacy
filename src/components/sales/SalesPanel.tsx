@@ -8,6 +8,13 @@ import { ProductGrid } from "./ProductGrid"
 import { OrderSummary } from "./OrderSummary"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 
 interface OrderItem extends Product {
   orderId: string
@@ -16,9 +23,11 @@ interface OrderItem extends Product {
 
 interface SalesPanelProps {
   products: Product[] | null
+  isOpen: boolean
+  onClose: () => void
 }
 
-export function SalesPanel({ products }: SalesPanelProps) {
+export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -252,39 +261,49 @@ export function SalesPanel({ products }: SalesPanelProps) {
   }))
 
   return (
-    <div className="grid h-[calc(100vh-10rem)] grid-cols-12 gap-4">
-      {/* Categories Section */}
-      <div className="col-span-2 overflow-auto rounded-lg border bg-card">
-        <CategorySelector
-          categories={categories}
-          subcategories={subcategories}
-          selectedCategory={selectedCategory}
-          selectedSubcategory={selectedSubcategory}
-          onSelectCategory={setSelectedCategory}
-          onSelectSubcategory={setSelectedSubcategory}
-        />
-      </div>
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full sm:w-[90vw] overflow-y-auto">
+        <SheetHeader className="mb-5">
+          <SheetTitle>New Sale</SheetTitle>
+          <SheetDescription>
+            Create a new sale by selecting products from the catalog
+          </SheetDescription>
+        </SheetHeader>
+        <div className="grid h-[calc(100vh-10rem)] grid-cols-12 gap-4">
+          {/* Categories Section */}
+          <div className="col-span-2 overflow-auto rounded-lg border bg-card">
+            <CategorySelector
+              categories={categories}
+              subcategories={subcategories}
+              selectedCategory={selectedCategory}
+              selectedSubcategory={selectedSubcategory}
+              onSelectCategory={setSelectedCategory}
+              onSelectSubcategory={setSelectedSubcategory}
+            />
+          </div>
 
-      {/* Products Grid */}
-      <div className="col-span-7 overflow-auto rounded-lg border bg-card">
-        <ProductGrid
-          products={filteredProducts}
-          onAddToOrder={handleAddToOrder}
-        />
-      </div>
+          {/* Products Grid */}
+          <div className="col-span-7 overflow-auto rounded-lg border bg-card">
+            <ProductGrid
+              products={filteredProducts}
+              onAddToOrder={handleAddToOrder}
+            />
+          </div>
 
-      {/* Order Summary */}
-      <div className="col-span-3 overflow-auto rounded-lg border bg-card">
-        <OrderSummary
-          items={orderItemsForSummary}
-          couponsCount={couponsCount}
-          onRemoveItem={handleRemoveItem}
-          onToggleTreat={handleToggleTreat}
-          onAddCoupon={handleAddCoupon}
-          onRemoveCoupon={handleRemoveCoupon}
-          onCompleteSale={handleCompleteSale}
-        />
-      </div>
-    </div>
+          {/* Order Summary */}
+          <div className="col-span-3 overflow-auto rounded-lg border bg-card">
+            <OrderSummary
+              items={orderItemsForSummary}
+              couponsCount={couponsCount}
+              onRemoveItem={handleRemoveItem}
+              onToggleTreat={handleToggleTreat}
+              onAddCoupon={handleAddCoupon}
+              onRemoveCoupon={handleRemoveCoupon}
+              onCompleteSale={handleCompleteSale}
+            />
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 } 

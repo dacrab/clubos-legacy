@@ -1,4 +1,4 @@
-import { cn, formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -17,7 +17,6 @@ export function RecentSales({
   sales,
   showEditStatus = false,
   className,
-  ...props
 }: RecentSalesProps) {
   if (!sales?.length) {
     return (
@@ -46,7 +45,7 @@ export function RecentSales({
             <div key={sale.id} className="flex items-center">
               <div className="space-y-1">
                 <p className="text-sm font-medium leading-none">
-                  {sale.profiles.name}
+                  {sale.profile.name}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {formatDate(new Date(sale.created_at))}

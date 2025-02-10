@@ -15,7 +15,6 @@ interface AppointmentsCalendarProps extends React.HTMLAttributes<HTMLDivElement>
 export function AppointmentsCalendar({
   appointments,
   className,
-  ...props
 }: AppointmentsCalendarProps) {
   if (!appointments?.length) {
     return (
@@ -71,4 +70,4 @@ export function AppointmentsCalendar({
       </CardContent>
     </Card>
   )
-} 
+}

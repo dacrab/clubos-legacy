@@ -15,7 +15,6 @@ interface LowStockProductsProps extends React.HTMLAttributes<HTMLDivElement> {
 export function LowStockProducts({
   products,
   className,
-  ...props
 }: LowStockProductsProps) {
   if (!products?.length) {
     return (
