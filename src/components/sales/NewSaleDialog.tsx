@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
-export function NewSaleSheet() {
+export function NewSaleDialog() {
   const [isOpen, setIsOpen] = useState(false);
 
   const { data: products } = useQuery({

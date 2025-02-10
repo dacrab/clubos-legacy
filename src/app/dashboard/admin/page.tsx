@@ -4,7 +4,7 @@ import { LowStockProducts } from "@/components/dashboard/LowStockProducts"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
-import { NewSaleSheet } from "@/components/sales/NewSaleSheet"
+import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
@@ -41,7 +41,7 @@ export default async function AdminDashboardPage() {
         description="Overview of recent sales and low stock products"
       >
         <div className="flex gap-4">
-          <NewSaleSheet />
+          <NewSaleDialog />
           {activeRegister && (
             <CloseRegisterDialog
               activeRegisterId={activeRegister.id}

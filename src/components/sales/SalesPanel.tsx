@@ -9,12 +9,12 @@ import { OrderSummary } from "./OrderSummary"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 
 interface OrderItem extends Product {
   orderId: string
@@ -236,7 +236,7 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
         description: "The sale has been successfully processed.",
       })
 
-      // Reset the order
+      // Reset the order but don't close the dialog
       setOrderItems([])
       setCouponsCount(0)
       router.refresh()
@@ -261,15 +261,15 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
   }))
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:w-[90vw] overflow-y-auto">
-        <SheetHeader className="mb-5">
-          <SheetTitle>New Sale</SheetTitle>
-          <SheetDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] flex flex-col p-8">
+        <DialogHeader className="mb-5">
+          <DialogTitle className="text-2xl">New Sale</DialogTitle>
+          <DialogDescription className="text-base">
             Create a new sale by selecting products from the catalog
-          </SheetDescription>
-        </SheetHeader>
-        <div className="grid h-[calc(100vh-10rem)] grid-cols-12 gap-4">
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid flex-1 grid-cols-12 gap-6 overflow-hidden">
           {/* Categories Section */}
           <div className="col-span-2 overflow-auto rounded-lg border bg-card">
             <CategorySelector
@@ -303,7 +303,7 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
             />
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 } 

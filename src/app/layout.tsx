@@ -3,6 +3,7 @@ import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
 import './globals.css';
 
 const fontSans = FontSans({
@@ -39,18 +40,20 @@ export default function RootLayout({ children }: RootLayoutProps) {
         'min-h-screen bg-background font-sans antialiased',
         fontSans.variable
       )}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          storageKey="pos-theme"
-        >
-          <div className="relative flex min-h-screen flex-col">
-            {children}
-          </div>
-          <Toaster />
-        </ThemeProvider>
+        <ReactQueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            storageKey="pos-theme"
+          >
+            <div className="relative flex min-h-screen flex-col">
+              {children}
+            </div>
+            <Toaster />
+          </ThemeProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );

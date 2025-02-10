@@ -10,10 +10,17 @@ import {
 } from "@/components/ui/card"
 import { Product } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2 } from "lucide-react"
-import Link from "next/link"
+import { Edit, Search } from "lucide-react"
 import Image from "next/image"
 import { ProductEditPanel } from "./ProductEditPanel"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface ProductsTableProps {
   products: Product[] | null
@@ -22,6 +29,9 @@ interface ProductsTableProps {
 export function ProductsTable({ products }: ProductsTableProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all")
 
   if (!products?.length) {
     return (
@@ -33,23 +43,81 @@ export function ProductsTable({ products }: ProductsTableProps) {
     )
   }
 
-  // Get unique categories and subcategories for the edit panel
+  // Get unique categories and subcategories
   const categories = Array.from(
     new Set(products.map((product) => product.category))
   )
   const subcategories = Array.from(
     new Set(
       products
+        .filter(product => !selectedCategory || product.category === selectedCategory)
         .map((product) => product.subcategory)
         .filter((subcategory): subcategory is string => subcategory !== null)
     )
   )
 
+  // Filter products based on search query and category/subcategory
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
+    const matchesSubcategory = selectedSubcategory === "all" || product.subcategory === selectedSubcategory
+    return matchesSearch && matchesCategory && matchesSubcategory
+  })
+
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Products ({products.length})</CardTitle>
+          <CardTitle>Products ({filteredProducts.length})</CardTitle>
+          <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <div className="flex gap-4">
+              <Select
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  setSelectedCategory(value)
+                  setSelectedSubcategory("all") // Reset subcategory when category changes
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedSubcategory}
+                onValueChange={setSelectedSubcategory}
+                disabled={selectedCategory === "all"}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select subcategory" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subcategories</SelectItem>
+                  {subcategories.map((subcategory) => (
+                    <SelectItem key={subcategory} value={subcategory}>
+                      {subcategory}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative w-full overflow-auto">
@@ -80,7 +148,7 @@ export function ProductsTable({ products }: ProductsTableProps) {
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr
                     key={product.id}
                     className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"

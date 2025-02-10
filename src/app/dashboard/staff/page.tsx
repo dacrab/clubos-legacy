@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { RecentSales } from "@/components/dashboard/RecentSales"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
-import { NewSaleSheet } from "@/components/sales/NewSaleSheet"
+import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 
 export default async function StaffDashboardPage() {
   const supabase = createClient()
@@ -27,7 +27,7 @@ export default async function StaffDashboardPage() {
         heading="Staff Dashboard"
         description="Overview of recent sales"
       >
-        <NewSaleSheet />
+        <NewSaleDialog />
       </DashboardHeader>
       <div className="grid gap-4">
         <RecentSales sales={recentSales} showEditStatus={false} />
