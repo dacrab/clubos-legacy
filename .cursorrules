@@ -49,9 +49,31 @@ State the rules you are following before you start coding.
 ### Project Structure:
 - src/
   - app/
-    - components/
-       -layout/
-       -ui
+    -auth/
+      -sign-in
+      -sign-out
+    -dashboard/
+      -admin
+      -products
+      -register
+      -sales
+      -secretary
+      -staff
+      -users
+
+    -components/
+      -appointments/
+      -auth/
+      -dashboard/
+      -layout/
+      -products/
+      -providers/
+      -registers/
+      -sales/
+      -ui
+    -lib/
+
+    -hooks/
     -lib/
       -supabase/
     -types/
