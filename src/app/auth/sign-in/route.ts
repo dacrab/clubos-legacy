@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { Role } from "@/types"
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
+    console.log("Login attempt for:", email)
     
-    // Validate required fields
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
@@ -13,83 +14,73 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Please enter a valid email address" },
-        { status: 400 }
-      )
-    }
-
     const supabase = await createClient()
 
-    // Attempt sign in
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    if (authError) {
-      // Handle specific auth errors
-      switch (authError.message) {
-        case "Invalid login credentials":
-          return NextResponse.json(
-            { error: "Invalid login credentials" },
-            { status: 401 }
-          )
-        case "Email not confirmed":
-          return NextResponse.json(
-            { error: "Please verify your email address before signing in" },
-            { status: 401 }
-          )
-        default:
-          return NextResponse.json(
-            { error: authError.message },
-            { status: 400 }
-          )
-      }
-    }
-
-    if (!authData.user) {
+    if (authError || !authData.user) {
+      console.error("Auth error:", authError)
       return NextResponse.json(
-        { error: "Authentication failed" },
+        { error: authError?.message || "Authentication failed" },
         { status: 401 }
       )
     }
 
-    // Get user profile
+    console.log("Auth successful for user:", authData.user.id)
+
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, email")
       .eq("id", authData.user.id)
       .single()
 
-    if (profileError) {
-      console.error("Profile fetch error:", profileError)
-      return NextResponse.json(
-        { error: "Failed to get user profile" },
-        { status: 400 }
-      )
-    }
-
-    if (!profile) {
+    if (profileError || !profile) {
+      console.error("Profile error:", profileError)
       return NextResponse.json(
         { error: "User profile not found" },
         { status: 404 }
       )
     }
 
-    // Set the session cookie
-    const response = NextResponse.json(
-      { 
-        user: authData.user,
-        role: profile.role 
-      },
-      { status: 200 }
-    )
+    console.log("Profile found:", { email: profile.email, role: profile.role })
+
+    // Validate that the role is one of the expected values
+    if (!['admin', 'staff', 'secretary'].includes(profile.role)) {
+      console.error("Invalid role:", profile.role)
+      return NextResponse.json(
+        { error: "Invalid user role" },
+        { status: 400 }
+      )
+    }
+
+    const responseData = { 
+      user: authData.user,
+      role: profile.role as Role,
+      session: authData.session
+    }
+
+    console.log("Sending response with role:", responseData.role)
+
+    const response = NextResponse.json(responseData, { status: 200 })
+
+    if (authData.session) {
+      const { access_token, refresh_token } = authData.session
+      const cookieOptions = {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+      }
+
+      response.cookies.set('sb-access-token', access_token, cookieOptions)
+      response.cookies.set('sb-refresh-token', refresh_token, cookieOptions) 
+    }
 
     return response
+
   } catch (error) {
     console.error("Sign-in error:", error)
     return NextResponse.json(
@@ -97,4 +88,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

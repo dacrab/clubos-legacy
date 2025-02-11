@@ -29,6 +29,16 @@ interface NewProductSheetProps {
   subcategories: string[]
 }
 
+const initialFormData = {
+  name: "",
+  description: "",
+  price: 0,
+  stock: 0,
+  category: "",
+  subcategory: "",
+  image_url: "",
+}
+
 export function NewProductSheet({ categories, subcategories }: NewProductSheetProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -36,53 +46,37 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: 0,
-    stock: 0,
-    category: "",
-    subcategory: "",
-    image_url: "",
-  })
+  const [formData, setFormData] = useState(initialFormData)
 
-  const handleInputChange = (
-    name: string,
-    value: string | number
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleInputChange = (name: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const validateImage = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      throw new Error("Please upload an image file.")
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("Image size should be less than 5MB.")
+    }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    try {
+      validateImage(file)
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: "Invalid file type",
-        description: "Please upload an image file."
+        title: "Invalid Image",
+        description: error instanceof Error ? error.message : "Invalid image file"
       })
-      return
     }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "File too large",
-        description: "Image size should be less than 5MB."
-      })
-      return
-    }
-
-    setImageFile(file)
-    const previewUrl = URL.createObjectURL(file)
-    setImagePreview(previewUrl)
   }
 
   const handleRemoveImage = () => {
@@ -91,13 +85,13 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
     setFormData(prev => ({ ...prev, image_url: "" }))
   }
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadImage = async (file: File) => {
     const supabase = createClient()
     const fileExt = file.name.split('.').pop()
     const fileName = `${crypto.randomUUID()}.${fileExt}`
     const filePath = `product-images/${fileName}`
 
-    const { error: uploadError, data } = await supabase
+    const { error: uploadError } = await supabase
       .storage
       .from('products')
       .upload(filePath, file)
@@ -112,30 +106,26 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
     return publicUrl
   }
 
+  const resetForm = () => {
+    setFormData(initialFormData)
+    setImageFile(null)
+    setImagePreview(null)
+    setIsOpen(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to add products."
-      })
-      setIsLoading(false)
-      return
-    }
-
     try {
-      let imageUrl = ""
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-      // Upload image if selected
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile)
+      if (!user) {
+        throw new Error("You must be logged in to add products.")
       }
+
+      const imageUrl = imageFile ? await uploadImage(imageFile) : ""
 
       await supabase
         .from("products")
@@ -153,25 +143,13 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
       })
 
       router.refresh()
-      setIsOpen(false)
-      // Reset form
-      setFormData({
-        name: "",
-        description: "",
-        price: 0,
-        stock: 0,
-        category: "",
-        subcategory: "",
-        image_url: "",
-      })
-      setImageFile(null)
-      setImagePreview(null)
+      resetForm()
     } catch (error) {
       console.error("Add error:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add product. Please try again."
+        description: error instanceof Error ? error.message : "Failed to add product. Please try again."
       })
     } finally {
       setIsLoading(false)
@@ -194,7 +172,6 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
-                name="name"
                 value={formData.name}
                 onChange={e => handleInputChange("name", e.target.value)}
                 required
@@ -205,7 +182,6 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
                 <Label htmlFor="price">Price</Label>
                 <Input
                   id="price"
-                  name="price"
                   type="number"
                   min="0"
                   step="0.01"
@@ -218,7 +194,6 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
                 <Label htmlFor="stock">Stock</Label>
                 <Input
                   id="stock"
-                  name="stock"
                   type="number"
                   min="0"
                   value={formData.stock}
@@ -312,7 +287,7 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsOpen(false)}
+                  onClick={resetForm}
                   disabled={isLoading}
                   className="w-full"
                 >
@@ -329,4 +304,4 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
       </Sheet>
     </>
   )
-} 
+}

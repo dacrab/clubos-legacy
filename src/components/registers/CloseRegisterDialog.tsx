@@ -17,7 +17,6 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2 } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
 
 interface CloseRegisterDialogProps {
   activeRegisterId: string
@@ -44,21 +43,21 @@ export function CloseRegisterDialog({
     e.preventDefault()
     setIsLoading(true)
 
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "You must be logged in to close the register.",
+      })
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "You must be logged in to close the register.",
-        })
-        return
-      }
-
-      // Close the register
-      const { error: closeError } = await supabase
+      await supabase
         .from("registers")
         .update({
           closed_at: new Date().toISOString(),
@@ -70,10 +69,7 @@ export function CloseRegisterDialog({
           total_amount: totalAmount,
         })
         .eq("id", activeRegisterId)
-
-      if (closeError) {
-        throw closeError
-      }
+        .throwOnError()
 
       toast({
         title: "Success",

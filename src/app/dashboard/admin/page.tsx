@@ -14,8 +14,16 @@ export default async function AdminDashboardPage() {
       .from("sales")
       .select(`
         *,
-        profiles:created_by(name),
-        sale_items(quantity, price_at_sale, products(name))
+        profile:created_by(name),
+        sale_items(
+          quantity,
+          price_at_sale,
+          products(
+            name,
+            last_edited_by,
+            is_deleted
+          )
+        )
       `)
       .order("created_at", { ascending: false })
       .limit(5),

@@ -3,70 +3,43 @@ import { createClient } from "@/lib/supabase/server"
 import { LoginForm } from "@/components/auth/LoginForm"
 import { Toaster } from "@/components/ui/toaster"
 
-export default async function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient()
+  const params = await searchParams
+  const returnTo = params?.from as string
 
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+  // Only check auth if we have a returnTo parameter
+  if (returnTo) {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    if (userError) {
-      console.error("Auth error:", userError)
-      return (
-        <main className="flex min-h-screen items-center justify-center">
-          <LoginForm />
-          <Toaster />
-        </main>
-      )
-    }
-
-    if (user) {
-      try {
-        const { data: profile, error: profileError } = await supabase
+      // If user is authenticated, get their profile
+      if (user && !userError) {
+        const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single()
 
-        if (profileError) {
-          console.error("Profile error:", profileError)
-          return (
-            <main className="flex min-h-screen items-center justify-center">
-              <LoginForm />
-              <Toaster />
-            </main>
-          )
+        // Redirect to appropriate dashboard based on role
+        if (profile?.role) {
+          redirect(`/dashboard/${profile.role}`)
         }
-
-        if (profile) {
-          switch (profile.role) {
-            case "admin":
-              redirect("/dashboard/admin")
-            case "staff":
-              redirect("/dashboard/staff")
-            case "secretary":
-              redirect("/dashboard/secretary")
-            default:
-              redirect("/dashboard")
-          }
-        }
-      } catch (error) {
-        console.error("Profile fetch error:", error)
       }
+    } catch (error) {
+      console.error("Auth check error:", error)
     }
-
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <LoginForm />
-        <Toaster />
-      </main>
-    )
-  } catch (error) {
-    console.error("Page error:", error)
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <LoginForm />
-        <Toaster />
-      </main>
-    )
   }
+
+  // Show login form by default
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <LoginForm returnTo={returnTo} />
+      <Toaster />
+    </main>
+  )
 }

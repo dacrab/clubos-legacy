@@ -2,7 +2,20 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({
+  const path = request.nextUrl.pathname;
+
+  // Allow access to root path, auth endpoints and static files
+  if (
+    path === "/" ||
+    path.startsWith('/auth/') ||
+    path.startsWith('/_next/') ||
+    path.startsWith('/api/') ||
+    path.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/)
+  ) {
+    return NextResponse.next();
+  }
+
+  let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -26,67 +39,49 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  // Allow access to auth endpoints
-  if (path.startsWith('/auth/')) {
+    // Handle unauthenticated users
+    if (!user || userError) {
+      const redirectUrl = new URL("/", request.url);
+      redirectUrl.searchParams.set("from", path);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Get user role
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      // If no profile exists, sign out the user and redirect to login
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Check dashboard access permissions
+    if (path.startsWith('/dashboard/')) {
+      const rolePath = path.split('/')[2]; // Get role from path
+      if (rolePath && rolePath !== profile.role && profile.role !== 'admin') {
+        return NextResponse.redirect(
+          new URL(`/dashboard/${profile.role}`, request.url)
+        );
+      }
+    }
+
     return response;
-  }
-
-  // Handle unauthenticated users
-  if (!user || error) {
-    if (path === "/") return response;
-    
+  } catch (error) {
+    console.error('Middleware error:', error);
+    // On error, redirect to login
     const redirectUrl = new URL("/", request.url);
     redirectUrl.searchParams.set("from", path);
     return NextResponse.redirect(redirectUrl);
   }
-
-  // Get user role
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) return response;
-
-  // Redirect from root to role-specific dashboard
-  if (path === "/") {
-    return NextResponse.redirect(
-      new URL(getDashboardPath(profile.role), request.url)
-    );
-  }
-
-  // Check dashboard access permissions
-  if (path.startsWith('/dashboard/')) {
-    const hasAccess = checkRoleAccess(profile.role, path);
-    if (!hasAccess) {
-      return NextResponse.redirect(
-        new URL(getDashboardPath(profile.role), request.url)
-      );
-    }
-  }
-
-  return response;
-}
-
-function getDashboardPath(role: string): string {
-  const paths = {
-    admin: "/dashboard/admin",
-    staff: "/dashboard/staff", 
-    secretary: "/dashboard/secretary"
-  };
-  return paths[role as keyof typeof paths] || "/dashboard";
-}
-
-function checkRoleAccess(role: string, path: string): boolean {
-  if (role === "admin") return true;
-  if (path === "/dashboard") return true;
-  return path.startsWith(`/dashboard/${role}`);
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/auth/:path*', '/'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

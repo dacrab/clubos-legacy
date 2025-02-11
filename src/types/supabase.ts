@@ -6,199 +6,135 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          name: string
-          role: 'admin' | 'staff' | 'secretary'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          email: string
-          name: string
-          role?: 'admin' | 'staff' | 'secretary'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          name?: string
-          role?: 'admin' | 'staff' | 'secretary'
-          created_at?: string
-          updated_at?: string
-        }
-      }
       products: {
         Row: {
           id: string
+          created_at: string
           name: string
+          description: string | null
           price: number
           stock: number
+          category: string
+          subcategory: string | null
+          image_url: string | null
           is_treat: boolean
-          last_edited_by: string | null
           is_deleted: boolean
-          created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
-          name: string
-          price: number
-          stock?: number
-          is_treat?: boolean
-          last_edited_by?: string | null
-          is_deleted?: boolean
           created_at?: string
-          updated_at?: string
+          name: string
+          description?: string | null
+          price: number
+          stock: number
+          category: string
+          subcategory?: string | null
+          image_url?: string | null
+          is_treat?: boolean
+          is_deleted?: boolean
         }
         Update: {
           id?: string
+          created_at?: string
           name?: string
+          description?: string | null
           price?: number
           stock?: number
+          category?: string
+          subcategory?: string | null
+          image_url?: string | null
           is_treat?: boolean
-          last_edited_by?: string | null
           is_deleted?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      registers: {
-        Row: {
-          id: string
-          opened_at: string
-          closed_at: string | null
-          items_sold: number
-          coupons_used: number
-          treat_items_sold: number
-          total_amount: number
-          closed_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          opened_at?: string
-          closed_at?: string | null
-          items_sold?: number
-          coupons_used?: number
-          treat_items_sold?: number
-          total_amount?: number
-          closed_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          opened_at?: string
-          closed_at?: string | null
-          items_sold?: number
-          coupons_used?: number
-          treat_items_sold?: number
-          total_amount?: number
-          closed_by?: string | null
-          created_at?: string
-          updated_at?: string
         }
       }
       sales: {
         Row: {
           id: string
-          register_id: string
-          total_amount: number
-          coupon_applied: boolean
-          created_by: string
           created_at: string
-          updated_at: string
+          total: number
+          items: Json[]
+          coupon_applied: boolean
+          register_id: string | null
         }
         Insert: {
           id?: string
-          register_id: string
-          total_amount: number
-          coupon_applied?: boolean
-          created_by: string
           created_at?: string
-          updated_at?: string
+          total: number
+          items: Json[]
+          coupon_applied?: boolean
+          register_id?: string | null
         }
         Update: {
           id?: string
-          register_id?: string
-          total_amount?: number
-          coupon_applied?: boolean
-          created_by?: string
           created_at?: string
-          updated_at?: string
+          total?: number
+          items?: Json[]
+          coupon_applied?: boolean
+          register_id?: string | null
         }
       }
-      sale_items: {
+      registers: {
         Row: {
           id: string
-          sale_id: string
-          product_id: string
-          quantity: number
-          price_at_sale: number
           created_at: string
+          closed_at: string | null
+          total: number
+          items_count: number
+          coupons_count: number
+          treats_count: number
         }
         Insert: {
           id?: string
-          sale_id: string
-          product_id: string
-          quantity: number
-          price_at_sale: number
           created_at?: string
+          closed_at?: string | null
+          total: number
+          items_count: number
+          coupons_count: number
+          treats_count: number
         }
         Update: {
           id?: string
-          sale_id?: string
-          product_id?: string
-          quantity?: number
-          price_at_sale?: number
           created_at?: string
+          closed_at?: string | null
+          total?: number
+          items_count?: number
+          coupons_count?: number
+          treats_count?: number
         }
       }
       appointments: {
         Row: {
           id: string
-          type: 'football' | 'party'
+          created_at: string
           start_time: string
           end_time: string
-          customer_name: string
-          customer_phone: string
-          notes: string | null
-          created_by: string
-          created_at: string
-          updated_at: string
+          title: string
+          description: string | null
+          type: 'football' | 'party'
+          status: 'pending' | 'confirmed' | 'cancelled'
         }
         Insert: {
           id?: string
-          type: 'football' | 'party'
+          created_at?: string
           start_time: string
           end_time: string
-          customer_name: string
-          customer_phone: string
-          notes?: string | null
-          created_by: string
-          created_at?: string
-          updated_at?: string
+          title: string
+          description?: string | null
+          type: 'football' | 'party'
+          status?: 'pending' | 'confirmed' | 'cancelled'
         }
         Update: {
           id?: string
-          type?: 'football' | 'party'
+          created_at?: string
           start_time?: string
           end_time?: string
-          customer_name?: string
-          customer_phone?: string
-          notes?: string | null
-          created_by?: string
-          created_at?: string
-          updated_at?: string
+          title?: string
+          description?: string | null
+          type?: 'football' | 'party'
+          status?: 'pending' | 'confirmed' | 'cancelled'
         }
       }
     }
@@ -209,8 +145,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      user_role: 'admin' | 'staff' | 'secretary'
-      appointment_type: 'football' | 'party'
+      [_ in never]: never
     }
   }
 } 

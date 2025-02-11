@@ -13,11 +13,15 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { Role } from "@/types"
 
-export function LoginForm() {
+interface LoginFormProps {
+  returnTo?: string;
+}
+
+export function LoginForm({ returnTo }: LoginFormProps) {
   const { toast } = useToast()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -54,6 +58,7 @@ export function LoginForm() {
       const data = await response.json()
 
       if (!response.ok) {
+        console.error("Login error:", data.error)
         // Handle specific error cases
         switch (data.error?.toLowerCase()) {
           case "invalid login credentials":
@@ -94,11 +99,18 @@ export function LoginForm() {
         description: "Successfully signed in. Redirecting...",
       })
 
-      // Get the return URL from the query params or use the default dashboard
-      const returnTo = searchParams.get('from') || `/dashboard/${data.role}`
-      
-      // Use router.replace to avoid having the login page in the history
-      router.replace(returnTo)
+      // Ensure we have a valid role
+      const role = data.role as Role
+      if (!role || !['admin', 'staff', 'secretary'].includes(role)) {
+        console.error("Invalid role received:", role)
+        throw new Error('Invalid role received')
+      }
+
+      // Use the returnTo URL if provided, otherwise go to role-specific dashboard
+      const redirectPath = returnTo || `/dashboard/${role}`
+      router.replace(redirectPath)
+      router.refresh()
+
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -140,7 +152,7 @@ export function LoginForm() {
               id="password"
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder="Password123"
               required
               disabled={isLoading}
               autoComplete="current-password"

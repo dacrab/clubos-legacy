@@ -35,7 +35,7 @@ const seedUsers: SeedUser[] = [
     role: 'admin',
   },
   {
-    email: 'staff1@example.com',
+    email: 'staff@example.com',
     password: 'staff123',
     name: 'Staff User',
     role: 'staff',

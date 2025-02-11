@@ -54,21 +54,14 @@ export function ProductEditPanel({
     image_url: product.image_url || "",
   })
 
-  const handleInputChange = (
-    name: string,
-    value: string | number
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleInputChange = (name: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         variant: "destructive",
@@ -78,19 +71,17 @@ export function ProductEditPanel({
       return
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         variant: "destructive",
-        title: "File too large",
+        title: "File too large", 
         description: "Image size should be less than 5MB."
       })
       return
     }
 
     setImageFile(file)
-    const previewUrl = URL.createObjectURL(file)
-    setImagePreview(previewUrl)
+    setImagePreview(URL.createObjectURL(file))
   }
 
   const handleRemoveImage = () => {
@@ -99,21 +90,19 @@ export function ProductEditPanel({
     setFormData(prev => ({ ...prev, image_url: "" }))
   }
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadImage = async (file: File) => {
     const supabase = createClient()
     const fileExt = file.name.split('.').pop()
     const fileName = `${crypto.randomUUID()}.${fileExt}`
     const filePath = `product-images/${fileName}`
 
-    const { error: uploadError, data } = await supabase
-      .storage
+    const { error, data } = await supabase.storage
       .from('products')
       .upload(filePath, file)
 
-    if (uploadError) throw uploadError
+    if (error) throw error
 
-    const { data: { publicUrl } } = supabase
-      .storage
+    const { data: { publicUrl } } = supabase.storage
       .from('products')
       .getPublicUrl(filePath)
 
@@ -124,35 +113,26 @@ export function ProductEditPanel({
     e.preventDefault()
     setIsLoading(true)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to edit products."
-      })
-      setIsLoading(false)
-      return
-    }
-
     try {
-      let imageUrl = formData.image_url
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-      // Upload new image if selected
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile)
+      if (!user) {
+        throw new Error("You must be logged in to edit products.")
       }
 
-      // Delete old image if it exists and a new one is uploaded
-      if (imageFile && product.image_url) {
-        const oldImagePath = product.image_url.split('/').pop()
-        if (oldImagePath) {
-          await supabase
-            .storage
-            .from('products')
-            .remove([`product-images/${oldImagePath}`])
+      let imageUrl = formData.image_url
+
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile)
+
+        if (product.image_url) {
+          const oldImagePath = product.image_url.split('/').pop()
+          if (oldImagePath) {
+            await supabase.storage
+              .from('products')
+              .remove([`product-images/${oldImagePath}`])
+          }
         }
       }
 
@@ -174,12 +154,13 @@ export function ProductEditPanel({
 
       router.refresh()
       onOpenChange(false)
+
     } catch (error) {
       console.error("Edit error:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update product. Please try again."
+        description: error instanceof Error ? error.message : "Failed to update product. Please try again."
       })
     } finally {
       setIsLoading(false)
@@ -190,15 +171,14 @@ export function ProductEditPanel({
     if (!confirm("Are you sure you want to delete this product?")) return
     
     setIsLoading(true)
-    const supabase = createClient()
 
     try {
-      // Delete image from storage if it exists
+      const supabase = createClient()
+
       if (product.image_url) {
         const imagePath = product.image_url.split('/').pop()
         if (imagePath) {
-          await supabase
-            .storage
+          await supabase.storage
             .from('products')
             .remove([`product-images/${imagePath}`])
         }
@@ -217,6 +197,7 @@ export function ProductEditPanel({
 
       router.refresh()
       onOpenChange(false)
+
     } catch (error) {
       console.error("Delete error:", error)
       toast({
