@@ -50,6 +50,17 @@ create policy "Only admins can manage products"
     )
   );
 
+-- Simplified policy for staff stock updates
+create policy "Staff can update stock"
+  on products for update
+  using (
+    exists (
+      select 1 from profiles
+      where id = auth.uid()
+      and role in ('admin', 'staff')
+    )
+  );
+
 -- Create registers table
 create table registers (
   id uuid default uuid_generate_v4() primary key,

@@ -157,6 +157,8 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
       // Update stock
       for (const item of orderItems) {
         try {
+          console.log(`Attempting to update stock for product ${item.name} (${item.id})`)
+          
           // Get current stock
           const { data: product, error: stockCheckError } = await supabase
             .from("products")
@@ -184,21 +186,41 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
             continue
           }
 
+          console.log(`Current stock for ${product.name}: ${product.stock}`)
+
+          // Get user role before update
+          const { data: { user } } = await supabase.auth.getUser()
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user?.id)
+            .single()
+
+          console.log(`Attempting update as user role: ${profile?.role}`)
+
           // Update stock
-          const { error: updateError } = await supabase
+          const { data: updateData, error: updateError } = await supabase
             .from("products")
             .update({
               stock: Math.max(0, product.stock - 1)
             })
             .eq("id", item.id)
+            .select()
 
           if (updateError) {
-            console.error("Stock update error:", updateError)
+            console.error("Stock update error details:", {
+              error: updateError,
+              productId: item.id,
+              currentStock: product.stock,
+              userRole: profile?.role
+            })
             toast({
               variant: "destructive",
               title: "Warning",
               description: `Failed to update stock for ${item.name}. Error: ${updateError.message}`,
             })
+          } else {
+            console.log(`Successfully updated stock for ${product.name} to ${Math.max(0, product.stock - 1)}`)
           }
         } catch (error) {
           console.error("Stock update failed:", error)
