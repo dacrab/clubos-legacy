@@ -4,35 +4,31 @@ import { LoginForm } from "@/components/auth/LoginForm"
 import { Toaster } from "@/components/ui/toaster"
 
 interface LoginPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient()
-  const params = await searchParams
-  const returnTo = params?.from as string
+  const returnTo = searchParams?.from as string
 
-  // Only check auth if we have a returnTo parameter
-  if (returnTo) {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      // If user is authenticated, get their profile
-      if (user && !userError) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single()
+    // If user is authenticated and we have a returnTo URL, get their profile
+    if (user && !userError && returnTo) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single()
 
-        // Redirect to appropriate dashboard based on role
-        if (profile?.role) {
-          redirect(`/dashboard/${profile.role}`)
-        }
+      // Redirect to appropriate dashboard based on role
+      if (profile?.role) {
+        return redirect(`/dashboard/${profile.role}`)
       }
-    } catch (error) {
-      console.error("Auth check error:", error)
     }
+  } catch (error) {
+    console.error("Auth check error:", error)
   }
 
   // Show login form by default

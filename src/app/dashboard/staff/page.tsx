@@ -1,45 +1,62 @@
 import { createClient } from "@/lib/supabase/server"
 import { RecentSales } from "@/components/dashboard/RecentSales"
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
-import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
+import { SignOutButton } from "@/components/SignOutButton"
+
+interface Product {
+  id: string
+  name: string
+  is_deleted: boolean
+}
+
+interface SaleItem {
+  id: string
+  quantity: number
+  price_at_sale: number
+  product: Product
+}
+
+interface SaleData {
+  id: string
+  created_at: string
+  total_amount: number
+  created_by: string
+  sale_items: SaleItem[]
+}
 
 export default async function StaffDashboardPage() {
   const supabase = await createClient()
 
-  // Check if user is authenticated
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
-  if (authError || !user) {
-    redirect("/auth/sign-in")
-  }
+  if (!user || authError) redirect("/auth/sign-in")
 
-  // Verify user exists in profiles and has correct role
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, name")
     .eq("id", user.id)
     .single()
 
-  if (profileError || !profile || !["admin", "staff"].includes(profile.role)) {
+  if (!profile || profileError || !["admin", "staff"].includes(profile.role)) {
     redirect("/auth/sign-in")
   }
 
-  // Fetch dashboard data
-  const [{ data: recentSales, error: salesError }, { data: activeRegister, error: registerError }] = await Promise.all([
+  const [salesResponse, registerResponse] = await Promise.all([
     supabase
       .from("sales")
       .select(`
-        *,
-        profile:created_by(name),
-        sale_items(
+        id,
+        created_at,
+        total_amount,
+        created_by,
+        sale_items!inner(
+          id,
           quantity,
           price_at_sale,
-          products(
+          product:products!inner(
+            id,
             name,
-            last_edited_by,
             is_deleted
           )
         )
@@ -51,19 +68,58 @@ export default async function StaffDashboardPage() {
       .from("registers")
       .select("id, items_sold, coupons_used, treat_items_sold, total_amount")
       .is("closed_at", null)
-      .single()
+      .maybeSingle()
   ])
 
+  const { data: salesData, error: salesError } = salesResponse as { data: SaleData[] | null, error: any }
+  const { data: activeRegister, error: registerError } = registerResponse
+
   if (salesError) {
-    console.error("Error fetching sales:", salesError)
+    console.error("Error fetching sales:", salesError.message)
   }
 
+  if (registerError && registerError.code !== 'PGRST116') {
+    console.error("Error fetching active register:", registerError.code, registerError.message || 'Unknown error')
+  }
+
+  const sellerIds = salesData?.map(sale => sale.created_by) || []
+  const { data: sellers } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .in('id', sellerIds)
+
+  const recentSales = salesData?.map(sale => ({
+    id: sale.id,
+    created_at: sale.created_at,
+    total_amount: sale.total_amount,
+    is_treat: false,
+    coupon_applied: false,
+    profile: {
+      name: sellers?.find(seller => seller.id === sale.created_by)?.name || 'Unknown'
+    },
+    sale_items: sale.sale_items.map(item => ({
+      id: item.id,
+      quantity: item.quantity,
+      price_at_sale: item.price_at_sale,
+      products: item.product,
+      is_treat: false,
+      last_edited_by: null,
+      last_edited_at: null,
+      is_deleted: false,
+      deleted_by: null,
+      deleted_at: null
+    }))
+  }))
+
   return (
-    <DashboardShell>
-      <DashboardHeader
-        heading="Staff Dashboard"
-        description="Overview of recent sales"
-      >
+    <div className="flex min-h-screen flex-col space-y-8 p-8">
+      <div className="flex items-center justify-between bg-card rounded-lg p-4 shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-semibold tracking-tight">Welcome back, {profile.name}</h2>
+            <p className="text-muted-foreground">Manage sales and register operations</p>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <NewSaleDialog />
           {activeRegister && (
@@ -75,11 +131,15 @@ export default async function StaffDashboardPage() {
               treatsCount={activeRegister.treat_items_sold}
             />
           )}
+          <SignOutButton />
         </div>
-      </DashboardHeader>
-      <div className="grid gap-4">
-        <RecentSales sales={recentSales} showEditStatus={false} />
       </div>
-    </DashboardShell>
+
+      <RecentSales 
+        sales={recentSales || []} 
+        showEditStatus={true}
+        userId={user.id}
+      />
+    </div>
   )
-} 
+}

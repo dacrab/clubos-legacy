@@ -1,0 +1,2 @@
+-- This migration's policy management has been moved to 20240320000006_consolidate_all_policies.sql
+-- Keeping this file as a placeholder to maintain migration history 
