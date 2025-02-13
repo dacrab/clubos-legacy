@@ -20,17 +20,27 @@ interface DeleteSaleItemDialogProps {
   productName: string
   userId: string
   onDelete: () => void
+  createdAt: string
 }
 
 export function DeleteSaleItemDialog({
   saleItemId,
   productName,
   userId,
-  onDelete
+  onDelete,
+  createdAt
 }: DeleteSaleItemDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  // Check if delete is allowed (within 5 minutes)
+  const isDeleteAllowed = () => {
+    const created = new Date(createdAt)
+    const now = new Date()
+    const diffInMinutes = (now.getTime() - created.getTime()) / (1000 * 60)
+    return diffInMinutes <= 5
+  }
 
   const handleDelete = async () => {
     setIsLoading(true)
@@ -55,7 +65,7 @@ export function DeleteSaleItemDialog({
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete sale item. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete sale item. Please try again.",
         variant: "destructive"
       })
     } finally {
@@ -69,7 +79,9 @@ export function DeleteSaleItemDialog({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-destructive"
+          className="h-8 w-8"
+          disabled={!isDeleteAllowed()}
+          title={!isDeleteAllowed() ? "Orders can only be deleted within 5 minutes of creation" : "Delete order"}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -78,7 +90,12 @@ export function DeleteSaleItemDialog({
         <DialogHeader>
           <DialogTitle>Delete Sale Item</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete {productName} from this sale? This action cannot be undone.
+            Are you sure you want to delete {productName}?
+            {!isDeleteAllowed() && (
+              <p className="mt-2 text-red-500 text-sm">
+                This order cannot be deleted as it was created more than 5 minutes ago
+              </p>
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -92,7 +109,7 @@ export function DeleteSaleItemDialog({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isLoading}
+            disabled={isLoading || !isDeleteAllowed()}
           >
             {isLoading ? "Deleting..." : "Delete"}
           </Button>

@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter as FontSans } from 'next/font/google';
 import { cn } from '@/lib/utils';
-import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
+import { ToastProvider } from '@/components/providers/ToastProvider';
 import './globals.css';
 
 const fontSans = FontSans({
@@ -51,7 +51,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <div className="relative flex min-h-screen flex-col">
               {children}
             </div>
-            <Toaster />
+            <ToastProvider />
           </ThemeProvider>
         </ReactQueryProvider>
       </body>

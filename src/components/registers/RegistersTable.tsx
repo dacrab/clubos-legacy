@@ -142,7 +142,27 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                       <td className="p-4 align-middle">{register.items_sold}</td>
                       <td className="p-4 align-middle">{register.coupons_used}</td>
                       <td className="p-4 align-middle">{register.treat_items_sold}</td>
-                      <td className="p-4 align-middle">{formatCurrency(register.total_amount)}</td>
+                      <td className="p-4 align-middle">
+                        <div className="flex flex-col gap-1">
+                          {register.coupons_used > 0 ? (
+                            <>
+                              <div className="text-sm text-muted-foreground line-through">
+                                Subtotal: {formatCurrency(register.total_amount + (register.coupons_used * 2))}
+                              </div>
+                              <div className="text-sm text-red-600">
+                                Coupon discount: -{formatCurrency(register.coupons_used * 2)}
+                              </div>
+                              <div className="font-medium">
+                                Final total: {formatCurrency(register.total_amount)}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="font-medium">
+                              Total: {formatCurrency(register.total_amount)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-4 align-middle">
                         <Button
                           variant="ghost"
@@ -219,8 +239,22 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                 )}
 
                                 <tr className="border-t">
-                                  <td colSpan={3} className="py-2 font-bold text-right">Total Income:</td>
-                                  <td colSpan={2} className="py-2 font-bold">{formatCurrency(totalIncome)}</td>
+                                  <td colSpan={3} className="py-2 font-bold text-right">Summary:</td>
+                                  <td colSpan={2} className="py-2">
+                                    <div className="flex flex-col gap-1">
+                                      <div className="text-sm">
+                                        Subtotal: {formatCurrency(totalIncome + (register.coupons_used * 2))}
+                                      </div>
+                                      {register.coupons_used > 0 && (
+                                        <div className="text-sm text-red-600">
+                                          Coupon discount: -{formatCurrency(register.coupons_used * 2)}
+                                        </div>
+                                      )}
+                                      <div className="font-bold">
+                                        Final total: {formatCurrency(totalIncome)}
+                                      </div>
+                                    </div>
+                                  </td>
                                 </tr>
                               </tbody>
                             </table>

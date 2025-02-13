@@ -20,9 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Upload, X } from "lucide-react"
+import { Loader2, Upload, X, Link as LinkIcon } from "lucide-react"
 
 interface ProductEditPanelProps {
   product: Product
@@ -44,6 +50,7 @@ export function ProductEditPanel({
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product.image_url)
+  const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description,
@@ -58,30 +65,47 @@ export function ProductEditPanel({
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleImageUrlChange = (url: string) => {
+    setFormData(prev => ({ ...prev, image_url: url }))
+    setImagePreview(url)
+    setImageFile(null)
+  }
+
+  const validateImageUrl = (url: string) => {
+    try {
+      new URL(url)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const validateImage = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      throw new Error("Please upload an image file.")
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("Image size should be less than 5MB.")
+    }
+  }
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
+    try {
+      validateImage(file)
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+      setFormData(prev => ({ ...prev, image_url: "" }))
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: "Invalid file type",
-        description: "Please upload an image file."
+        title: "Invalid Image",
+        description: error instanceof Error ? error.message : "Invalid image file"
       })
-      return
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "File too large", 
-        description: "Image size should be less than 5MB."
-      })
-      return
-    }
-
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
   }
 
   const handleRemoveImage = () => {
@@ -121,10 +145,10 @@ export function ProductEditPanel({
         throw new Error("You must be logged in to edit products.")
       }
 
-      let imageUrl = formData.image_url
+      let finalImageUrl = formData.image_url
 
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile)
+      if (imageMethod === "upload" && imageFile) {
+        finalImageUrl = await uploadImage(imageFile)
 
         if (product.image_url) {
           const oldImagePath = product.image_url.split('/').pop()
@@ -134,13 +158,17 @@ export function ProductEditPanel({
               .remove([`product-images/${oldImagePath}`])
           }
         }
+      } else if (imageMethod === "url" && formData.image_url) {
+        if (!validateImageUrl(formData.image_url)) {
+          throw new Error("Please enter a valid image URL")
+        }
       }
 
       await supabase
         .from("products")
         .update({
           ...formData,
-          image_url: imageUrl,
+          image_url: finalImageUrl,
           last_edited_by: user.id,
           updated_at: new Date().toISOString(),
         })
@@ -294,71 +322,86 @@ export function ProductEditPanel({
           </div>
           <div className="space-y-2">
             <Label>Product Image</Label>
-            <div className="flex flex-col gap-4">
-              {imagePreview ? (
+            <Tabs 
+              value={imageMethod} 
+              onValueChange={(value: string) => setImageMethod(value as "upload" | "url")} 
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </TabsTrigger>
+                <TabsTrigger value="url" className="flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4" />
+                  Image URL
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload" className="mt-4">
+                <div className="flex flex-col gap-4">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="cursor-pointer"
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="url" className="mt-4">
+                <div className="flex flex-col gap-4">
+                  <Input
+                    type="url"
+                    placeholder="Paste image URL here"
+                    value={formData.image_url}
+                    onChange={(e) => handleImageUrlChange(e.target.value)}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {imagePreview && (
+              <div className="mt-4">
                 <div className="relative aspect-square w-40 overflow-hidden rounded-lg border">
                   <Image
                     src={imagePreview}
-                    alt={formData.name}
+                    alt={formData.name || "Product preview"}
                     fill
                     className="object-cover"
                   />
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="destructive"
                     size="icon"
-                    className="absolute right-2 top-2 h-6 w-6 rounded-full bg-background/80"
+                    className="absolute right-2 top-2"
                     onClick={handleRemoveImage}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center rounded-lg border border-dashed p-4">
-                  <label htmlFor="image-upload" className="cursor-pointer">
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Click to upload image
-                      </span>
-                    </div>
-                    <input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-4 pt-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-                className="w-full"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </div>
+
+          <div className="flex justify-end gap-4 pt-4">
             <Button
               type="button"
               variant="destructive"
               onClick={handleDelete}
               disabled={isLoading}
-              className="w-full"
             >
+              Delete
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Product
+              Save Changes
             </Button>
           </div>
         </form>

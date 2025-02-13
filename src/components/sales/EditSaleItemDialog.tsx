@@ -46,6 +46,7 @@ interface EditSaleItemDialogProps {
   currentProductId: string
   userId: string
   onEdit: () => void
+  createdAt: string
 }
 
 export function EditSaleItemDialog({
@@ -54,7 +55,8 @@ export function EditSaleItemDialog({
   currentQuantity,
   currentProductId,
   userId,
-  onEdit
+  onEdit,
+  createdAt
 }: EditSaleItemDialogProps) {
   const [quantity, setQuantity] = useState(currentQuantity)
   const [selectedProductId, setSelectedProductId] = useState(currentProductId)
@@ -64,6 +66,14 @@ export function EditSaleItemDialog({
   const [commandOpen, setCommandOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
+
+  // Check if edit is allowed (within 5 minutes)
+  const isEditAllowed = () => {
+    const created = new Date(createdAt)
+    const now = new Date()
+    const diffInMinutes = (now.getTime() - created.getTime()) / (1000 * 60)
+    return diffInMinutes <= 5
+  }
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -145,6 +155,8 @@ export function EditSaleItemDialog({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
+          disabled={!isEditAllowed()}
+          title={!isEditAllowed() ? "Orders can only be edited within 5 minutes of creation" : "Edit order"}
         >
           <Pencil className="h-4 w-4" />
         </Button>
@@ -154,6 +166,11 @@ export function EditSaleItemDialog({
           <DialogTitle>Edit Sale Item</DialogTitle>
           <DialogDescription>
             Make changes to {productName}
+            {!isEditAllowed() && (
+              <p className="mt-2 text-red-500 text-sm">
+                This order cannot be edited as it was created more than 5 minutes ago
+              </p>
+            )}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

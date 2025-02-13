@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LoginForm } from "@/components/auth/LoginForm"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "sonner"
 
 interface LoginPageProps {
   searchParams: { [key: string]: string | string[] | undefined }
@@ -9,7 +9,7 @@ interface LoginPageProps {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient()
-  const returnTo = searchParams?.from as string
+  const returnTo = (await searchParams)?.from as string
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
