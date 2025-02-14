@@ -24,6 +24,9 @@ interface SaleData {
   total_amount: number
   created_by: string
   sale_items: SaleItem[]
+  coupon_applied: boolean
+  coupons_used: number
+  coupons_count: number
 }
 
 export default async function StaffDashboardPage() {
@@ -42,41 +45,34 @@ export default async function StaffDashboardPage() {
     redirect("/auth/sign-in")
   }
 
-  const [salesResponse, registerResponse] = await Promise.all([
-    supabase
-      .from("sales")
-      .select(`
+  const { data: salesData } = await supabase
+    .from("sales")
+    .select(`
+      id,
+      created_at,
+      created_by,
+      total_amount,
+      coupon_applied,
+      coupons_used,
+      sale_items(
         id,
-        created_at,
-        total_amount,
-        created_by,
-        sale_items!inner(
+        quantity,
+        price_at_sale,
+        product:products!inner(
           id,
-          quantity,
-          price_at_sale,
-          product:products!inner(
-            id,
-            name,
-            is_deleted
-          )
+          name,
+          is_deleted
         )
-      `)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    
-    supabase
-      .from("registers")
-      .select("id, items_sold, coupons_used, treat_items_sold, total_amount")
-      .is("closed_at", null)
-      .maybeSingle()
-  ])
+      )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(5)
 
-  const { data: salesData, error: salesError } = salesResponse as { data: SaleData[] | null, error: any }
-  const { data: activeRegister, error: registerError } = registerResponse
-
-  if (salesError) {
-    console.error("Error fetching sales:", salesError.message)
-  }
+  const { data: activeRegister, error: registerError } = await supabase
+    .from("registers")
+    .select("id, items_sold, coupons_used, treat_items_sold, total_amount")
+    .is("closed_at", null)
+    .maybeSingle()
 
   if (registerError && registerError.code !== 'PGRST116') {
     console.error("Error fetching active register:", registerError.code, registerError.message || 'Unknown error')
@@ -92,8 +88,10 @@ export default async function StaffDashboardPage() {
     id: sale.id,
     created_at: sale.created_at,
     total_amount: sale.total_amount,
+    coupon_applied: sale.coupon_applied,
+    coupons_used: sale.coupons_used,
+    coupons_count: sale.coupons_used,
     is_treat: false,
-    coupon_applied: false,
     profile: {
       name: sellers?.find(seller => seller.id === sale.created_by)?.name || 'Unknown'
     },

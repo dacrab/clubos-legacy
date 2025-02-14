@@ -30,6 +30,40 @@ interface TreatSummary {
   quantity: number
 }
 
+const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
+  const couponDiscount = couponsUsed * 2
+  const finalTotal = totalIncome - couponDiscount
+
+  if (!couponsUsed) {
+    return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
+  }
+
+  return (
+    <>
+      <div className="text-sm">Subtotal: {formatCurrency(totalIncome)}</div>
+      <div className="text-sm text-red-600">
+        Coupon discount: -{formatCurrency(couponDiscount)}
+      </div>
+      <div className="font-medium">Final total: {formatCurrency(finalTotal)}</div>
+    </>
+  )
+}
+
+const TreatItem = ({ name, quantity }: TreatSummary) => (
+  <tr className="text-sm">
+    <td className="py-1">{name}</td>
+    <td className="py-1">{quantity}</td>
+    <td className="py-1">€0.00</td>
+    <td className="py-1">€0.00</td>
+    <td className="py-1">
+      <div className="flex items-center gap-1 text-pink-800">
+        <Gift className="h-4 w-4" />
+        {quantity > 1 && <span>x{quantity}</span>}
+      </div>
+    </td>
+  </tr>
+)
+
 export function RegistersTable({ registers }: RegistersTableProps) {
   const [expandedRegisters, setExpandedRegisters] = useState<Set<string>>(new Set())
 
@@ -131,6 +165,8 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                 const isExpanded = expandedRegisters.has(register.id)
                 const productSummary = getProductSummary(register)
                 const totalIncome = calculateTotalIncome(productSummary)
+                const nonTreatProducts = productSummary.filter(p => !p.is_treat)
+                const treats = getTreatSummary(register)
 
                 return (
                   <React.Fragment key={register.id}>
@@ -144,23 +180,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                       <td className="p-4 align-middle">{register.treat_items_sold}</td>
                       <td className="p-4 align-middle">
                         <div className="flex flex-col gap-1">
-                          {register.coupons_used > 0 ? (
-                            <>
-                              <div className="text-sm text-muted-foreground line-through">
-                                Subtotal: {formatCurrency(register.total_amount + (register.coupons_used * 2))}
-                              </div>
-                              <div className="text-sm text-red-600">
-                                Coupon discount: -{formatCurrency(register.coupons_used * 2)}
-                              </div>
-                              <div className="font-medium">
-                                Final total: {formatCurrency(register.total_amount)}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="font-medium">
-                              Total: {formatCurrency(register.total_amount)}
-                            </span>
-                          )}
+                          <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
                         </div>
                       </td>
                       <td className="p-4 align-middle">
@@ -169,11 +189,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                           size="sm"
                           onClick={() => handleToggleRegister(register.id)}
                         >
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                       </td>
                     </tr>
@@ -192,24 +208,21 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                 </tr>
                               </thead>
                               <tbody>
-                                {productSummary
-                                  .filter(({ is_treat }) => !is_treat)
-                                  .map(({ name, quantity, price, total }, index) => (
-                                    <tr key={`sale-${index}`}>
-                                      <td className="py-2">{name}</td>
-                                      <td className="py-2">{quantity}</td>
-                                      <td className="py-2">{formatCurrency(price)}</td>
-                                      <td className="py-2">{formatCurrency(total)}</td>
-                                      <td className="py-2">
-                                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
-                                          Sale
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
+                                {nonTreatProducts.map(({ name, quantity, price, total }, index) => (
+                                  <tr key={`sale-${index}`}>
+                                    <td className="py-2">{name}</td>
+                                    <td className="py-2">{quantity}</td>
+                                    <td className="py-2">{formatCurrency(price)}</td>
+                                    <td className="py-2">{formatCurrency(total)}</td>
+                                    <td className="py-2">
+                                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
+                                        Sale
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
 
-                                {/* Treats Section */}
-                                {getTreatSummary(register).length > 0 && (
+                                {treats.length > 0 && (
                                   <>
                                     <tr>
                                       <td colSpan={5} className="pt-4 pb-2">
@@ -221,19 +234,8 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                         </div>
                                       </td>
                                     </tr>
-                                    {getTreatSummary(register).map(({ name, quantity }, index) => (
-                                      <tr key={`treat-${index}`} className="text-sm">
-                                        <td className="py-1">{name}</td>
-                                        <td className="py-1">{quantity}</td>
-                                        <td className="py-1">€0.00</td>
-                                        <td className="py-1">€0.00</td>
-                                        <td className="py-1">
-                                          <div className="flex items-center gap-1 text-pink-800">
-                                            <Gift className="h-4 w-4" />
-                                            {quantity > 1 && <span>x{quantity}</span>}
-                                          </div>
-                                        </td>
-                                      </tr>
+                                    {treats.map((treat, index) => (
+                                      <TreatItem key={`treat-${index}`} {...treat} />
                                     ))}
                                   </>
                                 )}
@@ -242,17 +244,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                   <td colSpan={3} className="py-2 font-bold text-right">Summary:</td>
                                   <td colSpan={2} className="py-2">
                                     <div className="flex flex-col gap-1">
-                                      <div className="text-sm">
-                                        Subtotal: {formatCurrency(totalIncome + (register.coupons_used * 2))}
-                                      </div>
-                                      {register.coupons_used > 0 && (
-                                        <div className="text-sm text-red-600">
-                                          Coupon discount: -{formatCurrency(register.coupons_used * 2)}
-                                        </div>
-                                      )}
-                                      <div className="font-bold">
-                                        Final total: {formatCurrency(totalIncome)}
-                                      </div>
+                                      <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
                                     </div>
                                   </td>
                                 </tr>

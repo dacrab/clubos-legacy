@@ -38,9 +38,9 @@ export async function editSaleItem({ saleItemId, quantity, productId, userId }: 
   const supabase = await createClient()
 
   // First, check if the sale item is within the 5-minute edit window
-  const { data: saleItemWithTimestamp, error: saleItemError } = await supabase
+  const { data: saleItem, error: saleItemError } = await supabase
     .from('sale_items')
-    .select('created_at, sale_id')
+    .select('created_at, sale_id, quantity, product_id')
     .eq('id', saleItemId)
     .single()
 
@@ -48,7 +48,7 @@ export async function editSaleItem({ saleItemId, quantity, productId, userId }: 
     return { error: saleItemError.message }
   }
 
-  const createdAt = new Date(saleItemWithTimestamp.created_at)
+  const createdAt = new Date(saleItem.created_at)
   const now = new Date()
   const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60)
 
@@ -56,55 +56,36 @@ export async function editSaleItem({ saleItemId, quantity, productId, userId }: 
     return { error: "Orders can only be edited within 5 minutes of creation" }
   }
 
-  // First, get the product price
-  const { data: product, error: productError } = await supabase
+  // Get both old and new product details
+  const { data: products, error: productsError } = await supabase
     .from('products')
-    .select('price')
-    .eq('id', productId)
-    .single()
+    .select('id, price, stock')
+    .in('id', [saleItem.product_id, productId])
 
-  if (productError) {
-    return { error: productError.message }
+  if (productsError) {
+    return { error: productsError.message }
   }
 
-  // Update the sale item with new product and quantity
-  const { error } = await supabase
-    .from('sale_items')
-    .update({
-      quantity,
-      product_id: productId,
-      price_at_sale: product.price,
-      last_edited_by: userId,
-      last_edited_at: new Date().toISOString()
-    })
-    .eq('id', saleItemId)
+  const oldProduct = products.find(p => p.id === saleItem.product_id)
+  const newProduct = products.find(p => p.id === productId)
 
-  if (error) {
-    return { error: error.message }
+  if (!oldProduct || !newProduct) {
+    return { error: "Products not found" }
   }
 
-  // Update the total amount in the parent sale
-  const { data: saleItemParent } = await supabase
-    .from('sale_items')
-    .select('sale_id')
-    .eq('id', saleItemId)
-    .single()
+  // Start a transaction
+  const { error: transactionError } = await supabase.rpc('handle_edit_sale_item', {
+    p_sale_item_id: saleItemId,
+    p_new_quantity: quantity,
+    p_new_product_id: productId,
+    p_new_price: newProduct.price,
+    p_user_id: userId,
+    p_old_product_id: oldProduct.id,
+    p_old_quantity: saleItem.quantity
+  })
 
-  if (saleItemParent) {
-    // Get all items for this sale to recalculate total
-    const { data: saleItems } = await supabase
-      .from('sale_items')
-      .select('quantity, price_at_sale')
-      .eq('sale_id', saleItemParent.sale_id)
-      .eq('is_deleted', false)
-
-    const totalAmount = saleItems?.reduce((sum, item) => sum + (item.quantity * item.price_at_sale), 0) || 0
-
-    // Update sale total
-    await supabase
-      .from('sales')
-      .update({ total_amount: totalAmount })
-      .eq('id', saleItemParent.sale_id)
+  if (transactionError) {
+    return { error: transactionError.message }
   }
 
   revalidatePath('/dashboard/staff')
@@ -115,10 +96,10 @@ export async function editSaleItem({ saleItemId, quantity, productId, userId }: 
 export async function deleteSaleItem({ saleItemId, userId }: DeleteSaleItemParams) {
   const supabase = await createClient()
 
-  // First, check if the sale item is within the 5-minute delete window
-  const { data: saleItemWithTimestamp, error: saleItemError } = await supabase
+  // First, check if the sale item is within the 5-minute delete window and get necessary details
+  const { data: saleItem, error: saleItemError } = await supabase
     .from('sale_items')
-    .select('created_at')
+    .select('created_at, product_id, quantity')
     .eq('id', saleItemId)
     .single()
 
@@ -126,7 +107,7 @@ export async function deleteSaleItem({ saleItemId, userId }: DeleteSaleItemParam
     return { error: saleItemError.message }
   }
 
-  const createdAt = new Date(saleItemWithTimestamp.created_at)
+  const createdAt = new Date(saleItem.created_at)
   const now = new Date()
   const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60)
 
@@ -134,17 +115,16 @@ export async function deleteSaleItem({ saleItemId, userId }: DeleteSaleItemParam
     return { error: "Orders can only be deleted within 5 minutes of creation" }
   }
 
-  const { error } = await supabase
-    .from('sale_items')
-    .update({
-      is_deleted: true,
-      deleted_by: userId,
-      deleted_at: new Date().toISOString()
-    })
-    .eq('id', saleItemId)
+  // Start a transaction
+  const { error: transactionError } = await supabase.rpc('handle_delete_sale_item', {
+    p_sale_item_id: saleItemId,
+    p_user_id: userId,
+    p_product_id: saleItem.product_id,
+    p_quantity: saleItem.quantity
+  })
 
-  if (error) {
-    return { error: error.message }
+  if (transactionError) {
+    return { error: transactionError.message }
   }
 
   revalidatePath('/dashboard/staff')

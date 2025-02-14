@@ -26,6 +26,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Upload, X, Link as LinkIcon } from "lucide-react"
@@ -37,7 +38,6 @@ interface NewProductSheetProps {
 
 const initialFormData = {
   name: "",
-  description: "",
   price: 0,
   stock: 0,
   category: "",
@@ -50,10 +50,18 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
   const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [hasUnlimitedStock, setHasUnlimitedStock] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
-  const [formData, setFormData] = useState(initialFormData)
+  const [formData, setFormData] = useState({
+    name: "",
+    price: 0,
+    stock: 0,
+    category: "",
+    subcategory: "",
+    image_url: null as string | null,
+  })
 
   const handleInputChange = (name: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -137,7 +145,7 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
     setIsOpen(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
@@ -146,7 +154,12 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        throw new Error("You must be logged in to add products.")
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "You must be logged in to add products.",
+        })
+        return
       }
 
       let finalImageUrl = formData.image_url
@@ -159,29 +172,31 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
         }
       }
 
-      await supabase
+      const { error } = await supabase
         .from("products")
         .insert({
           ...formData,
           image_url: finalImageUrl,
+          stock: hasUnlimitedStock ? -1 : formData.stock,
           created_by: user.id,
           last_edited_by: user.id,
         })
-        .throwOnError()
+
+      if (error) throw error
 
       toast({
         title: "Success",
-        description: "Product added successfully."
+        description: "Product added successfully.",
       })
 
       router.refresh()
       resetForm()
     } catch (error) {
-      console.error("Add error:", error)
+      console.error("Error:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add product. Please try again."
+        description: "Something went wrong.",
       })
     } finally {
       setIsLoading(false)
@@ -224,6 +239,14 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stock">Stock</Label>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Switch
+                    id="unlimited-stock"
+                    checked={hasUnlimitedStock}
+                    onCheckedChange={setHasUnlimitedStock}
+                  />
+                  <Label htmlFor="unlimited-stock">Unlimited Stock</Label>
+                </div>
                 <Input
                   id="stock"
                   type="number"
@@ -231,6 +254,7 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
                   value={formData.stock}
                   onChange={e => handleInputChange("stock", Number(e.target.value))}
                   required
+                  disabled={hasUnlimitedStock}
                 />
               </div>
             </div>
@@ -304,7 +328,7 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
                     <Input
                       type="url"
                       placeholder="Paste image URL here"
-                      value={formData.image_url}
+                      value={formData.image_url || ""}
                       onChange={(e) => handleImageUrlChange(e.target.value)}
                     />
                   </div>

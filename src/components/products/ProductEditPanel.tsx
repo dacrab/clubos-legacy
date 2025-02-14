@@ -26,6 +26,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Upload, X, Link as LinkIcon } from "lucide-react"
@@ -48,6 +49,7 @@ export function ProductEditPanel({
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [hasUnlimitedStock, setHasUnlimitedStock] = useState(product.stock === -1)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product.image_url)
   const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
@@ -55,7 +57,7 @@ export function ProductEditPanel({
     name: product.name,
     description: product.description,
     price: product.price,
-    stock: product.stock,
+    stock: product.stock === -1 ? 0 : product.stock,
     category: product.category,
     subcategory: product.subcategory || "",
     image_url: product.image_url || "",
@@ -169,6 +171,7 @@ export function ProductEditPanel({
         .update({
           ...formData,
           image_url: finalImageUrl,
+          stock: hasUnlimitedStock ? -1 : formData.stock,
           last_edited_by: user.id,
           updated_at: new Date().toISOString(),
         })
@@ -271,6 +274,14 @@ export function ProductEditPanel({
             </div>
             <div className="space-y-2">
               <Label htmlFor="stock">Stock</Label>
+              <div className="flex items-center space-x-2 mb-2">
+                <Switch
+                  id="unlimited-stock"
+                  checked={hasUnlimitedStock}
+                  onCheckedChange={setHasUnlimitedStock}
+                />
+                <Label htmlFor="unlimited-stock">Unlimited Stock</Label>
+              </div>
               <Input
                 id="stock"
                 name="stock"
@@ -279,6 +290,7 @@ export function ProductEditPanel({
                 value={formData.stock}
                 onChange={e => handleInputChange("stock", Number(e.target.value))}
                 required
+                disabled={hasUnlimitedStock}
               />
             </div>
           </div>

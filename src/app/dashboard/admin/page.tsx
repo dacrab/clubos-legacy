@@ -17,12 +17,15 @@ interface SaleItem {
   quantity: number
   price_at_sale: number
   products: Product
-  is_treat?: boolean
+  is_treat: boolean
+  marked_as_treat_by?: string | null
+  marked_as_treat_at?: string | null
   last_edited_by?: string | null
   last_edited_at?: string | null
   is_deleted?: boolean
   deleted_by?: string | null
   deleted_at?: string | null
+  created_at: string
 }
 
 interface Sale {
@@ -33,8 +36,9 @@ interface Sale {
   }
   sale_items: SaleItem[]
   total_amount: number
-  is_treat: boolean
   coupon_applied: boolean
+  coupons_used: number
+  coupons_count: number
 }
 
 // Supabase response types
@@ -42,7 +46,14 @@ interface SupabaseSaleItem {
   id: string
   quantity: number
   price_at_sale: number
-  product: Product
+  products: Product
+  is_treat: boolean
+  last_edited_by: string | null
+  last_edited_at: string | null
+  is_deleted: boolean
+  deleted_by: string | null
+  deleted_at: string | null
+  created_at: string
 }
 
 interface SupabaseSale {
@@ -50,6 +61,11 @@ interface SupabaseSale {
   created_at: string
   total_amount: number
   created_by: string
+  coupon_applied: boolean
+  register_id: string
+  registers: {
+    coupons_used: number
+  }
   sale_items: SupabaseSaleItem[]
 }
 
@@ -77,11 +93,23 @@ export default async function AdminDashboardPage() {
         created_at,
         total_amount,
         created_by,
-        sale_items!inner(
+        coupon_applied,
+        register_id,
+        registers!inner(
+          coupons_used
+        ),
+        sale_items(
           id,
           quantity,
           price_at_sale,
-          product:products!inner(
+          is_treat,
+          created_at,
+          last_edited_by,
+          last_edited_at,
+          is_deleted,
+          deleted_by,
+          deleted_at,
+          products:product_id(
             id,
             name,
             is_deleted
@@ -119,8 +147,9 @@ export default async function AdminDashboardPage() {
     id: sale.id,
     created_at: sale.created_at,
     total_amount: sale.total_amount,
-    is_treat: false,
-    coupon_applied: false,
+    coupon_applied: sale.coupon_applied,
+    coupons_used: sale.registers?.coupons_used || 0,
+    coupons_count: sale.registers?.coupons_used || 0,
     profile: {
       name: sellers?.find(seller => seller.id === sale.created_by)?.name || 'Unknown'
     },
@@ -128,13 +157,16 @@ export default async function AdminDashboardPage() {
       id: item.id,
       quantity: item.quantity,
       price_at_sale: item.price_at_sale,
-      products: item.product,
-      is_treat: false,
-      last_edited_by: null,
-      last_edited_at: null,
-      is_deleted: false,
-      deleted_by: null,
-      deleted_at: null
+      products: item.products,
+      is_treat: item.is_treat,
+      marked_as_treat_by: null,
+      marked_as_treat_at: null,
+      last_edited_by: item.last_edited_by,
+      last_edited_at: item.last_edited_at,
+      is_deleted: item.is_deleted,
+      deleted_by: item.deleted_by,
+      deleted_at: item.deleted_at,
+      created_at: item.created_at
     }))
   })) || []
 

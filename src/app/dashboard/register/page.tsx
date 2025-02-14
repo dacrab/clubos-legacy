@@ -10,12 +10,16 @@ export default async function RegisterPage() {
     .from("registers")
     .select(`
       id,
+      user_id:closed_by,
       closed_at,
+      closed_by,
       closed_by_name,
       items_sold,
       coupons_used,
       treat_items_sold,
       total_amount,
+      created_at,
+      updated_at,
       sales(
         id,
         total_amount,
