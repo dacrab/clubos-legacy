@@ -12,6 +12,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
+  SheetTrigger,
 } from "@/components/ui/sheet"
 import {
   Select,
@@ -28,8 +30,8 @@ import {
 } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Upload, X, Link as LinkIcon } from "lucide-react"
+import { toast } from "sonner"
+import { Loader2, Upload, X, Link as LinkIcon, Plus } from "lucide-react"
 
 interface NewProductSheetProps {
   categories: string[]
@@ -47,7 +49,6 @@ const initialFormData = {
 
 export function NewProductSheet({ categories, subcategories }: NewProductSheetProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [hasUnlimitedStock, setHasUnlimitedStock] = useState(false)
@@ -67,18 +68,41 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleImageUrlChange = (url: string) => {
-    setFormData(prev => ({ ...prev, image_url: url }))
-    setImagePreview(url)
-    setImageFile(null)
+  const validateImageUrl = async (url: string) => {
+    try {
+      const validUrl = new URL(url)
+      if (!validUrl.protocol.startsWith('http')) {
+        throw new Error("URL must start with http:// or https://")
+      }
+
+      // Check if image exists and is accessible
+      const response = await fetch(url, { method: 'HEAD' })
+      if (!response.ok) {
+        throw new Error("Unable to access image URL")
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType?.startsWith('image/')) {
+        throw new Error("URL does not point to a valid image")
+      }
+
+      return true
+    } catch (error) {
+      toast.error("Invalid Image URL", {
+        description: error instanceof Error ? error.message : "Please enter a valid image URL"
+      })
+      return false
+    }
   }
 
-  const validateImageUrl = (url: string) => {
-    try {
-      new URL(url)
-      return true
-    } catch {
-      return false
+  const handleImageUrlChange = async (url: string) => {
+    setFormData(prev => ({ ...prev, image_url: url }))
+    
+    if (url && await validateImageUrl(url)) {
+      setImagePreview(url)
+      setImageFile(null)
+    } else {
+      setImagePreview(null)
     }
   }
 
@@ -102,9 +126,7 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
       setImagePreview(URL.createObjectURL(file))
       setFormData(prev => ({ ...prev, image_url: "" }))
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Image",
+      toast.error("Invalid Image", {
         description: error instanceof Error ? error.message : "Invalid image file"
       })
     }
@@ -137,70 +159,90 @@ export function NewProductSheet({ categories, subcategories }: NewProductSheetPr
     return publicUrl
   }
 
-  const resetForm = () => {
-    setFormData(initialFormData)
-    setImageFile(null)
-    setImagePreview(null)
-    setImageMethod("upload")
-    setIsOpen(false)
-  }
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      // Get form values
+      const name = formData.name
+      const price = formData.price
+      const stock = hasUnlimitedStock ? -1 : formData.stock
+      const category = formData.category
+      const subcategory = formData.subcategory
+      let image_url = formData.image_url
 
-      if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "You must be logged in to add products.",
+      // Validate required fields
+      if (!name || !price || (!hasUnlimitedStock && !stock) || !category || !subcategory) {
+        toast.error("Validation Error", {
+          description: "Please fill in all required fields."
         })
+        setIsLoading(false)
         return
       }
 
-      let finalImageUrl = formData.image_url
-
-      if (imageMethod === "upload" && imageFile) {
-        finalImageUrl = await uploadImage(imageFile)
-      } else if (imageMethod === "url" && formData.image_url) {
-        if (!validateImageUrl(formData.image_url)) {
-          throw new Error("Please enter a valid image URL")
-        }
+      // Handle image upload if there's a file
+      if (imageFile) {
+        const uploadedUrl = await uploadImage(imageFile)
+        image_url = uploadedUrl
       }
+
+      // Validate that we have either an uploaded image or a valid URL
+      if (!image_url && !imageFile) {
+        toast.error("Image Required", {
+          description: "Please either upload an image or provide an image URL."
+        })
+        setIsLoading(false)
+        return
+      }
+
+      const supabase = createClient()
 
       const { error } = await supabase
         .from("products")
-        .insert({
-          ...formData,
-          image_url: finalImageUrl,
-          stock: hasUnlimitedStock ? -1 : formData.stock,
-          created_by: user.id,
-          last_edited_by: user.id,
-        })
+        .insert([
+          {
+            name,
+            price,
+            stock,
+            category,
+            subcategory,
+            image_url: image_url
+          }
+        ])
 
       if (error) throw error
 
-      toast({
-        title: "Success",
-        description: "Product added successfully.",
+      toast.success("Success", {
+        description: "Product added successfully."
       })
 
-      router.refresh()
       resetForm()
+      router.refresh()
     } catch (error) {
-      console.error("Error:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong.",
+      console.error("Add product error:", error)
+      toast.error("Error", {
+        description: "Failed to add product. Please try again."
       })
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      price: 0,
+      stock: 0,
+      category: "",
+      subcategory: "",
+      image_url: null,
+    })
+    setImageFile(null)
+    setImagePreview(null)
+    setImageMethod("upload")
+    setHasUnlimitedStock(false)
+    setIsOpen(false)
   }
 
   return (

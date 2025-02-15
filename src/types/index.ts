@@ -47,16 +47,16 @@ export interface OrderItem {
 
 export interface Register {
   id: string
-  user_id: string
+  opened_at: string
+  closed_at: string | null
   items_sold: number
   coupons_used: number
   treat_items_sold: number
   total_amount: number
-  closed_at: string | null
   closed_by: string | null
-  closed_by_name: string | null
   created_at: string
   updated_at: string
+  closed_by_name: string | null
   profiles?: {
     name: string
   }
@@ -68,6 +68,11 @@ export interface Register {
       quantity: number
       price_at_sale: number
       is_treat: boolean
+      last_edited_by?: string
+      last_edited_at?: string
+      is_deleted?: boolean
+      deleted_by?: string
+      deleted_at?: string
       products: {
         name: string
       }
@@ -112,10 +117,13 @@ export interface SaleItem {
   price_at_sale: number
   is_treat: boolean
   created_at: string
+  last_edited_by?: string
+  last_edited_at?: string
+  is_deleted?: boolean
+  deleted_by?: string
+  deleted_at?: string
   products: {
     name: string
-    last_edited_by?: string
-    is_deleted?: boolean
   }
 }
 

@@ -3,11 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export const UserNav = () => {
   const router = useRouter();
-  const { toast } = useToast();
   
   const handleSignOut = async () => {
     try {
@@ -17,9 +16,7 @@ export const UserNav = () => {
       router.refresh();
     } catch (error) {
       console.error('Sign out error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to sign out. Please try again.",
       });
     }

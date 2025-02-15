@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { formatCurrency } from "@/lib/utils"
 import {
   Card,
@@ -43,21 +43,30 @@ export function ProductsTable({ products }: ProductsTableProps) {
     )
   }
 
-  const categories = [...new Set(products.map(p => p.category))]
+  const categories = useMemo(() => 
+    [...new Set(products.map(p => p.category))],
+    [products]
+  )
   
-  const subcategories = [...new Set(
-    products
-      .filter(p => selectedCategory === "all" || p.category === selectedCategory)
-      .map(p => p.subcategory)
-      .filter((subcategory): subcategory is string => subcategory !== null)
-  )]
+  const subcategories = useMemo(() => 
+    [...new Set(
+      products
+        .filter(p => selectedCategory === "all" || p.category === selectedCategory)
+        .map(p => p.subcategory)
+        .filter((subcategory): subcategory is string => subcategory !== null)
+    )],
+    [products, selectedCategory]
+  )
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    const matchesSubcategory = selectedSubcategory === "all" || product.subcategory === selectedSubcategory
-    return matchesSearch && matchesCategory && matchesSubcategory
-  })
+  const filteredProducts = useMemo(() => 
+    products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
+      const matchesSubcategory = selectedSubcategory === "all" || product.subcategory === selectedSubcategory
+      return matchesSearch && matchesCategory && matchesSubcategory
+    }),
+    [products, searchQuery, selectedCategory, selectedSubcategory]
+  )
 
   const handleEditClick = (product: Product) => {
     setSelectedProduct(product)

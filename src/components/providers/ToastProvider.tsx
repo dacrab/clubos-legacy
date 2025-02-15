@@ -10,6 +10,10 @@ export function ToastProvider() {
     <Toaster
       theme={theme as "light" | "dark" | "system"}
       className="toaster group"
+      position="top-right"
+      expand={false}
+      richColors
+      duration={5000}
       toastOptions={{
         classNames: {
           toast:

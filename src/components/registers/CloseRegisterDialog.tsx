@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
 interface CloseRegisterDialogProps {
@@ -34,7 +34,6 @@ export function CloseRegisterDialog({
   treatsCount,
 }: CloseRegisterDialogProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [closedBy, setClosedBy] = useState("")
@@ -47,10 +46,8 @@ export function CloseRegisterDialog({
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to close the register.",
+      toast.error("Error", {
+        description: "You must be logged in to close the register."
       })
       setIsLoading(false)
       return
@@ -71,19 +68,16 @@ export function CloseRegisterDialog({
         .eq("id", activeRegisterId)
         .throwOnError()
 
-      toast({
-        title: "Success",
-        description: "Register closed successfully.",
+      toast.success("Success", {
+        description: "Register closed successfully."
       })
 
       setIsOpen(false)
       router.refresh()
     } catch (error) {
       console.error("Close register error:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to close register. Please try again.",
+      toast.error("Error", {
+        description: "Failed to close register. Please try again."
       })
     } finally {
       setIsLoading(false)

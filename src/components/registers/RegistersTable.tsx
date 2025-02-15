@@ -8,7 +8,19 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Register } from "@/types"
-import { ChevronDown, ChevronUp, Gift } from "lucide-react"
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  Gift, 
+  ShoppingCart,
+  Calendar,
+  User,
+  Package,
+  Ticket,
+  Heart,
+  DollarSign,
+  Info
+} from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import React from "react"
@@ -23,18 +35,26 @@ interface ProductSummary {
   price: number
   total: number
   is_treat: boolean
+  is_edited: boolean
+  is_deleted: boolean
+  edit_count: number
+  delete_count: number
 }
 
 interface TreatSummary {
   name: string
   quantity: number
+  is_edited: boolean
+  is_deleted: boolean
+  edit_count: number
+  delete_count: number
 }
 
-const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
-  const couponDiscount = couponsUsed * 2
+const TotalDisplay = ({ totalIncome, couponsUsed: _couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
+  const couponDiscount = _couponsUsed * 2
   const finalTotal = totalIncome - couponDiscount
 
-  if (!couponsUsed) {
+  if (!_couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
   }
 
@@ -49,20 +69,41 @@ const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, coupo
   )
 }
 
-const TreatItem = ({ name, quantity }: TreatSummary) => (
+const TreatItem = ({ name, quantity, is_edited, is_deleted, edit_count, delete_count }: TreatSummary) => (
   <tr className="text-sm">
     <td className="py-1">{name}</td>
     <td className="py-1">{quantity}</td>
     <td className="py-1">€0.00</td>
     <td className="py-1">€0.00</td>
     <td className="py-1">
-      <div className="flex items-center gap-1 text-pink-800">
-        <Gift className="h-4 w-4" />
-        {quantity > 1 && <span>x{quantity}</span>}
+      <StatusBadge type="treat">
+        <Gift className="h-3 w-3" />Treat
+      </StatusBadge>
+    </td>
+    <td className="py-1">
+      <div className="flex gap-1">
+        {is_edited && <StatusBadge type="edited" count={edit_count}>Edited</StatusBadge>}
+        {is_deleted && <StatusBadge type="deleted" count={delete_count}>Deleted</StatusBadge>}
       </div>
     </td>
   </tr>
 )
+
+const StatusBadge = ({ type, children, count }: { type: 'sale' | 'treat' | 'edited' | 'deleted', children: React.ReactNode, count?: number }) => {
+  const styles = {
+    sale: "bg-green-100 text-green-800",
+    treat: "bg-pink-100 text-pink-800",
+    edited: "bg-yellow-100 text-yellow-800",
+    deleted: "bg-red-100 text-red-800"
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${styles[type]}`}>
+      {children}
+      {count !== undefined && count > 1 ? ` (${count})` : ''}
+    </span>
+  )
+}
 
 export function RegistersTable({ registers }: RegistersTableProps) {
   const [expandedRegisters, setExpandedRegisters] = useState<Set<string>>(new Set())
@@ -93,21 +134,34 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     const productMap = new Map<string, ProductSummary>()
 
     register.sales?.forEach(sale => {
-      sale.sale_items?.forEach(({ products, quantity, price_at_sale, is_treat }) => {
-        const existing = productMap.get(products.name)
-        const total = price_at_sale * quantity
+      sale.sale_items?.forEach(item => {
+        if (!item.is_treat) {
+          const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
+          const existing = productMap.get(key)
+          const total = item.price_at_sale * item.quantity
+          const isEdited = Boolean(item.last_edited_by)
+          const isDeleted = Boolean(item.is_deleted)
 
-        if (existing) {
-          existing.quantity += quantity
-          existing.total += total
-        } else {
-          productMap.set(products.name, {
-            name: products.name,
-            quantity,
-            price: price_at_sale,
-            total,
-            is_treat
-          })
+          if (existing) {
+            existing.quantity += item.quantity
+            existing.total += total
+            existing.is_edited = existing.is_edited || isEdited
+            existing.is_deleted = existing.is_deleted || isDeleted
+            if (isEdited) existing.edit_count++
+            if (isDeleted) existing.delete_count++
+          } else {
+            productMap.set(key, {
+              name: item.products.name,
+              quantity: item.quantity,
+              price: item.price_at_sale,
+              total,
+              is_treat: item.is_treat,
+              is_edited: isEdited,
+              is_deleted: isDeleted,
+              edit_count: isEdited ? 1 : 0,
+              delete_count: isDeleted ? 1 : 0
+            })
+          }
         }
       })
     })
@@ -119,15 +173,27 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     const treatMap = new Map<string, TreatSummary>()
 
     register.sales?.forEach(sale => {
-      sale.sale_items?.forEach(({ products, quantity, is_treat }) => {
-        if (is_treat) {
-          const existing = treatMap.get(products.name)
+      sale.sale_items?.forEach(item => {
+        if (item.is_treat) {
+          const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
+          const existing = treatMap.get(key)
+          const isEdited = Boolean(item.last_edited_by)
+          const isDeleted = Boolean(item.is_deleted)
+
           if (existing) {
-            existing.quantity += quantity
+            existing.quantity += item.quantity
+            existing.is_edited = existing.is_edited || isEdited
+            existing.is_deleted = existing.is_deleted || isDeleted
+            if (isEdited) existing.edit_count++
+            if (isDeleted) existing.delete_count++
           } else {
-            treatMap.set(products.name, {
-              name: products.name,
-              quantity
+            treatMap.set(key, {
+              name: item.products.name,
+              quantity: item.quantity,
+              is_edited: isEdited,
+              is_deleted: isDeleted,
+              edit_count: isEdited ? 1 : 0,
+              delete_count: isDeleted ? 1 : 0
             })
           }
         }
@@ -144,20 +210,58 @@ export function RegistersTable({ registers }: RegistersTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Closed Registers ({registers.length})</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5" />
+          Closed Registers ({registers.length})
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="relative w-full overflow-auto">
           <table className="w-full caption-bottom text-sm">
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <th className="h-12 px-4 text-left align-middle font-medium">Closed At</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Closed By</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Items Sold</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Coupons Used</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Treats</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Total</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Details</th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Closed At
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Closed By
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Items Sold
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <Ticket className="h-4 w-4" />
+                    Coupons Used
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Treats
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Total
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    Details
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
@@ -165,6 +269,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                 const isExpanded = expandedRegisters.has(register.id)
                 const productSummary = getProductSummary(register)
                 const totalIncome = calculateTotalIncome(productSummary)
+                // Show all products, including deleted ones
                 const nonTreatProducts = productSummary.filter(p => !p.is_treat)
                 const treats = getTreatSummary(register)
 
@@ -205,19 +310,26 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                   <th className="text-left font-medium">Price</th>
                                   <th className="text-left font-medium">Total</th>
                                   <th className="text-left font-medium">Type</th>
+                                  <th className="text-left font-medium">Status</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {nonTreatProducts.map(({ name, quantity, price, total }, index) => (
+                                {nonTreatProducts.map(({ name, quantity, price, total, is_treat, is_edited, is_deleted, edit_count, delete_count }, index) => (
                                   <tr key={`sale-${index}`}>
                                     <td className="py-2">{name}</td>
                                     <td className="py-2">{quantity}</td>
                                     <td className="py-2">{formatCurrency(price)}</td>
                                     <td className="py-2">{formatCurrency(total)}</td>
                                     <td className="py-2">
-                                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
-                                        Sale
-                                      </span>
+                                      <StatusBadge type="sale">
+                                        <ShoppingCart className="h-3 w-3" />Sale
+                                      </StatusBadge>
+                                    </td>
+                                    <td className="py-2">
+                                      <div className="flex gap-1">
+                                        {is_edited && <StatusBadge type="edited" count={edit_count}>Edited</StatusBadge>}
+                                        {is_deleted && <StatusBadge type="deleted" count={delete_count}>Deleted</StatusBadge>}
+                                      </div>
                                     </td>
                                   </tr>
                                 ))}
@@ -225,7 +337,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                 {treats.length > 0 && (
                                   <>
                                     <tr>
-                                      <td colSpan={5} className="pt-4 pb-2">
+                                      <td colSpan={6} className="pt-4 pb-2">
                                         <div className="flex items-center gap-2">
                                           <Gift className="h-4 w-4 text-pink-500" />
                                           <span className="font-semibold text-pink-800">
@@ -241,7 +353,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                 )}
 
                                 <tr className="border-t">
-                                  <td colSpan={3} className="py-2 font-bold text-right">Summary:</td>
+                                  <td colSpan={4} className="py-2 font-bold text-right">Summary:</td>
                                   <td colSpan={2} className="py-2">
                                     <div className="flex flex-col gap-1">
                                       <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />

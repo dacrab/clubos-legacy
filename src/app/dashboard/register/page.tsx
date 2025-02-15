@@ -11,6 +11,7 @@ export default async function RegisterPage() {
     .select(`
       id,
       user_id:closed_by,
+      opened_at,
       closed_at,
       closed_by,
       closed_by_name,
@@ -28,6 +29,11 @@ export default async function RegisterPage() {
           quantity,
           price_at_sale,
           is_treat,
+          last_edited_by,
+          last_edited_at,
+          is_deleted,
+          deleted_by,
+          deleted_at,
           products(
             name
           )

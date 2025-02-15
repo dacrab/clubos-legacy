@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { ListPlus } from "lucide-react";
+import { toast } from "sonner";
+import { ListPlus, Loader2 } from "lucide-react";
 
 interface ManageCategoriesDialogProps {
   existingCategories: string[];
@@ -36,7 +38,6 @@ export function ManageCategoriesDialog({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [newSubcategory, setNewSubcategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
@@ -46,10 +47,8 @@ export function ManageCategoriesDialog({
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to add categories.",
+      toast.error("Error", {
+        description: "You must be logged in to add categories."
       });
       setIsLoading(false);
       return;
@@ -68,18 +67,16 @@ export function ManageCategoriesDialog({
         })
         .throwOnError();
 
-      toast({
-        title: "Success",
-        description: "Category added successfully.",
+      toast.success("Success", {
+        description: "Category added successfully."
       });
 
       setNewCategory("");
       window.location.reload();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add category.",
+      console.error("Add category error:", error);
+      toast.error("Error", {
+        description: "Failed to add category. Please try again."
       });
     } finally {
       setIsLoading(false);
@@ -94,10 +91,8 @@ export function ManageCategoriesDialog({
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to add subcategories.",
+      toast.error("Error", {
+        description: "You must be logged in to add subcategories."
       });
       setIsLoading(false);
       return;
@@ -117,18 +112,16 @@ export function ManageCategoriesDialog({
         })
         .throwOnError();
 
-      toast({
-        title: "Success",
-        description: "Subcategory added successfully.",
+      toast.success("Success", {
+        description: "Subcategory added successfully."
       });
 
       setNewSubcategory("");
       window.location.reload();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add subcategory.",
+      console.error("Add subcategory error:", error);
+      toast.error("Error", {
+        description: "Failed to add subcategory. Please try again."
       });
     } finally {
       setIsLoading(false);

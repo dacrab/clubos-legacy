@@ -26,10 +26,13 @@ export default async function SalesPage() {
         price_at_sale,
         is_treat,
         created_at,
+        last_edited_by,
+        last_edited_at,
+        is_deleted,
+        deleted_by,
+        deleted_at,
         products(
-          name,
-          last_edited_by,
-          is_deleted
+          name
         )
       )
     `)

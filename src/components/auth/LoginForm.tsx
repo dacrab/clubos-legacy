@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
+import { Eye, EyeOff } from "lucide-react"
 
 interface LoginFormProps {
   returnTo?: string
@@ -32,14 +33,13 @@ const errorMessages = {
 }
 
 export function LoginForm({ returnTo }: LoginFormProps) {
-  const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleError = (errorType: keyof typeof errorMessages) => {
-    toast({
-      variant: "destructive",
-      ...errorMessages[errorType]
+    toast.error(errorMessages[errorType].title, {
+      description: errorMessages[errorType].description
     })
     setIsLoading(false)
   }
@@ -61,31 +61,31 @@ export function LoginForm({ returnTo }: LoginFormProps) {
       const response = await fetch('/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       })
 
       if (!response.ok) {
         const data = await response.json()
         const error = data.error?.toLowerCase()
         
-        if (error.includes("invalid")) handleError('invalidCredentials')
-        else if (error.includes("profile")) handleError('profileError')
+        if (error?.includes("invalid")) handleError('invalidCredentials')
+        else if (error?.includes("profile")) handleError('profileError')
         else handleError('connectionError')
         return
       }
 
       const { role } = await response.json()
-      if (!['admin', 'staff', 'secretary'].includes(role)) {
+      
+      if (!role || !['admin', 'staff', 'secretary'].includes(role)) {
         throw new Error('Invalid role received')
       }
 
-      toast({
-        title: "Welcome back!",
-        description: "Successfully signed in. Redirecting...",
+      toast.success("Welcome back!", {
+        description: "Successfully signed in."
       })
 
-      router.replace(returnTo || `/dashboard/${role}`)
-      router.refresh()
+      await router.push(returnTo || `/dashboard/${role}`)
 
     } catch (error) {
       console.error("Login error:", error)
@@ -116,15 +116,34 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              name="password"
-              placeholder="Password123"
-              required
-              disabled={isLoading}
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password123"
+                required
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                )}
+                <span className="sr-only">
+                  {showPassword ? "Hide password" : "Show password"}
+                </span>
+              </Button>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Signing in..." : "Sign in"}

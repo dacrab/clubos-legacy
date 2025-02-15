@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Pencil, Check, Search } from "lucide-react"
+import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
+import { editSaleItem } from "@/app/dashboard/staff/actions"
+import { cn } from "@/lib/utils"
+
+// Dialog Components
 import {
   Dialog,
   DialogContent,
@@ -11,15 +20,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Pencil, Check, ChevronsUpDown } from "lucide-react"
-import { editSaleItem } from "@/app/dashboard/staff/actions"
-import { useToast } from "@/components/ui/use-toast"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
+
+// Popover Components
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+// Constants
+const EDIT_TIME_LIMIT = 5 * 60 // 5 minutes in seconds
 
 interface Product {
   id: string
@@ -47,18 +58,24 @@ export function EditSaleItemDialog({
   onEdit,
   createdAt
 }: EditSaleItemDialogProps) {
+  // Dialog state
   const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Form state
   const [quantity, setQuantity] = useState(currentQuantity)
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(0)
-  const { toast } = useToast()
+  const [searchQuery, setSearchQuery] = useState("")
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState(EDIT_TIME_LIMIT)
 
+  // Time-related utilities
   const canEdit = () => {
     const created = new Date(createdAt)
     const now = new Date()
-    return (now.getTime() - created.getTime()) / (1000 * 60) <= 5
+    return (now.getTime() - created.getTime()) / 1000 <= EDIT_TIME_LIMIT
   }
 
   const formatTimeLeft = (seconds: number) => {
@@ -67,13 +84,21 @@ export function EditSaleItemDialog({
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
+  // Timer effect
   useEffect(() => {
     if (!open) return
 
     const updateTime = () => {
-      const created = new Date(createdAt)
-      const now = new Date()
-      setTimeLeft(Math.max(0, 300 - Math.floor((now.getTime() - created.getTime()) / 1000)))
+      const elapsed = Math.floor((new Date().getTime() - new Date(createdAt).getTime()) / 1000)
+      const remaining = Math.max(0, EDIT_TIME_LIMIT - elapsed)
+      setTimeLeft(remaining)
+
+      if (remaining === 0) {
+        setOpen(false)
+        toast.error("Time expired", {
+          description: "The edit time limit has expired."
+        })
+      }
     }
 
     updateTime()
@@ -81,6 +106,7 @@ export function EditSaleItemDialog({
     return () => clearInterval(interval)
   }, [open, createdAt])
 
+  // Products fetch effect
   useEffect(() => {
     if (!open) return
 
@@ -93,7 +119,7 @@ export function EditSaleItemDialog({
         .order('name')
 
       if (error) {
-        toast({ title: "Error", description: "Failed to load products. Please try again.", variant: "destructive" })
+        toast.error("Error", { description: "Failed to load products. Please try again." })
         return
       }
 
@@ -105,32 +131,48 @@ export function EditSaleItemDialog({
     }
 
     fetchProducts()
-  }, [open, currentProductId, toast])
+  }, [open, currentProductId])
 
-  const handleProductSelect = (productId: string) => {
-    const product = products.find(p => p.id === productId)
-    if (product && (product.stock === -1 || product.stock > 0)) {
-      setSelectedProduct(product)
-    }
+  // Filtered products based on search
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Handlers
+  const handleProductSelect = (product: Product) => {
+    setSelectedProduct(product)
+    setSearchQuery("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!canEdit() || !selectedProduct) return setOpen(false)
-    if (quantity === currentQuantity && selectedProduct.id === currentProductId) return setOpen(false)
+    if (!selectedProduct) return setOpen(false)
+    if (quantity === currentQuantity && selectedProduct.id === currentProductId) {
+      return setOpen(false)
+    }
 
     setIsLoading(true)
 
     try {
-      const result = await editSaleItem({ saleItemId, quantity, productId: selectedProduct.id, userId })
+      const result = await editSaleItem({
+        saleItemId,
+        quantity,
+        productId: selectedProduct.id,
+        userId
+      })
+
       if (result.error) throw new Error(result.error)
       
-      toast({ title: "Sale item updated", description: "The sale item has been successfully updated." })
+      toast.success("Sale item updated", {
+        description: "The sale item has been successfully updated."
+      })
       onEdit()
       setOpen(false)
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update sale item. Please try again.", variant: "destructive" })
+      toast.error("Error", {
+        description: "Failed to update sale item. Please try again."
+      })
     } finally {
       setIsLoading(false)
     }
@@ -151,70 +193,80 @@ export function EditSaleItemDialog({
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
+
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Sale Item</DialogTitle>
           <DialogDescription>Make changes to {productName}</DialogDescription>
           <div className="mt-2 text-sm">
             {isEditable ? (
-              <p className="text-muted-foreground">Time remaining: {formatTimeLeft(timeLeft)}</p>
+              <p className="text-muted-foreground">
+                Time remaining: {formatTimeLeft(timeLeft)}
+              </p>
             ) : (
-              <p className="text-red-500">This order cannot be edited as it was created more than 5 minutes ago</p>
+              <p className="text-red-500">
+                This order cannot be edited as it was created more than 5 minutes ago
+              </p>
             )}
           </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="mt-4">
           <div className="grid gap-4">
+            {/* Product Selection */}
             <div className="grid gap-2">
               <Label htmlFor="product">Product</Label>
-              <Popover>
-                <PopoverTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
-                    id="product"
                     variant="outline"
-                    role="combobox"
                     className="w-full justify-between"
-                    disabled={!isEditable}
                   >
                     {selectedProduct?.name || productName}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 overflow-hidden z-[9999]" align="start" sideOffset={4}>
-                  <Command>
-                    <CommandInput placeholder="Search products..." />
-                    <CommandList>
-                      <CommandEmpty>No products found.</CommandEmpty>
-                      <CommandGroup heading="Available Products">
-                        {products.map((product) => {
-                          const isAvailable = product.stock === -1 || product.stock > 0
-                          const isSelected = selectedProduct?.id === product.id
-                          
-                          return (
-                            <CommandItem
-                              key={product.id}
-                              value={product.id}
-                              onSelect={() => handleProductSelect(product.id)}
-                              className={cn("flex items-center justify-between", !isAvailable && "opacity-50")}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                                <span>{product.name}</span>
-                              </div>
-                              <span className="text-xs text-muted-foreground">
-                                {product.stock === -1 ? "∞" : product.stock}
-                              </span>
-                            </CommandItem>
-                          )
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[300px]" align="start">
+                  <div className="flex items-center border-b p-2">
+                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="border-0 focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto py-2">
+                    {filteredProducts.length === 0 ? (
+                      <div className="py-6 text-center text-sm">No products found.</div>
+                    ) : (
+                      filteredProducts.map((product) => (
+                        <DropdownMenuItem
+                          key={product.id}
+                          onSelect={() => handleProductSelect(product)}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            {selectedProduct?.id === product.id && (
+                              <Check className="h-4 w-4" />
+                            )}
+                            <span>{product.name}</span>
+                          </div>
+                          <span className={cn(
+                            "text-xs",
+                            product.stock === 0 ? "text-red-500" : "text-muted-foreground"
+                          )}>
+                            {product.stock === -1 ? "∞" : product.stock}
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
+            {/* Quantity Input */}
             <div className="grid gap-2">
               <Label htmlFor="quantity">Quantity</Label>
               <Input
@@ -231,8 +283,12 @@ export function EditSaleItemDialog({
           <DialogFooter className="mt-6">
             <Button
               type="submit"
-              disabled={isLoading || !isEditable || !selectedProduct || 
-                (quantity === currentQuantity && selectedProduct.id === currentProductId)}
+              disabled={
+                isLoading || 
+                !isEditable || 
+                !selectedProduct || 
+                (quantity === currentQuantity && selectedProduct.id === currentProductId)
+              }
             >
               {isLoading ? "Saving..." : "Save changes"}
             </Button>

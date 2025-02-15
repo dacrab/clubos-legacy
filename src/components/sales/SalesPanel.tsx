@@ -7,7 +7,7 @@ import { CategorySelector } from "./CategorySelector"
 import { ProductGrid } from "./ProductGrid"
 import { OrderSummary } from "./OrderSummary"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,6 @@ interface SalesPanelProps {
 
 export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
@@ -79,12 +78,12 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "You must be logged in to complete a sale.",
+        toast.error("Error", {
+          description: "You must be logged in to complete a sale."
         })
+        setIsProcessing(false)
         return
       }
 
@@ -168,20 +167,16 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
 
           if (stockCheckError) {
             console.error("Stock check error:", stockCheckError)
-            toast({
-              variant: "destructive",
-              title: "Warning",
-              description: `Failed to check stock for ${item.name}. Please verify manually.`,
+            toast.error("Warning", {
+              description: `Failed to check stock for ${item.name}. Please verify manually.`
             })
             continue
           }
 
           if (!product) {
             console.error("Product not found:", item.id)
-            toast({
-              variant: "destructive",
-              title: "Warning",
-              description: `Product ${item.name} not found.`,
+            toast.error("Warning", {
+              description: `Product ${item.name} not found.`
             })
             continue
           }
@@ -189,7 +184,6 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
           console.log(`Current stock for ${product.name}: ${product.stock}`)
 
           // Get user role before update
-          const { data: { user } } = await supabase.auth.getUser()
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
@@ -214,34 +208,30 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
               currentStock: product.stock,
               userRole: profile?.role
             })
-            toast({
-              variant: "destructive",
-              title: "Warning",
-              description: `Failed to update stock for ${item.name}. Error: ${updateError.message}`,
+            toast.error("Warning", {
+              description: `Failed to update stock for ${item.name}. Error: ${updateError.message}`
             })
           } else {
             console.log(`Successfully updated stock for ${product.name} to ${Math.max(0, product.stock - 1)}`)
           }
         } catch (error) {
           console.error("Stock update failed:", error)
-          toast({
-            variant: "destructive",
-            title: "Warning",
-            description: `Error updating stock. Please verify inventory manually.`,
+          toast.error("Warning", {
+            description: `Error updating stock. Please verify inventory manually.`
           })
         }
       }
 
-      toast({ title: "Success", description: "Sale completed successfully." })
+      toast.success("Success", { 
+        description: "Sale completed successfully." 
+      })
       setOrderItems([])
       setCouponsCount(0)
       router.refresh()
 
     } catch (error) {
       console.error("Sale error:", error)
-      toast({
-        variant: "destructive",
-        title: "Error", 
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to complete sale."
       })
     } finally {

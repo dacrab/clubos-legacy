@@ -9,7 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Sale } from "@/types"
-import { Gift, Ticket, ChevronDown, ChevronUp } from "lucide-react"
+import { 
+  Gift, 
+  Ticket, 
+  ChevronDown, 
+  ChevronUp,
+  Calendar,
+  User,
+  ShoppingCart,
+  DollarSign,
+  Info,
+  ChevronRight
+} from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
@@ -93,7 +104,7 @@ const ProductRow = ({ product }: { product: ProductSummary }) => (
       {product.is_treat ? (
         <StatusBadge type="treat"><Gift className="h-3 w-3" />Treat</StatusBadge>
       ) : (
-        <StatusBadge type="sale">Sale</StatusBadge>
+        <StatusBadge type="sale"><ShoppingCart className="h-3 w-3" />Sale</StatusBadge>
       )}
     </td>
     <td className="py-2">
@@ -164,23 +175,27 @@ export function SalesTable({ sales }: SalesTableProps) {
     const productMap = new Map<string, ProductSummary>()
 
     sale.sale_items.forEach(item => {
-      const existing = productMap.get(item.products.name)
+      const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
+      const existing = productMap.get(key)
       const total = item.price_at_sale * item.quantity
+
+      const isEdited = Boolean(item.last_edited_by)
+      const isDeleted = Boolean(item.is_deleted)
 
       if (existing) {
         existing.quantity += item.quantity
         existing.total += total
-        existing.is_edited = existing.is_edited || Boolean(item.products.last_edited_by)
-        existing.is_deleted = existing.is_deleted || Boolean(item.products.is_deleted)
+        existing.is_edited = existing.is_edited || isEdited
+        existing.is_deleted = existing.is_deleted || isDeleted
       } else {
-        productMap.set(item.products.name, {
+        productMap.set(key, {
           name: item.products.name,
           quantity: item.quantity,
           price: item.price_at_sale,
           total,
           is_treat: item.is_treat,
-          is_edited: Boolean(item.products.last_edited_by),
-          is_deleted: Boolean(item.products.is_deleted)
+          is_edited: isEdited,
+          is_deleted: isDeleted
         })
       }
     })
@@ -198,12 +213,24 @@ export function SalesTable({ sales }: SalesTableProps) {
           <table className="w-full caption-bottom text-sm">
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <th className="h-12 px-4 text-left align-middle font-medium">Date</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Staff</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Items Count</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Total</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Status</th>
-                <th className="h-12 px-4 text-left align-middle font-medium">Details</th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <Calendar className="h-4 w-4 inline mr-2" />Date
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <User className="h-4 w-4 inline mr-2" />Staff
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <ShoppingCart className="h-4 w-4 inline mr-2" />Items Count
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <DollarSign className="h-4 w-4 inline mr-2" />Total
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <Info className="h-4 w-4 inline mr-2" />Status
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium">
+                  <ChevronRight className="h-4 w-4 inline mr-2" />Details
+                </th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
@@ -256,4 +283,4 @@ export function SalesTable({ sales }: SalesTableProps) {
       </CardContent>
     </Card>
   )
-} 
+}

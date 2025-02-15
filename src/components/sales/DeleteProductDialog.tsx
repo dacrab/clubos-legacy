@@ -11,9 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 import { deleteSaleItem } from "@/app/dashboard/staff/actions"
-import { useToast } from "@/components/ui/use-toast"
 
 interface DeleteSaleItemDialogProps {
   saleItemId: string
@@ -32,7 +32,6 @@ export function DeleteSaleItemDialog({
 }: DeleteSaleItemDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
 
   // Check if delete is allowed (within 5 minutes)
   const isDeleteAllowed = () => {
@@ -55,18 +54,15 @@ export function DeleteSaleItemDialog({
         throw new Error(result.error)
       }
 
-      toast({
-        title: "Sale item deleted",
+      toast.success("Sale item deleted", {
         description: "The sale item has been successfully deleted."
       })
       
       onDelete()
       setIsOpen(false)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete sale item. Please try again.",
-        variant: "destructive"
+      toast.error("Error", {
+        description: error instanceof Error ? error.message : "Failed to delete sale item. Please try again."
       })
     } finally {
       setIsLoading(false)

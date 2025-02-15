@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { LoginForm } from "@/components/auth/LoginForm"
-import { Toaster } from "sonner"
 
 interface LoginPageProps {
   searchParams: { [key: string]: string | string[] | undefined }
@@ -35,7 +34,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <LoginForm returnTo={returnTo} />
-      <Toaster />
     </main>
   )
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { Role } from "@/types"
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -56,27 +57,31 @@ export async function POST(request: Request) {
       )
     }
 
-    const responseData = { 
-      user: authData.user,
-      role: profile.role as Role,
-      session: authData.session
-    }
-
-    console.log("Sending response with role:", responseData.role)
-
-    const response = NextResponse.json(responseData, { status: 200 })
+    const cookieStore = cookies()
+    const response = NextResponse.json(
+      { role: profile.role as Role },
+      { status: 200 }
+    )
 
     if (authData.session) {
       const { access_token, refresh_token } = authData.session
-      const cookieOptions = {
+      
+      // Set cookies with strict security options
+      response.cookies.set('sb-access-token', access_token, {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax' as const,
-      }
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
 
-      response.cookies.set('sb-access-token', access_token, cookieOptions)
-      response.cookies.set('sb-refresh-token', refresh_token, cookieOptions) 
+      response.cookies.set('sb-refresh-token', refresh_token, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
     }
 
     return response

@@ -11,7 +11,10 @@ CREATE OR REPLACE FUNCTION handle_edit_sale_item(
   p_old_product_id UUID,
   p_old_quantity INTEGER
 )
-RETURNS VOID AS $$
+RETURNS VOID
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
 BEGIN
   -- First restore the stock for the old product
   UPDATE products
@@ -39,7 +42,7 @@ BEGIN
     last_edited_at = NOW()
   WHERE id = p_sale_item_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create function to handle deleting sale items
 CREATE OR REPLACE FUNCTION handle_delete_sale_item(
@@ -48,7 +51,10 @@ CREATE OR REPLACE FUNCTION handle_delete_sale_item(
   p_product_id UUID,
   p_quantity INTEGER
 )
-RETURNS VOID AS $$
+RETURNS VOID
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
 BEGIN
   -- Restore the stock
   UPDATE products
@@ -66,7 +72,11 @@ BEGIN
     deleted_at = NOW()
   WHERE id = p_sale_item_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+-- Grant execute permissions to authenticated users
+GRANT EXECUTE ON FUNCTION handle_edit_sale_item TO authenticated;
+GRANT EXECUTE ON FUNCTION handle_delete_sale_item TO authenticated;
 
 -- Commit transaction
 COMMIT; 

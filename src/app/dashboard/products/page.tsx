@@ -4,7 +4,6 @@ import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { ProductsTable } from "@/components/products/ProductsTable"
 import { NewProductSheet } from "@/components/products/NewProductSheet"
 import { ManageCategoriesDialog } from "@/components/products/ManageCategoriesDialog"
-import { Toaster } from "sonner"
 import { Product } from "@/types"
 
 export default async function ProductsPage() {
@@ -46,7 +45,6 @@ export default async function ProductsPage() {
         </div>
       </DashboardHeader>
       <ProductsTable products={products} />
-      <Toaster />
     </DashboardShell>
   )
 } 

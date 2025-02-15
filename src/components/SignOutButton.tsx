@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 
 interface SignOutButtonProps {
@@ -13,7 +13,6 @@ interface SignOutButtonProps {
 
 export function SignOutButton({ variant = "ghost", size = "icon" }: SignOutButtonProps) {
   const router = useRouter();
-  const { toast } = useToast();
   
   const handleSignOut = async () => {
     try {
@@ -23,9 +22,7 @@ export function SignOutButton({ variant = "ghost", size = "icon" }: SignOutButto
       router.refresh();
     } catch (error) {
       console.error('Sign out error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to sign out. Please try again.",
       });
     }

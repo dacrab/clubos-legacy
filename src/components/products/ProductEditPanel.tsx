@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Product } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { FormField } from "@/components/ui/form-field"
+import { SelectField } from "@/components/ui/select-field"
 import { Label } from "@/components/ui/label"
 import {
   Sheet,
@@ -14,12 +15,14 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import {
   Tabs,
   TabsContent,
@@ -28,8 +31,21 @@ import {
 } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Upload, X, Link as LinkIcon } from "lucide-react"
+import { toast } from "sonner"
+import { 
+  Loader2, 
+  Upload, 
+  X, 
+  Link as LinkIcon, 
+  Trash2,
+  Package,
+  DollarSign,
+  Boxes,
+  Tags,
+  Tag,
+  Save,
+  XCircle
+} from "lucide-react"
 
 interface ProductEditPanelProps {
   product: Product
@@ -47,12 +63,12 @@ export function ProductEditPanel({
   subcategories,
 }: ProductEditPanelProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [hasUnlimitedStock, setHasUnlimitedStock] = useState(product.stock === -1)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product.image_url)
   const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description,
@@ -67,45 +83,37 @@ export function ProductEditPanel({
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleImageUrlChange = (url: string) => {
-    setFormData(prev => ({ ...prev, image_url: url }))
-    setImagePreview(url)
-    setImageFile(null)
-  }
-
-  const validateImageUrl = (url: string) => {
-    try {
-      new URL(url)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const validateImage = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      throw new Error("Please upload an image file.")
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error("Image size should be less than 5MB.")
-    }
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     try {
-      validateImage(file)
+      if (!file.type.startsWith('image/')) {
+        throw new Error("Please upload an image file.")
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Image size should be less than 5MB.")
+      }
+
       setImageFile(file)
       setImagePreview(URL.createObjectURL(file))
       setFormData(prev => ({ ...prev, image_url: "" }))
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Image",
+      toast.error("Invalid Image", {
         description: error instanceof Error ? error.message : "Invalid image file"
+      })
+    }
+  }
+
+  const handleImageUrl = (url: string) => {
+    try {
+      new URL(url)
+      setFormData(prev => ({ ...prev, image_url: url }))
+      setImagePreview(url)
+      setImageFile(null)
+    } catch {
+      toast.error("Invalid URL", {
+        description: "Please enter a valid image URL"
       })
     }
   }
@@ -122,7 +130,7 @@ export function ProductEditPanel({
     const fileName = `${crypto.randomUUID()}.${fileExt}`
     const filePath = `product-images/${fileName}`
 
-    const { error, data } = await supabase.storage
+    const { error } = await supabase.storage
       .from('products')
       .upload(filePath, file)
 
@@ -133,6 +141,16 @@ export function ProductEditPanel({
       .getPublicUrl(filePath)
 
     return publicUrl
+  }
+
+  const deleteImage = async (imageUrl: string) => {
+    const imagePath = imageUrl.split('/').pop()
+    if (!imagePath) return
+
+    const supabase = createClient()
+    await supabase.storage
+      .from('products')
+      .remove([`product-images/${imagePath}`])
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -151,18 +169,8 @@ export function ProductEditPanel({
 
       if (imageMethod === "upload" && imageFile) {
         finalImageUrl = await uploadImage(imageFile)
-
         if (product.image_url) {
-          const oldImagePath = product.image_url.split('/').pop()
-          if (oldImagePath) {
-            await supabase.storage
-              .from('products')
-              .remove([`product-images/${oldImagePath}`])
-          }
-        }
-      } else if (imageMethod === "url" && formData.image_url) {
-        if (!validateImageUrl(formData.image_url)) {
-          throw new Error("Please enter a valid image URL")
+          await deleteImage(product.image_url)
         }
       }
 
@@ -178,8 +186,7 @@ export function ProductEditPanel({
         .eq("id", product.id)
         .throwOnError()
 
-      toast({
-        title: "Success",
+      toast.success("Success", {
         description: "Product updated successfully."
       })
 
@@ -188,10 +195,8 @@ export function ProductEditPanel({
 
     } catch (error) {
       console.error("Edit error:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update product. Please try again."
+      toast.error("Error", {
+        description: error instanceof Error ? error.message : "Failed to update product."
       })
     } finally {
       setIsLoading(false)
@@ -199,30 +204,23 @@ export function ProductEditPanel({
   }
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product?")) return
-    
     setIsLoading(true)
 
     try {
       const supabase = createClient()
 
       if (product.image_url) {
-        const imagePath = product.image_url.split('/').pop()
-        if (imagePath) {
-          await supabase.storage
-            .from('products')
-            .remove([`product-images/${imagePath}`])
-        }
+        await deleteImage(product.image_url)
       }
 
-      await supabase
+      const { error } = await supabase
         .from("products")
-        .update({ is_deleted: true })
+        .delete()
         .eq("id", product.id)
-        .throwOnError()
 
-      toast({
-        title: "Success",
+      if (error) throw error
+
+      toast.success("Success", {
         description: "Product deleted successfully."
       })
 
@@ -231,193 +229,222 @@ export function ProductEditPanel({
 
     } catch (error) {
       console.error("Delete error:", error)
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to delete product. Please try again."
       })
     } finally {
       setIsLoading(false)
+      setIsDeleteDialogOpen(false)
     }
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
-          <SheetTitle>Edit Product</SheetTitle>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={e => handleInputChange("name", e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">Price</Label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={e => handleInputChange("price", Number(e.target.value))}
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col">
+          <SheetHeader>
+            <SheetTitle>Edit Product</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto">
+            <form id="editForm" onSubmit={handleSubmit} className="space-y-4 py-4">
+              <FormField
+                id="name"
+                name="name"
+                label="Name"
+                icon={Package}
+                value={formData.name}
+                onChange={e => handleInputChange("name", e.target.value)}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stock">Stock</Label>
-              <div className="flex items-center space-x-2 mb-2">
-                <Switch
-                  id="unlimited-stock"
-                  checked={hasUnlimitedStock}
-                  onCheckedChange={setHasUnlimitedStock}
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  id="price"
+                  name="price"
+                  label="Price"
+                  icon={DollarSign}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={e => handleInputChange("price", Number(e.target.value))}
+                  required
                 />
-                <Label htmlFor="unlimited-stock">Unlimited Stock</Label>
-              </div>
-              <Input
-                id="stock"
-                name="stock"
-                type="number"
-                min="0"
-                value={formData.stock}
-                onChange={e => handleInputChange("stock", Number(e.target.value))}
-                required
-                disabled={hasUnlimitedStock}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select
-                value={formData.category}
-                onValueChange={value => handleInputChange("category", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subcategory">Subcategory</Label>
-              <Select
-                value={formData.subcategory}
-                onValueChange={value => handleInputChange("subcategory", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcategories.map(subcategory => (
-                    <SelectItem key={subcategory} value={subcategory}>
-                      {subcategory}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Product Image</Label>
-            <Tabs 
-              value={imageMethod} 
-              onValueChange={(value: string) => setImageMethod(value as "upload" | "url")} 
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="upload" className="flex items-center gap-2">
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </TabsTrigger>
-                <TabsTrigger value="url" className="flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  Image URL
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="upload" className="mt-4">
-                <div className="flex flex-col gap-4">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="cursor-pointer"
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="url" className="mt-4">
-                <div className="flex flex-col gap-4">
-                  <Input
-                    type="url"
-                    placeholder="Paste image URL here"
-                    value={formData.image_url}
-                    onChange={(e) => handleImageUrlChange(e.target.value)}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
 
-            {imagePreview && (
-              <div className="mt-4">
-                <div className="relative aspect-square w-40 overflow-hidden rounded-lg border">
-                  <Image
-                    src={imagePreview}
-                    alt={formData.name || "Product preview"}
-                    fill
-                    className="object-cover"
-                  />
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Stock</Label>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Switch
+                      id="unlimited-stock"
+                      checked={hasUnlimitedStock}
+                      onCheckedChange={setHasUnlimitedStock}
+                    />
+                    <Label htmlFor="unlimited-stock">Unlimited Stock</Label>
+                  </div>
+                  <FormField
+                    id="stock"
+                    name="stock"
+                    icon={Boxes}
+                    type="number"
+                    min="0"
+                    value={formData.stock}
+                    onChange={e => handleInputChange("stock", Number(e.target.value))}
+                    required
+                    disabled={hasUnlimitedStock} label={""}                />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <SelectField
+                  label="Category"
+                  icon={Tags}
+                  value={formData.category}
+                  onValueChange={value => handleInputChange("category", value)}
+                  placeholder="Select category"
+                  options={categories.map(cat => ({ value: cat, label: cat }))}
+                  required
+                />
+
+                <SelectField
+                  label="Subcategory"
+                  icon={Tag}
+                  value={formData.subcategory}
+                  onValueChange={value => handleInputChange("subcategory", value)}
+                  placeholder="Select subcategory"
+                  options={subcategories.map(sub => ({ value: sub, label: sub }))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Product Image</Label>
+                <Tabs 
+                  value={imageMethod} 
+                  onValueChange={(value: string) => setImageMethod(value as "upload" | "url")} 
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload" className="flex items-center gap-2">
+                      <Upload className="h-4 w-4" />
+                      Upload
+                    </TabsTrigger>
+                    <TabsTrigger value="url" className="flex items-center gap-2">
+                      <LinkIcon className="h-4 w-4" />
+                      Image URL
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="upload" className="mt-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="cursor-pointer w-full rounded-md border border-input px-3 py-2"
+                    />
+                  </TabsContent>
+                  <TabsContent value="url" className="mt-4">
+                    <FormField
+                      type="url"
+                      label="Image URL"
+                      placeholder="Paste image URL here"
+                      value={formData.image_url}
+                      onChange={(e) => handleImageUrl(e.target.value)}
+                      icon={LinkIcon}
+                    />
+                  </TabsContent>
+                </Tabs>
+
+                {imagePreview && (
+                  <div className="mt-4">
+                    <div className="relative aspect-square w-40 overflow-hidden rounded-lg border">
+                      <Image
+                        src={imagePreview}
+                        alt={formData.name}
+                        fill
+                        className="object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={handleRemoveImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className="flex flex-col gap-4 pt-4 border-t">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button type="submit" form="editForm" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" type="button" disabled={isLoading} className="w-full">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Product</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete this product? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
                   <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute right-2 top-2"
-                    onClick={handleRemoveImage}
+                    variant="outline"
+                    onClick={() => setIsDeleteDialogOpen(false)}
+                    disabled={isLoading}
                   >
-                    <X className="h-4 w-4" />
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancel
                   </Button>
-                </div>
-              </div>
-            )}
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
-
-          <div className="flex justify-end gap-4 pt-4">
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isLoading}
-            >
-              Delete
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
