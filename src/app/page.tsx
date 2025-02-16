@@ -8,13 +8,13 @@ interface LoginPageProps {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient()
-  const returnTo = (await searchParams)?.from as string
+  const returnTo = searchParams?.from as string
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    // If user is authenticated and we have a returnTo URL, get their profile
-    if (user && !userError && returnTo) {
+    // If user is authenticated, get their profile and redirect
+    if (user && !userError) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -23,14 +23,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       // Redirect to appropriate dashboard based on role
       if (profile?.role) {
-        return redirect(`/dashboard/${profile.role}`)
+        redirect(`/dashboard/${profile.role}`)
       }
     }
   } catch (error) {
     console.error("Auth check error:", error)
   }
 
-  // Show login form by default
+  // Show login form for unauthenticated users
   return (
     <main className="flex min-h-screen items-center justify-center">
       <LoginForm returnTo={returnTo} />

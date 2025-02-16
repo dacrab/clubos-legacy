@@ -85,7 +85,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         description: "Successfully signed in."
       })
 
-      await router.push(returnTo || `/dashboard/${role}`)
+      router.replace(returnTo || `/dashboard/${role}`)
 
     } catch (error) {
       console.error("Login error:", error)
