@@ -14,13 +14,23 @@ export function NewSaleDialog() {
     queryKey: ['available-products'],
     queryFn: async () => {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          category:category_id(id, name),
+          subcategory:subcategory_id(id, name)
+        `)
         .eq('is_deleted', false)
         .or('stock.gt.0,stock.eq.-1') // Get products with stock > 0 OR stock = -1 (unlimited)
         .order('name');
-      return data || [];
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        return [];
+      }
+
+      return data;
     },
   });
 

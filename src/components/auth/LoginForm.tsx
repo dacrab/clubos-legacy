@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
-import { Eye, EyeOff } from "lucide-react"
+import { z } from "zod"
+
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters")
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
 
 interface LoginFormProps {
   returnTo?: string
@@ -18,10 +24,6 @@ const errorMessages = {
     title: "Invalid credentials",
     description: "The email or password you entered is incorrect."
   },
-  missingFields: {
-    title: "Missing information",
-    description: "Please provide both email and password."
-  },
   profileError: {
     title: "Profile error",
     description: "Unable to retrieve your user profile. Please try again."
@@ -30,12 +32,11 @@ const errorMessages = {
     title: "Connection error",
     description: "Unable to connect to the server. Please check your internet connection and try again."
   }
-}
+} as const
 
 export function LoginForm({ returnTo }: LoginFormProps) {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const router = useRouter()
 
   const handleError = (errorType: keyof typeof errorMessages) => {
     toast.error(errorMessages[errorType].title, {
@@ -44,112 +45,114 @@ export function LoginForm({ returnTo }: LoginFormProps) {
     setIsLoading(false)
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(event.currentTarget)
-    const email = formData.get("email")?.toString()
-    const password = formData.get("password")?.toString()
-
-    if (!email || !password) {
-      handleError('missingFields')
-      return
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      email: formData.get("email")?.toString(),
+      password: formData.get("password")?.toString()
     }
 
     try {
+      const validatedData = loginSchema.parse(data)
+
       const response = await fetch('/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
+        body: JSON.stringify(validatedData),
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        const error = data.error?.toLowerCase()
+        const errorData = await response.json()
+        const error = errorData.error?.toLowerCase() || ''
         
-        if (error?.includes("invalid")) handleError('invalidCredentials')
-        else if (error?.includes("profile")) handleError('profileError')
-        else handleError('connectionError')
+        if (error.includes("invalid") || error.includes("password") || error.includes("user")) {
+          handleError('invalidCredentials')
+        } else if (error.includes("profile")) {
+          handleError('profileError')
+        } else {
+          handleError('connectionError')
+        }
         return
       }
 
       const { role } = await response.json()
       
       if (!role || !['admin', 'staff', 'secretary'].includes(role)) {
-        throw new Error('Invalid role received')
+        handleError('profileError')
+        return
       }
 
       toast.success("Welcome back!", {
         description: "Successfully signed in."
       })
 
-      router.replace(returnTo || `/dashboard/${role}`)
+      router.push(`/dashboard/${role}`)
+      router.refresh()
 
     } catch (error) {
-      console.error("Login error:", error)
-      handleError('connectionError')
+      if (error instanceof z.ZodError) {
+        toast.error("Validation Error", {
+          description: error.errors[0].message
+        })
+      } else {
+        console.error("Login error:", error)
+        handleError('connectionError')
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <Card className="w-[350px]">
-      <CardHeader>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Sign in to your account to continue</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="user@example.com"
-              required
-              disabled={isLoading}
-              autoComplete="email"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Password123"
-                required
-                disabled={isLoading}
-                autoComplete="current-password"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                )}
-                <span className="sr-only">
-                  {showPassword ? "Hide password" : "Show password"}
-                </span>
-              </Button>
-            </div>
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div className="mx-auto w-full max-w-sm space-y-6">
+      <div className="space-y-2 text-center">
+        <h1 className="text-2xl font-bold">Welcome back</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your credentials to sign in
+        </p>
+      </div>
+      <form 
+        onSubmit={handleSubmit} 
+        className="space-y-4"
+        aria-label="Login form"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            placeholder="m@example.com"
+            required
+            type="email"
+            autoComplete="email"
+            aria-label="Email address"
+            className="w-full"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            required
+            type="password"
+            autoComplete="current-password"
+            aria-label="Password"
+            className="w-full"
+          />
+        </div>
+        <Button 
+          className="w-full"
+          type="submit" 
+          disabled={isLoading}
+          aria-label={isLoading ? "Signing in..." : "Sign in"}
+        >
+          {isLoading ? "Signing in..." : "Sign In"}
+        </Button>
+      </form>
+    </div>
   )
 }

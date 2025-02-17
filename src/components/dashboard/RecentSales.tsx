@@ -2,8 +2,8 @@
 
 import { formatDistanceToNow } from "date-fns"
 import { ChevronDown, ChevronUp, Gift, Pencil, Trash2, Ticket } from "lucide-react"
-import { useState } from "react"
-
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditSaleItemDialog } from "@/components/sales/EditSaleItemDialog"
@@ -75,10 +75,10 @@ const SaleItemBadge = ({ type, children }: { type: 'sale' | 'treat' | 'edited' |
 
 const TotalDisplay = ({ subtotal, couponsUsed }: { subtotal: number, couponsUsed: number }) => {
   const couponDiscount = couponsUsed * 2
-  const finalTotal = subtotal - couponDiscount
+  const finalTotal = subtotal - couponDiscount // Final amount after coupon discount
 
   if (!couponsUsed) {
-    return <span className="font-medium">Total: {formatCurrency(finalTotal)}</span>
+    return <span className="font-medium">Total: {formatCurrency(subtotal)}</span>
   }
 
   return (
@@ -243,62 +243,141 @@ const SaleDetails = ({ sale, userId, onRefresh }: {
   )
 }
 
-export function RecentSales({ sales, userId }: RecentSalesProps) {
-  const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set())
-  const [refreshKey, setRefreshKey] = useState(0)
+export interface RecentSalesRef {
+  clearSales: () => void
+}
 
-  if (!sales?.length) {
+export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
+  function RecentSales({ sales, userId }, ref) {
+    const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set())
+    const [refreshKey, setRefreshKey] = useState(0)
+    const [localSales, setLocalSales] = useState<Sale[]>(sales || [])
+    const parentRef = useRef<HTMLDivElement>(null)
+    const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+    const [expandedHeights, setExpandedHeights] = useState<{ [key: string]: number }>({})
+
+    useEffect(() => {
+      setLocalSales(sales || [])
+    }, [sales])
+
+    useEffect(() => {
+      // Measure heights of expanded rows
+      expandedSales.forEach(saleId => {
+        if (rowRefs.current[saleId]) {
+          const height = rowRefs.current[saleId]?.getBoundingClientRect().height || 0
+          setExpandedHeights(prev => ({ ...prev, [saleId]: height }))
+        }
+      })
+      rowVirtualizer.measure()
+    }, [expandedSales])
+
+    useImperativeHandle(ref, () => ({
+      clearSales: () => {
+        setLocalSales([])
+        setExpandedSales(new Set())
+      }
+    }))
+
+    const rowVirtualizer = useVirtualizer({
+      count: localSales.length,
+      getScrollElement: () => parentRef.current,
+      estimateSize: (index) => {
+        const sale = localSales[index]
+        return expandedSales.has(sale.id) ? (expandedHeights[sale.id] || 300) : 100
+      },
+      overscan: 5,
+      measureElement: (element) => {
+        return element?.getBoundingClientRect().height ?? 100
+      }
+    })
+
+    if (!localSales?.length) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">No recent sales found</p>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    const handleToggleSale = (saleId: string) => {
+      setExpandedSales(prev => {
+        const next = new Set(prev)
+        next.has(saleId) ? next.delete(saleId) : next.add(saleId)
+        return next
+      })
+    }
+
+    const handleRefresh = () => setRefreshKey(prev => prev + 1)
+
     return (
       <Card>
         <CardHeader>
           <CardTitle>Recent Sales</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No recent sales found</p>
+          <div
+            ref={parentRef}
+            className="h-[600px] overflow-auto"
+          >
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const sale = localSales[virtualRow.index]
+                const isExpanded = expandedSales.has(sale.id)
+
+                return (
+                  <div
+                    key={`${sale.id}-${refreshKey}`}
+                    ref={(el) => {
+                      rowRefs.current[sale.id] = el
+                    }}
+                    className="absolute left-0 w-full border-b bg-background transition-all duration-200 ease-in-out"
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                      height: 'auto',
+                      minHeight: '100px',
+                    }}
+                  >
+                    <div className="p-4 space-y-4">
+                      <SaleHeader 
+                        sale={sale} 
+                        isExpanded={isExpanded} 
+                        onToggle={() => handleToggleSale(sale.id)} 
+                      />
+                      {isExpanded && (
+                        <div 
+                          className="mt-4 transition-all duration-200 ease-in-out"
+                          style={{
+                            opacity: isExpanded ? 1 : 0,
+                            maxHeight: isExpanded ? '1000px' : '0px',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <SaleDetails 
+                            sale={sale} 
+                            userId={userId} 
+                            onRefresh={handleRefresh} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </CardContent>
       </Card>
     )
   }
-
-  const handleToggleSale = (saleId: string) => {
-    setExpandedSales(prev => {
-      const next = new Set(prev)
-      next.has(saleId) ? next.delete(saleId) : next.add(saleId)
-      return next
-    })
-  }
-
-  const handleRefresh = () => setRefreshKey(prev => prev + 1)
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Sales</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-8">
-          {sales.map((sale) => {
-            const isExpanded = expandedSales.has(sale.id)
-
-            return (
-              <div key={`${sale.id}-${refreshKey}`} className="flex flex-col space-y-4">
-                <SaleHeader 
-                  sale={sale} 
-                  isExpanded={isExpanded} 
-                  onToggle={() => handleToggleSale(sale.id)} 
-                />
-                {isExpanded && (
-                  <SaleDetails 
-                    sale={sale} 
-                    userId={userId} 
-                    onRefresh={handleRefresh} 
-                  />
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+)

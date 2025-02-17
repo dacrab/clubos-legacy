@@ -35,20 +35,43 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
   const [couponsCount, setCouponsCount] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const categories = Array.from(new Set(products?.map(p => p.category) || []))
-  
-  const subcategories = Array.from(new Set(
-    products
-      ?.filter(p => !selectedCategory || p.category === selectedCategory)
-      .map(p => p.subcategory)
-      .filter((s): s is string => s !== null) || []
-  ))
+  // Get unique categories
+  const categories = products
+    ?.filter(p => p.category && p.category_id)
+    .reduce<Array<{ id: string; name: string }>>((acc, product) => {
+      if (!acc.some(c => c.id === product.category_id) && product.category) {
+        acc.push({
+          id: product.category_id!,
+          name: product.category.name
+        });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => a.name.localeCompare(b.name)) || [];
+
+  // Get unique subcategories for the selected category
+  const subcategories = products
+    ?.filter(p => 
+      p.subcategory && 
+      p.subcategory_id && 
+      (!selectedCategory || p.category_id === selectedCategory)
+    )
+    .reduce<Array<{ id: string; name: string }>>((acc, product) => {
+      if (!acc.some(s => s.id === product.subcategory_id) && product.subcategory) {
+        acc.push({
+          id: product.subcategory_id!,
+          name: product.subcategory.name
+        });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => a.name.localeCompare(b.name)) || [];
 
   const filteredProducts = products?.filter(product => 
-    (!selectedCategory || product.category === selectedCategory) &&
-    (!selectedSubcategory || product.subcategory === selectedSubcategory) &&
+    (!selectedCategory || product.category_id === selectedCategory) &&
+    (!selectedSubcategory || product.subcategory_id === selectedSubcategory) &&
     !product.is_deleted
-  ) || null
+  ) || null;
 
   const handleAddToOrder = (product: Product) => {
     const orderId = crypto.randomUUID()
@@ -88,26 +111,40 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
       }
 
       // Get or create register
-      const { data: activeRegister } = await supabase
+      const { data: activeRegister, error: registerError } = await supabase
         .from("registers")
         .select("id, items_sold, coupons_used, treat_items_sold, total_amount")
         .is("closed_at", null)
         .limit(1)
         .single()
 
-      const registerId = activeRegister?.id || (await supabase
-        .from("registers")
-        .insert({
-          opened_at: new Date().toISOString(),
-          items_sold: 0,
-          coupons_used: 0,
-          treat_items_sold: 0,
-          total_amount: 0,
-        })
-        .select()
-        .single())?.data?.id
+      if (registerError && registerError.code !== 'PGRST116') {
+        throw new Error(`Failed to get register: ${registerError.message}`)
+      }
 
-      if (!registerId) throw new Error("Failed to get/create register")
+      const { data: newRegister, error: createRegisterError } = !activeRegister 
+        ? await supabase
+            .from("registers")
+            .insert({
+              opened_at: new Date().toISOString(),
+              items_sold: 0,
+              coupons_used: 0,
+              treat_items_sold: 0,
+              total_amount: 0
+            })
+            .select()
+            .single()
+        : { data: null, error: null }
+
+      if (createRegisterError) {
+        throw new Error(`Failed to create register: ${createRegisterError.message}`)
+      }
+
+      const registerId = activeRegister?.id || newRegister?.id
+
+      if (!registerId) {
+        throw new Error("Failed to get/create register")
+      }
 
       // Calculate totals
       const total = orderItems.reduce(
@@ -115,19 +152,26 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
         0
       ) - (couponsCount * 2)
 
+      const now = new Date().toISOString()
+
       // Create sale
-      const { data: sale } = await supabase
+      const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
           register_id: registerId,
           total_amount: Math.max(0, total),
           coupon_applied: couponsCount > 0,
+          coupons_used: couponsCount,
           created_by: user.id,
+          created_at: now,
+          updated_at: now,
+          is_treat: orderItems.some(item => item.is_treat_selected)
         })
         .select()
         .single()
 
-      if (!sale) throw new Error("Failed to create sale")
+      if (saleError) throw new Error(`Failed to create sale: ${saleError.message}`)
+      if (!sale) throw new Error("Failed to create sale: No sale was created")
 
       // Create sale items
       const saleItems = orderItems.map(item => ({
@@ -136,89 +180,67 @@ export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
         quantity: 1,
         price_at_sale: item.is_treat_selected ? 0 : item.price,
         is_treat: item.is_treat_selected,
+        created_at: now,
+        is_deleted: false
       }))
 
-      await supabase.from("sale_items").insert(saleItems)
+      const { error: saleItemsError } = await supabase
+        .from("sale_items")
+        .insert(saleItems)
+
+      if (saleItemsError) {
+        // Rollback sale if sale items creation fails
+        await supabase.from("sales").delete().eq("id", sale.id)
+        throw new Error(`Failed to create sale items: ${saleItemsError.message}`)
+      }
 
       // Update register
       const treatsCount = orderItems.filter(item => item.is_treat_selected).length
-      await supabase
+      const { error: registerUpdateError } = await supabase
         .from("registers")
         .update({
           items_sold: (activeRegister?.items_sold || 0) + orderItems.length,
           coupons_used: (activeRegister?.coupons_used || 0) + couponsCount,
           treat_items_sold: (activeRegister?.treat_items_sold || 0) + treatsCount,
           total_amount: (activeRegister?.total_amount || 0) + Math.max(0, total),
-          updated_at: new Date().toISOString()
+          updated_at: now
         })
         .eq("id", registerId)
 
+      if (registerUpdateError) {
+        throw new Error(`Failed to update register: ${registerUpdateError.message}`)
+      }
+
       // Update stock
       for (const item of orderItems) {
-        try {
-          console.log(`Attempting to update stock for product ${item.name} (${item.id})`)
-          
-          // Get current stock
-          const { data: product, error: stockCheckError } = await supabase
-            .from("products")
-            .select("id, stock, name")
-            .eq("id", item.id)
-            .single()
+        if (item.stock === -1) continue // Skip unlimited stock items
 
-          if (stockCheckError) {
-            console.error("Stock check error:", stockCheckError)
-            toast.error("Warning", {
-              description: `Failed to check stock for ${item.name}. Please verify manually.`
-            })
-            continue
-          }
+        const { data: product, error: stockCheckError } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.id)
+          .single()
 
-          if (!product) {
-            console.error("Product not found:", item.id)
-            toast.error("Warning", {
-              description: `Product ${item.name} not found.`
-            })
-            continue
-          }
+        if (stockCheckError) {
+          console.error(`Failed to check stock for product ${item.id}:`, stockCheckError)
+          continue
+        }
 
-          console.log(`Current stock for ${product.name}: ${product.stock}`)
+        if (!product) {
+          console.error(`Product not found: ${item.id}`)
+          continue
+        }
 
-          // Get user role before update
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user?.id)
-            .single()
-
-          console.log(`Attempting update as user role: ${profile?.role}`)
-
-          // Update stock
-          const { data: updateData, error: updateError } = await supabase
-            .from("products")
-            .update({
-              stock: Math.max(0, product.stock - 1)
-            })
-            .eq("id", item.id)
-            .select()
-
-          if (updateError) {
-            console.error("Stock update error details:", {
-              error: updateError,
-              productId: item.id,
-              currentStock: product.stock,
-              userRole: profile?.role
-            })
-            toast.error("Warning", {
-              description: `Failed to update stock for ${item.name}. Error: ${updateError.message}`
-            })
-          } else {
-            console.log(`Successfully updated stock for ${product.name} to ${Math.max(0, product.stock - 1)}`)
-          }
-        } catch (error) {
-          console.error("Stock update failed:", error)
-          toast.error("Warning", {
-            description: `Error updating stock. Please verify inventory manually.`
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({
+            stock: product.stock === -1 ? -1 : Math.max(0, product.stock - 1),
+            updated_at: now
           })
+          .eq("id", item.id)
+
+        if (updateError) {
+          console.error(`Failed to update stock for product ${item.id}:`, updateError)
         }
       }
 

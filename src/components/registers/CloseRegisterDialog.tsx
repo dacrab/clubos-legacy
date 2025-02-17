@@ -24,6 +24,7 @@ interface CloseRegisterDialogProps {
   itemsSold: number
   couponsUsed: number
   treatsCount: number
+  onRegisterClosed?: () => void
 }
 
 export function CloseRegisterDialog({
@@ -32,6 +33,7 @@ export function CloseRegisterDialog({
   itemsSold,
   couponsUsed,
   treatsCount,
+  onRegisterClosed
 }: CloseRegisterDialogProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -73,6 +75,7 @@ export function CloseRegisterDialog({
       })
 
       setIsOpen(false)
+      onRegisterClosed?.()
       router.refresh()
     } catch (error) {
       console.error("Close register error:", error)

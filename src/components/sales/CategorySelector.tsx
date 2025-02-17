@@ -2,13 +2,18 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
+interface Category {
+  id: string
+  name: string
+}
+
 interface CategorySelectorProps {
-  categories: string[]
-  subcategories: string[]
+  categories: Category[]
+  subcategories: Category[]
   selectedCategory: string | null
   selectedSubcategory: string | null
-  onSelectCategory: (category: string | null) => void
-  onSelectSubcategory: (subcategory: string | null) => void
+  onSelectCategory: (categoryId: string | null) => void
+  onSelectSubcategory: (subcategoryId: string | null) => void
 }
 
 export function CategorySelector({
@@ -38,24 +43,24 @@ export function CategorySelector({
           All Products
         </Button>
         {categories.map((category) => (
-          <div key={category} className="space-y-1">
+          <div key={category.id} className="space-y-1">
             <Button
               variant="ghost"
               className={cn(
                 "justify-start",
-                selectedCategory === category && "bg-accent text-accent-foreground"
+                selectedCategory === category.id && "bg-accent text-accent-foreground"
               )}
               onClick={() => {
-                onSelectCategory(category)
+                onSelectCategory(category.id)
                 onSelectSubcategory(null)
               }}
             >
-              {category}
+              {category.name}
             </Button>
-            {selectedCategory === category && subcategories.length > 0 && (
+            {selectedCategory === category.id && subcategories.length > 0 && (
               <div className="ml-4 flex flex-col gap-1">
                 <Button
-                  key={`all-${category}`}
+                  key={`${category.id}-all`}
                   variant="ghost"
                   size="sm"
                   className={cn(
@@ -64,21 +69,21 @@ export function CategorySelector({
                   )}
                   onClick={() => onSelectSubcategory(null)}
                 >
-                  All {category}
+                  All {category.name}
                 </Button>
                 {subcategories.map((subcategory) => (
                   <Button
-                    key={`${category}-${subcategory}`}
+                    key={`${category.id}-${subcategory.id}`}
                     variant="ghost"
                     size="sm"
                     className={cn(
                       "justify-start",
-                      selectedSubcategory === subcategory &&
+                      selectedSubcategory === subcategory.id &&
                         "bg-muted text-muted-foreground"
                     )}
-                    onClick={() => onSelectSubcategory(subcategory)}
+                    onClick={() => onSelectSubcategory(subcategory.id)}
                   >
-                    {subcategory}
+                    {subcategory.name}
                   </Button>
                 ))}
               </div>

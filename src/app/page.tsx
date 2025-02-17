@@ -3,12 +3,13 @@ import { createClient } from "@/lib/supabase/server"
 import { LoginForm } from "@/components/auth/LoginForm"
 
 interface LoginPageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const supabase = await createClient()
-  const returnTo = searchParams?.from as string
+  const params = await searchParams
+  const returnTo = params?.from as string
 
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser()

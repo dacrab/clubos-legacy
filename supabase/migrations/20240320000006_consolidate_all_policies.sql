@@ -27,6 +27,19 @@ USING (
   )
 );
 
+-- Policy for staff to insert new sale_items
+CREATE POLICY "Staff can insert sale_items"
+ON sale_items
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'staff'
+  )
+);
+
 -- Policy for staff to update sale_items within 5 minutes
 CREATE POLICY "Staff can update recent sale_items"
 ON sale_items
@@ -58,4 +71,4 @@ USING (
 );
 
 -- Grant necessary permissions to authenticated users
-GRANT SELECT, UPDATE, DELETE ON sale_items TO authenticated; 
+GRANT SELECT, INSERT, UPDATE, DELETE ON sale_items TO authenticated; 

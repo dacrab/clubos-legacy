@@ -9,26 +9,31 @@ import { Product } from "@/types"
 export default async function ProductsPage() {
   const supabase = await createClient()
 
-  const { data: rawProducts = [] } = await supabase
+  // Fetch products with category and subcategory data
+  const { data: products = [] } = await supabase
     .from("products")
-    .select("*")
+    .select(`
+      *,
+      category:categories!category_id(id, name),
+      subcategory:categories!subcategory_id(id, name)
+    `)
     .order("name", { ascending: true })
 
-  // Ensure products is never null
-  const products: Product[] = rawProducts || []
+  // Fetch categories (parent categories only)
+  const { data: categories = [] } = await supabase
+    .from("categories")
+    .select("id, name")
+    .is("parent_id", null)
+    .eq("is_deleted", false)
+    .order("name", { ascending: true })
 
-  // Get unique categories and subcategories for the new product form
-  const categories = Array.from(
-    new Set(products.map((product) => product.category))
-  ).filter(Boolean) // Remove any null/undefined values
-
-  const subcategories = Array.from(
-    new Set(
-      products
-        .map((product) => product.subcategory)
-        .filter((subcategory): subcategory is string => subcategory !== null)
-    )
-  )
+  // Fetch subcategories
+  const { data: subcategories = [] } = await supabase
+    .from("categories")
+    .select("id, name, parent_id")
+    .not("parent_id", "is", null)
+    .eq("is_deleted", false)
+    .order("name", { ascending: true })
 
   return (
     <DashboardShell>
@@ -37,14 +42,21 @@ export default async function ProductsPage() {
         description="Manage your warehouse products"
       >
         <div className="flex gap-2">
-          <NewProductSheet categories={categories} subcategories={subcategories} />
+          <NewProductSheet 
+            categories={categories.map(c => c.name)} 
+            subcategories={subcategories.map(s => s.name)} 
+          />
           <ManageCategoriesDialog 
-            existingCategories={categories} 
-            existingSubcategories={subcategories} 
+            existingCategories={categories.map(c => c.name)} 
+            existingSubcategories={subcategories.map(s => s.name)} 
           />
         </div>
       </DashboardHeader>
-      <ProductsTable products={products} />
+      <ProductsTable 
+        products={products} 
+        categories={categories}
+        subcategories={subcategories}
+      />
     </DashboardShell>
   )
 } 

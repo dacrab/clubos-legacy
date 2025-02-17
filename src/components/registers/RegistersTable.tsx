@@ -21,9 +21,10 @@ import {
   DollarSign,
   Info
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import React from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
 
 interface RegistersTableProps {
   registers: Register[] | null
@@ -52,7 +53,8 @@ interface TreatSummary {
 
 const TotalDisplay = ({ totalIncome, couponsUsed: _couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
   const couponDiscount = _couponsUsed * 2
-  const finalTotal = totalIncome - couponDiscount
+  const finalTotal = totalIncome
+  const subtotal = totalIncome + couponDiscount
 
   if (!_couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
@@ -60,7 +62,7 @@ const TotalDisplay = ({ totalIncome, couponsUsed: _couponsUsed }: { totalIncome:
 
   return (
     <>
-      <div className="text-sm">Subtotal: {formatCurrency(totalIncome)}</div>
+      <div className="text-sm">Subtotal: {formatCurrency(subtotal)}</div>
       <div className="text-sm text-red-600">
         Coupon discount: -{formatCurrency(couponDiscount)}
       </div>
@@ -107,6 +109,20 @@ const StatusBadge = ({ type, children, count }: { type: 'sale' | 'treat' | 'edit
 
 export function RegistersTable({ registers }: RegistersTableProps) {
   const [expandedRegisters, setExpandedRegisters] = useState<Set<string>>(new Set())
+  const tableRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const [expandedHeights, setExpandedHeights] = useState<{ [key: string]: number }>({})
+
+  useEffect(() => {
+    // Measure heights of expanded rows
+    expandedRegisters.forEach(registerId => {
+      if (rowRefs.current[registerId]) {
+        const height = rowRefs.current[registerId]?.getBoundingClientRect().height || 0
+        setExpandedHeights(prev => ({ ...prev, [registerId]: height }))
+      }
+    })
+    rowVirtualizer.measure()
+  }, [expandedRegisters])
 
   if (!registers?.length) {
     return (
@@ -117,6 +133,19 @@ export function RegistersTable({ registers }: RegistersTableProps) {
       </Card>
     )
   }
+
+  const rowVirtualizer = useVirtualizer({
+    count: registers.length,
+    getScrollElement: () => tableRef.current,
+    estimateSize: (index) => {
+      const register = registers[index]
+      return expandedRegisters.has(register.id) ? (expandedHeights[register.id] || 400) : 100
+    },
+    overscan: 5,
+    measureElement: (element) => {
+      return element?.getBoundingClientRect().height ?? 100
+    }
+  })
 
   const handleToggleRegister = (registerId: string) => {
     setExpandedRegisters(prev => {
@@ -216,91 +245,118 @@ export function RegistersTable({ registers }: RegistersTableProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="relative w-full overflow-auto">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="[&_tr]:border-b">
-              <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Closed At
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Closed By
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Items Sold
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <Ticket className="h-4 w-4" />
-                    Coupons Used
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-4 w-4" />
-                    Treats
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Total
-                  </div>
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Details
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="[&_tr:last-child]:border-0">
-              {registers.map((register) => {
+        <div className="relative rounded-md border">
+          <div className="border-b sticky top-0 z-20 bg-background">
+            <div className="flex items-center h-12">
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Closed At
+                </div>
+              </div>
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Closed By
+                </div>
+              </div>
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Items Sold
+                </div>
+              </div>
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-4 w-4" />
+                  Coupons Used
+                </div>
+              </div>
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <Heart className="h-4 w-4" />
+                  Treats
+                </div>
+              </div>
+              <div className="w-[15%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Total
+                </div>
+              </div>
+              <div className="w-[10%] px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Details
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            ref={tableRef}
+            className="h-[600px] overflow-auto"
+          >
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const register = registers[virtualRow.index]
                 const isExpanded = expandedRegisters.has(register.id)
                 const productSummary = getProductSummary(register)
                 const totalIncome = calculateTotalIncome(productSummary)
-                // Show all products, including deleted ones
                 const nonTreatProducts = productSummary.filter(p => !p.is_treat)
                 const treats = getTreatSummary(register)
 
                 return (
-                  <React.Fragment key={register.id}>
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                      <td className="p-4 align-middle">
-                        {register.closed_at ? formatDate(new Date(register.closed_at)) : "Open"}
-                      </td>
-                      <td className="p-4 align-middle">{register.closed_by_name || "N/A"}</td>
-                      <td className="p-4 align-middle">{register.items_sold}</td>
-                      <td className="p-4 align-middle">{register.coupons_used}</td>
-                      <td className="p-4 align-middle">{register.treat_items_sold}</td>
-                      <td className="p-4 align-middle">
-                        <div className="flex flex-col gap-1">
-                          <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
+                  <div
+                    key={register.id}
+                    ref={(el) => {
+                      rowRefs.current[register.id] = el
+                    }}
+                    className="absolute left-0 w-full border-b bg-background transition-all duration-200 ease-in-out"
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                      height: 'auto',
+                      minHeight: '100px',
+                    }}
+                  >
+                    <div className="p-4 space-y-4">
+                      <div className="flex items-center min-h-[60px]">
+                        <div className="w-[15%]">
+                          {register.closed_at ? formatDate(new Date(register.closed_at)) : "Open"}
                         </div>
-                      </td>
-                      <td className="p-4 align-middle">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleRegister(register.id)}
+                        <div className="w-[15%]">{register.closed_by_name || "N/A"}</div>
+                        <div className="w-[15%]">{register.items_sold}</div>
+                        <div className="w-[15%]">{register.coupons_used}</div>
+                        <div className="w-[15%]">{register.treat_items_sold}</div>
+                        <div className="w-[15%]">
+                          <div className="flex flex-col gap-1">
+                            <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
+                          </div>
+                        </div>
+                        <div className="w-[10%]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleRegister(register.id)}
+                          >
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div 
+                          className="mt-4 transition-all duration-200 ease-in-out"
+                          style={{
+                            opacity: isExpanded ? 1 : 0,
+                            maxHeight: isExpanded ? '1000px' : '0px',
+                            overflow: 'hidden'
+                          }}
                         >
-                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={7} className="p-4">
                           <div className="rounded-lg border bg-muted/50 p-4">
                             <table className="w-full">
                               <thead>
@@ -363,14 +419,14 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                               </tbody>
                             </table>
                           </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

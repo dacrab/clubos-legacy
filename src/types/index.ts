@@ -17,12 +17,20 @@ export interface Product {
   stock: number
   is_treat: boolean
   image_url: string | null
-  category: string
-  subcategory: string | null
+  category_id: string | null
+  subcategory_id: string | null
   last_edited_by?: string
   is_deleted: boolean
   created_at: string
   updated_at: string
+  category?: {
+    id: string
+    name: string
+  } | null
+  subcategory?: {
+    id: string
+    name: string
+  } | null
 }
 
 export interface Order {
