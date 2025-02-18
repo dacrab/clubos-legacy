@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useEffect, useState } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import {
@@ -21,8 +21,10 @@ import {
   DollarSign,
   ChevronRight
 } from "lucide-react"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { TableDateFilter } from "@/components/ui/table-date-filter"
+import type { DateRange } from "react-day-picker"
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
 
 // Types
 interface SalesTableProps {
@@ -42,8 +44,8 @@ interface ProductSummary {
 // Components
 const TotalDisplay = ({ totalAmount, couponsUsed }: { totalAmount: number, couponsUsed: number }) => {
   const couponDiscount = couponsUsed * 2
-  const subtotal = totalAmount
-  const finalTotal = subtotal - couponDiscount
+  const subtotal = totalAmount // Original amount before discounts
+  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
 
   if (!couponsUsed) {
     return <span className="font-medium">{formatCurrency(totalAmount)}</span>
@@ -122,12 +124,12 @@ const ProductRow = ({ product }: { product: ProductSummary }) => {
 const SaleDetails = ({ sale, productSummary }: { sale: Sale, productSummary: ProductSummary[] }) => {
   const calculateSubtotal = () => {
     return productSummary.reduce((total, product) => 
-      total + (product.is_deleted ? 0 : product.total), 0)
+      total + (!product.is_deleted ? product.total : 0), 0)
   }
 
   const subtotal = calculateSubtotal()
   const couponDiscount = sale.coupon_applied ? sale.coupons_used * 2 : 0
-  const finalTotal = subtotal - couponDiscount
+  const finalTotal = Math.max(0, subtotal - couponDiscount)
 
   return (
     <div className="rounded-lg border bg-muted/50 p-4 mb-4 relative z-10">
@@ -181,6 +183,7 @@ const TableHeader = () => (
 
 export function SalesTable({ sales }: SalesTableProps) {
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const tableRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [expandedHeight, setExpandedHeight] = useState<number>(0)
@@ -188,6 +191,33 @@ export function SalesTable({ sales }: SalesTableProps) {
   const handleToggleSale = (saleId: string) => {
     setExpandedSaleId(prev => prev === saleId ? null : saleId)
   }
+
+  const handleDateChange = (range: DateRange | undefined) => {
+    setDateRange(range)
+    setExpandedSaleId(null)
+  }
+
+  const handleClearDateFilter = () => {
+    setDateRange(undefined)
+    setExpandedSaleId(null)
+  }
+
+  const filteredSales = React.useMemo(() => {
+    if (!sales) return null
+    if (!dateRange?.from) return sales
+
+    return sales.filter(sale => {
+      const saleDate = parseISO(sale.created_at)
+      const from = dateRange.from
+
+      if (!from) return true
+
+      const start = startOfDay(from)
+      const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(from)
+
+      return isWithinInterval(saleDate, { start, end })
+    })
+  }, [sales, dateRange])
 
   const getProductSummary = (sale: Sale): ProductSummary[] => {
     const productMap = new Map<string, ProductSummary>()
@@ -244,86 +274,95 @@ export function SalesTable({ sales }: SalesTableProps) {
   }
 
   const rowVirtualizer = useVirtualizer({
-    count: sales.length,
+    count: filteredSales?.length || 0,
     getScrollElement: () => tableRef.current,
-    estimateSize: (index) => expandedSaleId === sales[index].id ? expandedHeight : 100,
+    estimateSize: (index) => {
+      const sale = filteredSales?.[index]
+      return expandedSaleId === sale?.id ? expandedHeight : 100
+    },
     overscan: 5,
-    measureElement: element => element?.getBoundingClientRect().height ?? 100
   })
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sales ({sales.length})</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Sales History</CardTitle>
+          <TableDateFilter
+            date={dateRange}
+            onDateChange={handleDateChange}
+            onClearFilter={handleClearDateFilter}
+          />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="relative rounded-md border">
+      <CardContent className="p-0">
+        <div
+          ref={tableRef}
+          className="relative h-[600px] overflow-auto"
+        >
           <TableHeader />
-          <div ref={tableRef} className="h-[600px] overflow-auto">
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const sale = sales[virtualRow.index]
-                const isExpanded = expandedSaleId === sale.id
-                const productSummary = getProductSummary(sale)
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative"
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const sale = filteredSales?.[virtualRow.index]
+              if (!sale) return null
 
-                return (
-                  <div
-                    key={sale.id}
-                    ref={el => { rowRefs.current[sale.id] = el }}
-                    className="absolute left-0 w-full border-b bg-background transition-all duration-200 ease-in-out"
-                    style={{
-                      top: 0,
-                      transform: `translateY(${virtualRow.start}px)`,
-                      height: 'auto',
-                      minHeight: '100px',
-                    }}
-                  >
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-center min-h-[60px]">
-                        <div className="w-[20%]">{formatDate(new Date(sale.created_at))}</div>
-                        <div className="w-[20%]">{sale.profile.name}</div>
-                        <div className="w-[20%]">
-                          {sale.sale_items.reduce((sum, item) => sum + item.quantity, 0)}
-                        </div>
-                        <div className="w-[30%] flex flex-col justify-center py-2">
-                          <TotalDisplay 
-                            totalAmount={sale.total_amount} 
-                            couponsUsed={sale.coupon_applied ? sale.coupons_used : 0} 
-                          />
-                        </div>
-                        <div className="w-[10%]">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleSale(sale.id)}
-                          >
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </Button>
-                        </div>
+              const productSummary = getProductSummary(sale)
+              const isExpanded = expandedSaleId === sale.id
+
+              return (
+                <div
+                  key={sale.id}
+                  ref={(el) => {
+                    rowRefs.current[sale.id] = el
+                  }}
+                  className="absolute top-0 left-0 w-full"
+                  style={{
+                    height: virtualRow.size,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <div className="flex items-center py-4 px-4 hover:bg-muted/50">
+                    <div className="w-[20%]">{formatDate(parseISO(sale.created_at))}</div>
+                    <div className="w-[20%]">{sale.profile.name}</div>
+                    <div className="w-[20%]">{sale.sale_items.length} items</div>
+                    <div className="w-[30%]">
+                      <div className="flex flex-col">
+                        <TotalDisplay
+                          totalAmount={sale.total_amount}
+                          couponsUsed={sale.coupon_applied ? sale.coupons_used : 0}
+                        />
+                        <SaleStatusIcons sale={sale} />
                       </div>
-                      {isExpanded && (
-                        <div 
-                          className="mt-4 transition-all duration-200 ease-in-out"
-                          style={{
-                            opacity: isExpanded ? 1 : 0,
-                            maxHeight: isExpanded ? '1000px' : '0px',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          <SaleDetails sale={sale} productSummary={productSummary} />
-                        </div>
-                      )}
+                    </div>
+                    <div className="w-[10%] text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleToggleSale(sale.id)}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                  {isExpanded && (
+                    <SaleDetails
+                      sale={sale}
+                      productSummary={productSummary}
+                    />
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </CardContent>

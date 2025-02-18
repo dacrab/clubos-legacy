@@ -75,7 +75,7 @@ const SaleItemBadge = ({ type, children }: { type: 'sale' | 'treat' | 'edited' |
 
 const TotalDisplay = ({ subtotal, couponsUsed }: { subtotal: number, couponsUsed: number }) => {
   const couponDiscount = couponsUsed * 2
-  const finalTotal = subtotal - couponDiscount // Final amount after coupon discount
+  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
 
   if (!couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(subtotal)}</span>

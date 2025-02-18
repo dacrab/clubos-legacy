@@ -12,20 +12,23 @@ import {
   ChevronDown, 
   ChevronUp, 
   Gift, 
-  ShoppingCart,
   Calendar,
   User,
   Package,
   Ticket,
   Heart,
   DollarSign,
-  Info
+  Info,
 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { TableDateFilter } from "@/components/ui/table-date-filter"
+import type { DateRange } from "react-day-picker"
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
 
+// Types
 interface RegistersTableProps {
   registers: Register[] | null
 }
@@ -51,12 +54,13 @@ interface TreatSummary {
   delete_count: number
 }
 
-const TotalDisplay = ({ totalIncome, couponsUsed: _couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
-  const couponDiscount = _couponsUsed * 2
-  const finalTotal = totalIncome
-  const subtotal = totalIncome + couponDiscount
+// Components
+const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
+  const couponDiscount = couponsUsed * 2
+  const subtotal = totalIncome // This is the sum of all non-treat, non-deleted items
+  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
 
-  if (!_couponsUsed) {
+  if (!couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
   }
 
@@ -107,14 +111,73 @@ const StatusBadge = ({ type, children, count }: { type: 'sale' | 'treat' | 'edit
   )
 }
 
+const TableHeader = () => (
+  <div className="border-b sticky top-0 z-20 bg-background">
+    <div className="flex items-center h-12">
+      <HeaderCell icon={<Calendar className="h-4 w-4" />} text="Closed At" width="15%" />
+      <HeaderCell icon={<User className="h-4 w-4" />} text="Closed By" width="15%" />
+      <HeaderCell icon={<Package className="h-4 w-4" />} text="Items Sold" width="15%" />
+      <HeaderCell icon={<Ticket className="h-4 w-4" />} text="Coupons Used" width="15%" />
+      <HeaderCell icon={<Heart className="h-4 w-4" />} text="Treats" width="15%" />
+      <HeaderCell icon={<DollarSign className="h-4 w-4" />} text="Total" width="15%" />
+      <HeaderCell icon={<Info className="h-4 w-4" />} text="Details" width="10%" />
+    </div>
+  </div>
+)
+
+const HeaderCell = ({ icon, text, width }: { icon: React.ReactNode, text: string, width: string }) => (
+  <div className={`w-[${width}] px-4 font-medium`}>
+    <div className="flex items-center gap-2">
+      {icon}
+      {text}
+    </div>
+  </div>
+)
+
+// Main Component
 export function RegistersTable({ registers }: RegistersTableProps) {
   const [expandedRegisters, setExpandedRegisters] = useState<Set<string>>(new Set())
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const tableRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [expandedHeights, setExpandedHeights] = useState<{ [key: string]: number }>({})
 
+  const handleToggleRegister = (registerId: string) => {
+    setExpandedRegisters(prev => {
+      const next = new Set(prev)
+      if (next.has(registerId)) {
+        next.delete(registerId)
+      } else {
+        next.add(registerId)
+      }
+      return next
+    })
+  }
+
+  const handleDateChange = (range: DateRange | undefined) => {
+    setDateRange(range)
+    setExpandedRegisters(new Set())
+  }
+
+  const handleClearDateFilter = () => {
+    setDateRange(undefined)
+    setExpandedRegisters(new Set())
+  }
+
+  const filteredRegisters = React.useMemo(() => {
+    if (!registers) return null
+    if (!dateRange?.from) return registers
+
+    return registers.filter(register => {
+      const registerDate = parseISO(register.closed_at || register.opened_at)
+      const start = startOfDay(dateRange.from as Date)
+      const end = dateRange.to ? endOfDay(dateRange.to as Date) : endOfDay(dateRange.from as Date)
+
+      return isWithinInterval(registerDate, { start, end })
+    })
+  }, [registers, dateRange])
+
   useEffect(() => {
-    // Measure heights of expanded rows
     expandedRegisters.forEach(registerId => {
       if (rowRefs.current[registerId]) {
         const height = rowRefs.current[registerId]?.getBoundingClientRect().height || 0
@@ -135,29 +198,14 @@ export function RegistersTable({ registers }: RegistersTableProps) {
   }
 
   const rowVirtualizer = useVirtualizer({
-    count: registers.length,
+    count: filteredRegisters?.length || 0,
     getScrollElement: () => tableRef.current,
     estimateSize: (index) => {
-      const register = registers[index]
-      return expandedRegisters.has(register.id) ? (expandedHeights[register.id] || 400) : 100
+      const register = filteredRegisters?.[index]
+      return expandedRegisters.has(register?.id || '') ? (expandedHeights[register?.id || ''] || 400) : 100
     },
     overscan: 5,
-    measureElement: (element) => {
-      return element?.getBoundingClientRect().height ?? 100
-    }
   })
-
-  const handleToggleRegister = (registerId: string) => {
-    setExpandedRegisters(prev => {
-      const next = new Set(prev)
-      if (next.has(registerId)) {
-        next.delete(registerId)
-      } else {
-        next.add(registerId)
-      }
-      return next
-    })
-  }
 
   const getProductSummary = (register: Register): ProductSummary[] => {
     const productMap = new Map<string, ProductSummary>()
@@ -232,200 +280,166 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     return Array.from(treatMap.values())
   }
 
-  const calculateTotalIncome = (products: ProductSummary[]): number => {
-    return products.reduce((sum, { total, is_treat }) => sum + (is_treat ? 0 : total), 0)
-  }
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          Closed Registers ({registers.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Registers History</CardTitle>
+          <TableDateFilter
+            date={dateRange}
+            onDateChange={handleDateChange}
+            onClearFilter={handleClearDateFilter}
+          />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="relative rounded-md border">
-          <div className="border-b sticky top-0 z-20 bg-background">
-            <div className="flex items-center h-12">
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Closed At
-                </div>
-              </div>
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Closed By
-                </div>
-              </div>
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Items Sold
-                </div>
-              </div>
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <Ticket className="h-4 w-4" />
-                  Coupons Used
-                </div>
-              </div>
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
-                  Treats
-                </div>
-              </div>
-              <div className="w-[15%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Total
-                </div>
-              </div>
-              <div className="w-[10%] px-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4" />
-                  Details
-                </div>
-              </div>
-            </div>
-          </div>
+      <CardContent className="p-0">
+        <div
+          ref={tableRef}
+          className="relative h-[600px] overflow-auto"
+        >
+          <TableHeader />
           <div
-            ref={tableRef}
-            className="h-[600px] overflow-auto"
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative"
+            }}
           >
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const register = registers[virtualRow.index]
-                const isExpanded = expandedRegisters.has(register.id)
-                const productSummary = getProductSummary(register)
-                const totalIncome = calculateTotalIncome(productSummary)
-                const nonTreatProducts = productSummary.filter(p => !p.is_treat)
-                const treats = getTreatSummary(register)
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const register = filteredRegisters?.[virtualRow.index]
+              if (!register) return null
 
-                return (
-                  <div
-                    key={register.id}
-                    ref={(el) => {
-                      rowRefs.current[register.id] = el
-                    }}
-                    className="absolute left-0 w-full border-b bg-background transition-all duration-200 ease-in-out"
-                    style={{
-                      transform: `translateY(${virtualRow.start}px)`,
-                      height: 'auto',
-                      minHeight: '100px',
-                    }}
-                  >
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-center min-h-[60px]">
-                        <div className="w-[15%]">
-                          {register.closed_at ? formatDate(new Date(register.closed_at)) : "Open"}
-                        </div>
-                        <div className="w-[15%]">{register.closed_by_name || "N/A"}</div>
-                        <div className="w-[15%]">{register.items_sold}</div>
-                        <div className="w-[15%]">{register.coupons_used}</div>
-                        <div className="w-[15%]">{register.treat_items_sold}</div>
-                        <div className="w-[15%]">
-                          <div className="flex flex-col gap-1">
-                            <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
-                          </div>
-                        </div>
-                        <div className="w-[10%]">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleRegister(register.id)}
-                          >
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                      {isExpanded && (
-                        <div 
-                          className="mt-4 transition-all duration-200 ease-in-out"
-                          style={{
-                            opacity: isExpanded ? 1 : 0,
-                            maxHeight: isExpanded ? '1000px' : '0px',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          <div className="rounded-lg border bg-muted/50 p-4">
+              const isExpanded = expandedRegisters.has(register.id)
+              const productSummary = getProductSummary(register)
+              const treatSummary = getTreatSummary(register)
+
+              return (
+                <div
+                  key={register.id}
+                  ref={(el) => {
+                    rowRefs.current[register.id] = el
+                  }}
+                  className="absolute top-0 left-0 w-full"
+                  style={{
+                    height: virtualRow.size,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <div className="flex items-center py-4 px-4 hover:bg-muted/50">
+                    <div className="w-[15%]">
+                      {formatDate(parseISO(register.closed_at || register.opened_at))}
+                    </div>
+                    <div className="w-[15%]">
+                      {register.profiles?.name || 'N/A'}
+                    </div>
+                    <div className="w-[15%]">{register.items_sold}</div>
+                    <div className="w-[15%]">{register.coupons_used}</div>
+                    <div className="w-[15%]">{register.treat_items_sold}</div>
+                    <div className="w-[15%]">
+                      <TotalDisplay
+                        totalIncome={register.total_amount}
+                        couponsUsed={register.coupons_used}
+                      />
+                    </div>
+                    <div className="w-[10%] text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleToggleRegister(register.id)}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div className="px-4 pb-4">
+                      <div className="rounded-lg border bg-muted/50 p-4">
+                        <h3 className="font-medium mb-4">Products Sold</h3>
+                        <div className="space-y-4">
+                          {productSummary.length > 0 && (
                             <table className="w-full">
                               <thead>
                                 <tr>
-                                  <th className="text-left font-medium">Product</th>
-                                  <th className="text-left font-medium">Quantity</th>
-                                  <th className="text-left font-medium">Price</th>
-                                  <th className="text-left font-medium">Total</th>
-                                  <th className="text-left font-medium">Type</th>
-                                  <th className="text-left font-medium">Status</th>
+                                  <th className="text-left font-medium py-2">Product</th>
+                                  <th className="text-left font-medium py-2">Quantity</th>
+                                  <th className="text-left font-medium py-2">Price</th>
+                                  <th className="text-left font-medium py-2">Total</th>
+                                  <th className="text-left font-medium py-2">Status</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {nonTreatProducts.map(({ name, quantity, price, total, is_treat, is_edited, is_deleted, edit_count, delete_count }, index) => (
-                                  <tr key={`sale-${index}`}>
-                                    <td className="py-2">{name}</td>
-                                    <td className="py-2">{quantity}</td>
-                                    <td className="py-2">{formatCurrency(price)}</td>
-                                    <td className="py-2">{formatCurrency(total)}</td>
-                                    <td className="py-2">
-                                      <StatusBadge type="sale">
-                                        <ShoppingCart className="h-3 w-3" />Sale
-                                      </StatusBadge>
-                                    </td>
+                                {productSummary.map((product, index) => (
+                                  <tr key={index} className="border-t">
+                                    <td className="py-2">{product.name}</td>
+                                    <td className="py-2">{product.quantity}</td>
+                                    <td className="py-2">{formatCurrency(product.price)}</td>
+                                    <td className="py-2">{formatCurrency(product.total)}</td>
                                     <td className="py-2">
                                       <div className="flex gap-1">
-                                        {is_edited && <StatusBadge type="edited" count={edit_count}>Edited</StatusBadge>}
-                                        {is_deleted && <StatusBadge type="deleted" count={delete_count}>Deleted</StatusBadge>}
+                                        {product.is_edited && (
+                                          <StatusBadge type="edited" count={product.edit_count}>
+                                            Edited
+                                          </StatusBadge>
+                                        )}
+                                        {product.is_deleted && (
+                                          <StatusBadge type="deleted" count={product.delete_count}>
+                                            Deleted
+                                          </StatusBadge>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
                                 ))}
-
-                                {treats.length > 0 && (
-                                  <>
-                                    <tr>
-                                      <td colSpan={6} className="pt-4 pb-2">
-                                        <div className="flex items-center gap-2">
-                                          <Gift className="h-4 w-4 text-pink-500" />
-                                          <span className="font-semibold text-pink-800">
-                                            Treats ({register.treat_items_sold})
-                                          </span>
+                              </tbody>
+                            </table>
+                          )}
+                          {treatSummary.length > 0 && (
+                            <>
+                              <h3 className="font-medium mb-2 mt-6">Treats Given</h3>
+                              <table className="w-full">
+                                <thead>
+                                  <tr>
+                                    <th className="text-left font-medium py-2">Product</th>
+                                    <th className="text-left font-medium py-2">Quantity</th>
+                                    <th className="text-left font-medium py-2">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {treatSummary.map((treat, index) => (
+                                    <tr key={index} className="border-t">
+                                      <td className="py-2">{treat.name}</td>
+                                      <td className="py-2">{treat.quantity}</td>
+                                      <td className="py-2">
+                                        <div className="flex gap-1">
+                                          {treat.is_edited && (
+                                            <StatusBadge type="edited" count={treat.edit_count}>
+                                              Edited
+                                            </StatusBadge>
+                                          )}
+                                          {treat.is_deleted && (
+                                            <StatusBadge type="deleted" count={treat.delete_count}>
+                                              Deleted
+                                            </StatusBadge>
+                                          )}
                                         </div>
                                       </td>
                                     </tr>
-                                    {treats.map((treat, index) => (
-                                      <TreatItem key={`treat-${index}`} {...treat} />
-                                    ))}
-                                  </>
-                                )}
-
-                                <tr className="border-t">
-                                  <td colSpan={4} className="py-2 font-bold text-right">Summary:</td>
-                                  <td colSpan={2} className="py-2">
-                                    <div className="flex flex-col gap-1">
-                                      <TotalDisplay totalIncome={totalIncome} couponsUsed={register.coupons_used} />
-                                    </div>
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </CardContent>
