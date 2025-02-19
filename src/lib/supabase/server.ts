@@ -20,7 +20,7 @@ export async function createClient() {
             ...options,
           });
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string) {
           cookieStore.delete(name);
         },
       },

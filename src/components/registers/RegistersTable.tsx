@@ -11,7 +11,6 @@ import { Register } from "@/types"
 import { 
   ChevronDown, 
   ChevronUp, 
-  Gift, 
   Calendar,
   User,
   Package,
@@ -75,26 +74,6 @@ const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, coupo
   )
 }
 
-const TreatItem = ({ name, quantity, is_edited, is_deleted, edit_count, delete_count }: TreatSummary) => (
-  <tr className="text-sm">
-    <td className="py-1">{name}</td>
-    <td className="py-1">{quantity}</td>
-    <td className="py-1">€0.00</td>
-    <td className="py-1">€0.00</td>
-    <td className="py-1">
-      <StatusBadge type="treat">
-        <Gift className="h-3 w-3" />Treat
-      </StatusBadge>
-    </td>
-    <td className="py-1">
-      <div className="flex gap-1">
-        {is_edited && <StatusBadge type="edited" count={edit_count}>Edited</StatusBadge>}
-        {is_deleted && <StatusBadge type="deleted" count={delete_count}>Deleted</StatusBadge>}
-      </div>
-    </td>
-  </tr>
-)
-
 const StatusBadge = ({ type, children, count }: { type: 'sale' | 'treat' | 'edited' | 'deleted', children: React.ReactNode, count?: number }) => {
   const styles = {
     sale: "bg-green-100 text-green-800",
@@ -139,8 +118,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
   const [expandedRegisters, setExpandedRegisters] = useState<Set<string>>(new Set())
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const tableRef = useRef<HTMLDivElement>(null)
-  const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-  const [expandedHeights, setExpandedHeights] = useState<{ [key: string]: number }>({})
+  const [expandedHeights, setExpandedHeights] = useState<Record<string, number>>({})
 
   const handleToggleRegister = (registerId: string) => {
     setExpandedRegisters(prev => {
@@ -177,15 +155,21 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     })
   }, [registers, dateRange])
 
+  const rowVirtualizer = useVirtualizer({
+    count: filteredRegisters?.length || 0,
+    getScrollElement: () => tableRef.current,
+    estimateSize: (index) => {
+      const register = filteredRegisters?.[index]
+      return expandedRegisters.has(register?.id || '') ? (expandedHeights[register?.id || ''] || 400) : 100
+    },
+    overscan: 5,
+  })
+
   useEffect(() => {
-    expandedRegisters.forEach(registerId => {
-      if (rowRefs.current[registerId]) {
-        const height = rowRefs.current[registerId]?.getBoundingClientRect().height || 0
-        setExpandedHeights(prev => ({ ...prev, [registerId]: height }))
-      }
-    })
-    rowVirtualizer.measure()
-  }, [expandedRegisters])
+    if (tableRef.current) {
+      rowVirtualizer.measure()
+    }
+  }, [expandedRegisters, expandedHeights, rowVirtualizer])
 
   if (!registers?.length) {
     return (
@@ -196,16 +180,6 @@ export function RegistersTable({ registers }: RegistersTableProps) {
       </Card>
     )
   }
-
-  const rowVirtualizer = useVirtualizer({
-    count: filteredRegisters?.length || 0,
-    getScrollElement: () => tableRef.current,
-    estimateSize: (index) => {
-      const register = filteredRegisters?.[index]
-      return expandedRegisters.has(register?.id || '') ? (expandedHeights[register?.id || ''] || 400) : 100
-    },
-    overscan: 5,
-  })
 
   const getProductSummary = (register: Register): ProductSummary[] => {
     const productMap = new Map<string, ProductSummary>()
@@ -284,7 +258,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Registers History</CardTitle>
+          <CardTitle>Closed Registers</CardTitle>
           <TableDateFilter
             date={dateRange}
             onDateChange={handleDateChange}
@@ -292,136 +266,113 @@ export function RegistersTable({ registers }: RegistersTableProps) {
           />
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        <div
-          ref={tableRef}
-          className="relative h-[600px] overflow-auto"
-        >
+      <CardContent>
+        <div className="space-y-4">
           <TableHeader />
           <div
+            ref={tableRef}
+            className="relative h-[600px] overflow-auto"
             style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative"
+              contain: 'strict',
             }}
           >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const register = filteredRegisters?.[virtualRow.index]
-              if (!register) return null
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const register = filteredRegisters?.[virtualRow.index]
+                if (!register) return null
 
-              const isExpanded = expandedRegisters.has(register.id)
-              const productSummary = getProductSummary(register)
-              const treatSummary = getTreatSummary(register)
+                const isExpanded = expandedRegisters.has(register.id)
+                const productSummary = getProductSummary(register)
+                const treatSummary = getTreatSummary(register)
 
-              return (
-                <div
-                  key={register.id}
-                  ref={(el) => {
-                    rowRefs.current[register.id] = el
-                  }}
-                  className="absolute top-0 left-0 w-full"
-                  style={{
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <div className="flex items-center py-4 px-4 hover:bg-muted/50">
-                    <div className="w-[15%]">
-                      {formatDate(parseISO(register.closed_at || register.opened_at))}
-                    </div>
-                    <div className="w-[15%]">
-                      {register.profiles?.name || 'N/A'}
-                    </div>
-                    <div className="w-[15%]">{register.items_sold}</div>
-                    <div className="w-[15%]">{register.coupons_used}</div>
-                    <div className="w-[15%]">{register.treat_items_sold}</div>
-                    <div className="w-[15%]">
-                      <TotalDisplay
-                        totalIncome={register.total_amount}
-                        couponsUsed={register.coupons_used}
-                      />
-                    </div>
-                    <div className="w-[10%] text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggleRegister(register.id)}
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  {isExpanded && (
-                    <div className="px-4 pb-4">
-                      <div className="rounded-lg border bg-muted/50 p-4">
-                        <h3 className="font-medium mb-4">Products Sold</h3>
-                        <div className="space-y-4">
-                          {productSummary.length > 0 && (
-                            <table className="w-full">
-                              <thead>
-                                <tr>
-                                  <th className="text-left font-medium py-2">Product</th>
-                                  <th className="text-left font-medium py-2">Quantity</th>
-                                  <th className="text-left font-medium py-2">Price</th>
-                                  <th className="text-left font-medium py-2">Total</th>
-                                  <th className="text-left font-medium py-2">Status</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {productSummary.map((product, index) => (
-                                  <tr key={index} className="border-t">
-                                    <td className="py-2">{product.name}</td>
-                                    <td className="py-2">{product.quantity}</td>
-                                    <td className="py-2">{formatCurrency(product.price)}</td>
-                                    <td className="py-2">{formatCurrency(product.total)}</td>
-                                    <td className="py-2">
-                                      <div className="flex gap-1">
-                                        {product.is_edited && (
-                                          <StatusBadge type="edited" count={product.edit_count}>
-                                            Edited
-                                          </StatusBadge>
-                                        )}
-                                        {product.is_deleted && (
-                                          <StatusBadge type="deleted" count={product.delete_count}>
-                                            Deleted
-                                          </StatusBadge>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                return (
+                  <div
+                    key={virtualRow.index}
+                    data-index={virtualRow.index}
+                    ref={(el) => {
+                      if (el && isExpanded) {
+                        const height = el.getBoundingClientRect().height
+                        setExpandedHeights(prev => ({
+                          ...prev,
+                          [register.id]: height
+                        }))
+                      }
+                    }}
+                    className={`absolute top-0 left-0 w-full border-b p-4 ${
+                      virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/50"
+                    }`}
+                    style={{
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div className="flex items-center py-4 px-4 hover:bg-muted/50">
+                      <div className="w-[15%]">
+                        {formatDate(parseISO(register.closed_at || register.opened_at))}
+                      </div>
+                      <div className="w-[15%]">
+                        {register.profiles?.name || 'N/A'}
+                      </div>
+                      <div className="w-[15%]">{register.items_sold}</div>
+                      <div className="w-[15%]">{register.coupons_used}</div>
+                      <div className="w-[15%]">{register.treat_items_sold}</div>
+                      <div className="w-[15%]">
+                        <TotalDisplay
+                          totalIncome={register.total_amount}
+                          couponsUsed={register.coupons_used}
+                        />
+                      </div>
+                      <div className="w-[10%] text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleRegister(register.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
                           )}
-                          {treatSummary.length > 0 && (
-                            <>
-                              <h3 className="font-medium mb-2 mt-6">Treats Given</h3>
+                        </Button>
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div className="px-4 pb-4">
+                        <div className="rounded-lg border bg-muted/50 p-4">
+                          <h3 className="font-medium mb-4">Products Sold</h3>
+                          <div className="space-y-4">
+                            {productSummary.length > 0 && (
                               <table className="w-full">
                                 <thead>
                                   <tr>
                                     <th className="text-left font-medium py-2">Product</th>
                                     <th className="text-left font-medium py-2">Quantity</th>
+                                    <th className="text-left font-medium py-2">Price</th>
+                                    <th className="text-left font-medium py-2">Total</th>
                                     <th className="text-left font-medium py-2">Status</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {treatSummary.map((treat, index) => (
+                                  {productSummary.map((product, index) => (
                                     <tr key={index} className="border-t">
-                                      <td className="py-2">{treat.name}</td>
-                                      <td className="py-2">{treat.quantity}</td>
+                                      <td className="py-2">{product.name}</td>
+                                      <td className="py-2">{product.quantity}</td>
+                                      <td className="py-2">{formatCurrency(product.price)}</td>
+                                      <td className="py-2">{formatCurrency(product.total)}</td>
                                       <td className="py-2">
                                         <div className="flex gap-1">
-                                          {treat.is_edited && (
-                                            <StatusBadge type="edited" count={treat.edit_count}>
+                                          {product.is_edited && (
+                                            <StatusBadge type="edited" count={product.edit_count}>
                                               Edited
                                             </StatusBadge>
                                           )}
-                                          {treat.is_deleted && (
-                                            <StatusBadge type="deleted" count={treat.delete_count}>
+                                          {product.is_deleted && (
+                                            <StatusBadge type="deleted" count={product.delete_count}>
                                               Deleted
                                             </StatusBadge>
                                           )}
@@ -431,15 +382,51 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                                   ))}
                                 </tbody>
                               </table>
-                            </>
-                          )}
+                            )}
+                            {treatSummary.length > 0 && (
+                              <>
+                                <h3 className="font-medium mb-2 mt-6">Treats Given</h3>
+                                <table className="w-full">
+                                  <thead>
+                                    <tr>
+                                      <th className="text-left font-medium py-2">Product</th>
+                                      <th className="text-left font-medium py-2">Quantity</th>
+                                      <th className="text-left font-medium py-2">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {treatSummary.map((treat, index) => (
+                                      <tr key={index} className="border-t">
+                                        <td className="py-2">{treat.name}</td>
+                                        <td className="py-2">{treat.quantity}</td>
+                                        <td className="py-2">
+                                          <div className="flex gap-1">
+                                            {treat.is_edited && (
+                                              <StatusBadge type="edited" count={treat.edit_count}>
+                                                Edited
+                                              </StatusBadge>
+                                            )}
+                                            {treat.is_deleted && (
+                                              <StatusBadge type="deleted" count={treat.delete_count}>
+                                                Deleted
+                                              </StatusBadge>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </CardContent>

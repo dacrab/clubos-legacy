@@ -7,22 +7,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { z } from "zod"
+import { signIn, getUserProfile } from "@/lib/supabase/client"
+
+const DOMAIN = "example.com"
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  username: z.string().min(1, "Please enter your username"),
   password: z.string().min(6, "Password must be at least 6 characters")
 })
 
-type LoginFormData = z.infer<typeof loginSchema>
-
-interface LoginFormProps {
-  returnTo?: string
-}
 
 const errorMessages = {
   invalidCredentials: {
     title: "Invalid credentials",
-    description: "The email or password you entered is incorrect."
+    description: "The username or password you entered is incorrect."
   },
   profileError: {
     title: "Profile error",
@@ -34,8 +32,12 @@ const errorMessages = {
   }
 } as const
 
-export function LoginForm({ returnTo }: LoginFormProps) {
+export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    username: '',
+    password: ''
+  })
   const router = useRouter()
 
   const handleError = (errorType: keyof typeof errorMessages) => {
@@ -49,38 +51,17 @@ export function LoginForm({ returnTo }: LoginFormProps) {
     e.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    const data = {
-      email: formData.get("email")?.toString(),
-      password: formData.get("password")?.toString()
-    }
-
     try {
-      const validatedData = loginSchema.parse(data)
+      const validatedData = loginSchema.parse(formData)
+      const email = `${validatedData.username}@${DOMAIN}`
 
-      const response = await fetch('/auth/sign-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validatedData),
-      })
+      // Sign in with Supabase
+      await signIn(email, validatedData.password)
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        const error = errorData.error?.toLowerCase() || ''
-        
-        if (error.includes("invalid") || error.includes("password") || error.includes("user")) {
-          handleError('invalidCredentials')
-        } else if (error.includes("profile")) {
-          handleError('profileError')
-        } else {
-          handleError('connectionError')
-        }
-        return
-      }
-
-      const { role } = await response.json()
+      // Get user profile
+      const profile = await getUserProfile()
       
-      if (!role || !['admin', 'staff', 'secretary'].includes(role)) {
+      if (!profile || !['admin', 'staff', 'secretary'].includes(profile.role)) {
         handleError('profileError')
         return
       }
@@ -89,7 +70,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         description: "Successfully signed in."
       })
 
-      router.push(`/dashboard/${role}`)
+      router.push(`/dashboard/${profile.role}`)
       router.refresh()
 
     } catch (error) {
@@ -114,41 +95,37 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           Enter your credentials to sign in
         </p>
       </div>
-      <form 
-        onSubmit={handleSubmit} 
-        className="space-y-4"
-        aria-label="Login form"
-      >
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            placeholder="m@example.com"
-            required
-            type="email"
-            autoComplete="email"
-            aria-label="Email address"
-            className="w-full"
-          />
+          <Label htmlFor="username">Username</Label>
+          <div className="relative">
+            <Input
+              id="username"
+              value={formData.username}
+              onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+              placeholder="Your Username"
+              type="text"
+              autoComplete="username"
+              className="w-full pr-24"
+            />
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"
-            name="password"
-            required
             type="password"
+            placeholder="Your Password"
+            value={formData.password}
+            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
             autoComplete="current-password"
-            aria-label="Password"
             className="w-full"
           />
         </div>
         <Button 
-          className="w-full"
           type="submit" 
+          className="w-full"
           disabled={isLoading}
-          aria-label={isLoading ? "Signing in..." : "Sign in"}
         >
           {isLoading ? "Signing in..." : "Sign In"}
         </Button>

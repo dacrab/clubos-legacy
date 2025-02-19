@@ -21,6 +21,7 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Pencil } from "lucide-react"
+import { PostgrestError } from "@supabase/supabase-js"
 
 interface User {
   id: string
@@ -65,10 +66,11 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
       setIsOpen(false)
       // Optionally refresh the users list here
       window.location.reload()
-    } catch (error: any) {
+    } catch (error) {
       console.error("Update user error:", error)
+      const message = error instanceof PostgrestError ? error.message : "Failed to update user. Please try again."
       toast.error("Error", {
-        description: error.message || "Failed to update user. Please try again."
+        description: message
       })
     } finally {
       setIsLoading(false)

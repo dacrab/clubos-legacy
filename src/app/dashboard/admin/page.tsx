@@ -1,5 +1,6 @@
 'use client'
 
+import { User } from '@supabase/supabase-js'
 import { createClient } from "@/lib/supabase/client"
 import { RecentSales } from "@/components/dashboard/RecentSales"
 import { LowStockProducts } from "@/components/dashboard/LowStockProducts"
@@ -8,48 +9,47 @@ import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
 import { SignOutButton } from "@/components/SignOutButton"
 import { useRef, useEffect, useState } from "react"
-
-interface Product {
-  id: string
-  name: string
-  is_deleted: boolean
-}
-
-interface SaleItem {
-  id: string
-  quantity: number
-  price_at_sale: number
-  products: Product
-  is_treat: boolean
-  last_edited_by: string | null
-  last_edited_at: string | null
-  is_deleted: boolean
-  deleted_by: string | null
-  deleted_at: string | null
-  created_at: string
-}
-
-interface Sale {
-  id: string
-  created_at: string
-  total_amount: number
-  coupon_applied: boolean
-  coupons_used: number
-  profile: {
-    name: string
-  }
-  sale_items: SaleItem[]
-}
+import { TypedSupabaseClient, Profile, Register, Sale } from "@/types/app"
 
 export default function AdminDashboardPage() {
   const recentSalesRef = useRef<{ clearSales: () => void } | null>(null)
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [recentSales, setRecentSales] = useState<Sale[]>([])
-  const [activeRegister, setActiveRegister] = useState<any>(null)
+  const [activeRegister, setActiveRegister] = useState<Register | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchSalesData = async (supabase: any) => {
+  const fetchSalesData = async (supabase: TypedSupabaseClient) => {
+    type SaleResponse = {
+      id: string
+      created_at: string
+      total_amount: number
+      coupon_applied: boolean
+      registers: {
+        coupons_used: number
+      }[]
+      profiles: {
+        name: string
+      }[]
+      sale_items: {
+        id: string
+        quantity: number
+        price_at_sale: number
+        products: {
+          id: string
+          name: string
+          is_deleted: boolean
+        }[]
+        is_treat: boolean
+        last_edited_by: string | null
+        last_edited_at: string | null
+        is_deleted: boolean
+        deleted_by: string | null
+        deleted_at: string | null
+        created_at: string
+      }[]
+    }
+
     const { data: salesData, error: salesError } = await supabase
       .from("sales")
       .select(`
@@ -90,21 +90,30 @@ export default function AdminDashboardPage() {
       return
     }
 
+    if (!salesData) {
+      setRecentSales([])
+      return
+    }
+
     // Transform sales data
-    const transformedSales: Sale[] = salesData?.map(sale => ({
+    const transformedSales: Sale[] = (salesData as unknown as SaleResponse[]).map((sale) => ({
       id: sale.id,
       created_at: sale.created_at,
       total_amount: sale.total_amount,
       coupon_applied: sale.coupon_applied,
-      coupons_used: sale.registers?.coupons_used || 0,
+      coupons_used: sale.registers[0]?.coupons_used || 0,
       profile: {
-        name: sale.profiles.name
+        name: sale.profiles[0]?.name || ''
       },
-      sale_items: sale.sale_items.map(item => ({
+      sale_items: sale.sale_items.map((item) => ({
         id: item.id,
         quantity: item.quantity,
         price_at_sale: item.price_at_sale,
-        products: item.products,
+        products: {
+          id: item.products[0]?.id || '',
+          name: item.products[0]?.name || '',
+          is_deleted: item.products[0]?.is_deleted || false
+        },
         is_treat: item.is_treat,
         last_edited_by: item.last_edited_by,
         last_edited_at: item.last_edited_at,
@@ -113,7 +122,7 @@ export default function AdminDashboardPage() {
         deleted_at: item.deleted_at,
         created_at: item.created_at
       }))
-    })) || []
+    }))
 
     setRecentSales(transformedSales)
   }
@@ -134,7 +143,7 @@ export default function AdminDashboardPage() {
         // Get profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("role, name")
+          .select("id, role, name")
           .eq("id", userData.id)
           .single()
 
@@ -142,12 +151,12 @@ export default function AdminDashboardPage() {
           redirect("/auth/sign-in")
           return
         }
-        setProfile(profileData)
+        setProfile(profileData as Profile)
 
         // Get active register
         const { data: registerData, error: registerError } = await supabase
           .from("registers")
-          .select("id, items_sold, coupons_used, treat_items_sold, total_amount")
+          .select("id, items_sold, coupons_used, treat_items_sold, total_amount, closed_at")
           .is("closed_at", null)
           .maybeSingle()
 
@@ -155,7 +164,7 @@ export default function AdminDashboardPage() {
           console.error("Error fetching active register:", registerError.code, registerError.message || 'Unknown error')
         }
 
-        setActiveRegister(registerData)
+        setActiveRegister(registerData as Register | null)
 
         // Fetch initial sales data
         await fetchSalesData(supabase)
@@ -260,7 +269,7 @@ export default function AdminDashboardPage() {
           <RecentSales 
             ref={recentSalesRef}
             sales={recentSales} 
-            userId={user?.id}
+            userId={user?.id || ''}
           />
           <LowStockProducts />
         </div>

@@ -1,422 +1,186 @@
 'use client';
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
+
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
-  SheetFooter,
-  SheetTrigger,
-} from "@/components/ui/sheet"
+} from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
-import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
-import { Loader2, Upload, X, Link as LinkIcon, Plus } from "lucide-react"
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+
+const formSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  price: z.string().min(1, 'Price is required'),
+  quantity: z.string().min(1, 'Quantity is required'),
+  isTreat: z.boolean().default(false),
+})
+
+type FormValues = z.infer<typeof formSchema>
 
 interface NewProductSheetProps {
-  categories: string[]
-  subcategories: string[]
+  isOpen: boolean
+  onClose: () => void
+  onSuccess?: () => void
 }
 
-const initialFormData = {
-  name: "",
-  price: 0,
-  stock: 0,
-  category: "",
-  subcategory: "",
-  image_url: "",
-}
-
-export function NewProductSheet({ categories, subcategories }: NewProductSheetProps) {
-  const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
+export function NewProductSheet({ isOpen, onClose, onSuccess }: NewProductSheetProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [hasUnlimitedStock, setHasUnlimitedStock] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
-  const [formData, setFormData] = useState({
-    name: "",
-    price: 0,
-    stock: 0,
-    category: "",
-    subcategory: "",
-    image_url: null as string | null,
+  const supabase = createClient()
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      price: '',
+      quantity: '',
+      isTreat: false,
+    },
   })
 
-  const handleInputChange = (name: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const validateImageUrl = async (url: string) => {
+  const onSubmit = async (data: FormValues) => {
     try {
-      const validUrl = new URL(url)
-      if (!validUrl.protocol.startsWith('http')) {
-        throw new Error("URL must start with http:// or https://")
-      }
-
-      // Check if image exists and is accessible
-      const response = await fetch(url, { method: 'HEAD' })
-      if (!response.ok) {
-        throw new Error("Unable to access image URL")
-      }
-
-      const contentType = response.headers.get('content-type')
-      if (!contentType?.startsWith('image/')) {
-        throw new Error("URL does not point to a valid image")
-      }
-
-      return true
-    } catch (error) {
-      toast.error("Invalid Image URL", {
-        description: error instanceof Error ? error.message : "Please enter a valid image URL"
+      setIsLoading(true)
+      const { error } = await supabase.from('products').insert({
+        name: data.name,
+        description: data.description || '',
+        price: parseFloat(data.price),
+        quantity: parseInt(data.quantity),
+        is_treat: data.isTreat,
       })
-      return false
-    }
-  }
-
-  const handleImageUrlChange = async (url: string) => {
-    setFormData(prev => ({ ...prev, image_url: url }))
-    
-    if (url && await validateImageUrl(url)) {
-      setImagePreview(url)
-      setImageFile(null)
-    } else {
-      setImagePreview(null)
-    }
-  }
-
-  const validateImage = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      throw new Error("Please upload an image file.")
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error("Image size should be less than 5MB.")
-    }
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      validateImage(file)
-      setImageFile(file)
-      setImagePreview(URL.createObjectURL(file))
-      setFormData(prev => ({ ...prev, image_url: "" }))
-    } catch (error) {
-      toast.error("Invalid Image", {
-        description: error instanceof Error ? error.message : "Invalid image file"
-      })
-    }
-  }
-
-  const handleRemoveImage = () => {
-    setImageFile(null)
-    setImagePreview(null)
-    setFormData(prev => ({ ...prev, image_url: "" }))
-  }
-
-  const uploadImage = async (file: File) => {
-    const supabase = createClient()
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${crypto.randomUUID()}.${fileExt}`
-    const filePath = `product-images/${fileName}`
-
-    const { error: uploadError } = await supabase
-      .storage
-      .from('products')
-      .upload(filePath, file)
-
-    if (uploadError) throw uploadError
-
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('products')
-      .getPublicUrl(filePath)
-
-    return publicUrl
-  }
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      // Get form values
-      const name = formData.name
-      const price = formData.price
-      const stock = hasUnlimitedStock ? -1 : formData.stock
-      const category = formData.category
-      const subcategory = formData.subcategory
-      let image_url = formData.image_url
-
-      // Validate required fields
-      if (!name || !price || (!hasUnlimitedStock && !stock) || !category || !subcategory) {
-        toast.error("Validation Error", {
-          description: "Please fill in all required fields."
-        })
-        setIsLoading(false)
-        return
-      }
-
-      // Handle image upload if there's a file
-      if (imageFile) {
-        const uploadedUrl = await uploadImage(imageFile)
-        image_url = uploadedUrl
-      }
-
-      // Validate that we have either an uploaded image or a valid URL
-      if (!image_url && !imageFile) {
-        toast.error("Image Required", {
-          description: "Please either upload an image or provide an image URL."
-        })
-        setIsLoading(false)
-        return
-      }
-
-      const supabase = createClient()
-
-      const { error } = await supabase
-        .from("products")
-        .insert([
-          {
-            name,
-            price,
-            stock,
-            category,
-            subcategory,
-            image_url: image_url
-          }
-        ])
 
       if (error) throw error
 
-      toast.success("Success", {
-        description: "Product added successfully."
-      })
-
-      resetForm()
-      router.refresh()
+      toast.success('Product created successfully')
+      form.reset()
+      onSuccess?.()
+      onClose()
     } catch (error) {
-      console.error("Add product error:", error)
-      toast.error("Error", {
-        description: "Failed to add product. Please try again."
-      })
+      console.error('Error creating product:', error)
+      toast.error('Failed to create product')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      price: 0,
-      stock: 0,
-      category: "",
-      subcategory: "",
-      image_url: null,
-    })
-    setImageFile(null)
-    setImagePreview(null)
-    setImageMethod("upload")
-    setHasUnlimitedStock(false)
-    setIsOpen(false)
-  }
-
   return (
-    <>
-      <Button onClick={() => setIsOpen(true)}>Add Product</Button>
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="right" className="w-[400px] sm:w-[540px]">
-          <SheetHeader>
-            <SheetTitle>Add New Product</SheetTitle>
-            <SheetDescription>
-              Add a new product to your warehouse inventory
-            </SheetDescription>
-          </SheetHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={e => handleInputChange("name", e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={e => handleInputChange("price", Number(e.target.value))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stock">Stock</Label>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Switch
-                    id="unlimited-stock"
-                    checked={hasUnlimitedStock}
-                    onCheckedChange={setHasUnlimitedStock}
-                  />
-                  <Label htmlFor="unlimited-stock">Unlimited Stock</Label>
-                </div>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock}
-                  onChange={e => handleInputChange("stock", Number(e.target.value))}
-                  required
-                  disabled={hasUnlimitedStock}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={value => handleInputChange("category", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategory</Label>
-                <Select
-                  value={formData.subcategory}
-                  onValueChange={value => handleInputChange("subcategory", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subcategory" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subcategories.map(subcategory => (
-                      <SelectItem key={subcategory} value={subcategory}>
-                        {subcategory}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Product Image</Label>
-              <Tabs 
-                value={imageMethod} 
-                onValueChange={(value: string) => setImageMethod(value as "upload" | "url")} 
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="upload" className="flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Upload
-                  </TabsTrigger>
-                  <TabsTrigger value="url" className="flex items-center gap-2">
-                    <LinkIcon className="h-4 w-4" />
-                    Image URL
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="upload" className="mt-4">
-                  <div className="flex flex-col gap-4">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                </TabsContent>
-                <TabsContent value="url" className="mt-4">
-                  <div className="flex flex-col gap-4">
-                    <Input
-                      type="url"
-                      placeholder="Paste image URL here"
-                      value={formData.image_url || ""}
-                      onChange={(e) => handleImageUrlChange(e.target.value)}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {imagePreview && (
-                <div className="mt-4">
-                  <div className="relative aspect-square w-40 overflow-hidden rounded-lg border">
-                    <Image
-                      src={imagePreview}
-                      alt={formData.name || "Product preview"}
-                      fill
-                      className="object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute right-2 top-2"
-                      onClick={handleRemoveImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>New Product</SheetTitle>
+          <SheetDescription>
+            Add a new product to your inventory
+          </SheetDescription>
+        </SheetHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Product name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
-
-            <div className="flex justify-end gap-4 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Product
-              </Button>
-            </div>
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Product description (optional)"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isTreat"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Treat Item</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Product'}
+            </Button>
           </form>
-        </SheetContent>
-      </Sheet>
-    </>
+        </Form>
+      </SheetContent>
+    </Sheet>
   )
 }

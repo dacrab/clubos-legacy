@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Filter, X } from "lucide-react"
+import { X } from "lucide-react"
 import { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { DateRangePickerWithPresets } from "@/components/ui/date-range-picker"

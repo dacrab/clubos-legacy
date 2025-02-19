@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from "react"
+import React, { useRef, useEffect, useState, useMemo } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import {
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card"
 import { Sale } from "@/types"
 import { 
-  Gift, 
   Ticket, 
   ChevronDown, 
   ChevronUp,
@@ -21,7 +20,6 @@ import {
   DollarSign,
   ChevronRight
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { TableDateFilter } from "@/components/ui/table-date-filter"
 import type { DateRange } from "react-day-picker"
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
@@ -43,9 +41,8 @@ interface ProductSummary {
 
 // Components
 const TotalDisplay = ({ totalAmount, couponsUsed }: { totalAmount: number, couponsUsed: number }) => {
-  const couponDiscount = couponsUsed * 2
   const subtotal = totalAmount // Original amount before discounts
-  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
+  const finalTotal = Math.max(0, subtotal - (couponsUsed * 2))
 
   if (!couponsUsed) {
     return <span className="font-medium">{formatCurrency(totalAmount)}</span>
@@ -55,7 +52,7 @@ const TotalDisplay = ({ totalAmount, couponsUsed }: { totalAmount: number, coupo
     <>
       <div className="text-sm">Subtotal: {formatCurrency(subtotal)}</div>
       <div className="text-sm text-red-600">
-        Coupon: -{formatCurrency(couponDiscount)}
+        Coupon: -{formatCurrency(couponsUsed * 2)}
       </div>
       <div className="font-medium">Final: {formatCurrency(finalTotal)}</div>
     </>
@@ -83,7 +80,7 @@ const SaleStatusIcons = ({ sale }: { sale: Sale }) => {
       {sale.coupon_applied && (
         <StatusIcon count={sale.coupons_used} icon={Ticket} color="text-emerald-600" label="Coupon" />
       )}
-      <StatusIcon count={treatItems} icon={Gift} color="text-pink-600" label="Treat Item" />
+      <StatusIcon count={treatItems} icon={Ticket} color="text-pink-600" label="Treat Item" />
       <StatusIcon count={editedItems} color="text-yellow-600" label="Edited Item" />
       <StatusIcon count={deletedItems} color="text-red-600" label="Deleted Item" />
     </div>
@@ -128,8 +125,6 @@ const SaleDetails = ({ sale, productSummary }: { sale: Sale, productSummary: Pro
   }
 
   const subtotal = calculateSubtotal()
-  const couponDiscount = sale.coupon_applied ? sale.coupons_used * 2 : 0
-  const finalTotal = Math.max(0, subtotal - couponDiscount)
 
   return (
     <div className="rounded-lg border bg-muted/50 p-4 mb-4 relative z-10">
@@ -185,8 +180,7 @@ export function SalesTable({ sales }: SalesTableProps) {
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const tableRef = useRef<HTMLDivElement>(null)
-  const rowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
-  const [expandedHeight, setExpandedHeight] = useState<number>(0)
+  const [expandedHeights, setExpandedHeights] = useState<Record<string, number>>({})
 
   const handleToggleSale = (saleId: string) => {
     setExpandedSaleId(prev => prev === saleId ? null : saleId)
@@ -202,7 +196,7 @@ export function SalesTable({ sales }: SalesTableProps) {
     setExpandedSaleId(null)
   }
 
-  const filteredSales = React.useMemo(() => {
+  const filteredSales = useMemo(() => {
     if (!sales) return null
     if (!dateRange?.from) return sales
 
@@ -252,51 +246,45 @@ export function SalesTable({ sales }: SalesTableProps) {
     return Array.from(productMap.values())
   }
 
-  useEffect(() => {
-    if (expandedSaleId && rowRefs.current[expandedSaleId]) {
-      const height = rowRefs.current[expandedSaleId]?.getBoundingClientRect().height || 0
-      setExpandedHeight(height)
-      rowVirtualizer.measure()
-    } else {
-      setExpandedHeight(0)
-      rowVirtualizer.measure()
-    }
-  }, [expandedSaleId])
-
-  if (!sales?.length) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No sales found</CardTitle>
-        </CardHeader>
-      </Card>
-    )
-  }
-
   const rowVirtualizer = useVirtualizer({
-    count: filteredSales?.length || 0,
+    count: filteredSales?.length ?? 0,
     getScrollElement: () => tableRef.current,
-    estimateSize: (index) => {
-      const sale = filteredSales?.[index]
-      return expandedSaleId === sale?.id ? expandedHeight : 100
-    },
+    estimateSize: () => 100,
     overscan: 5,
   })
+
+  useEffect(() => {
+    if (!tableRef.current || !expandedSaleId) return
+
+    const measureExpandedRow = () => {
+      const expandedRow = tableRef.current?.querySelector(`[data-sale-id="${expandedSaleId}"]`)
+      if (expandedRow instanceof HTMLElement) {
+        setExpandedHeights(prev => ({
+          ...prev,
+          [expandedSaleId]: expandedRow.getBoundingClientRect().height
+        }))
+      }
+    }
+
+    measureExpandedRow()
+    window.addEventListener('resize', measureExpandedRow)
+    return () => window.removeEventListener('resize', measureExpandedRow)
+  }, [expandedSaleId])
+
+  if (!filteredSales) return null
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Sales History</CardTitle>
-          <TableDateFilter
-            date={dateRange}
-            onDateChange={handleDateChange}
-            onClearFilter={handleClearDateFilter}
-          />
-        </div>
+        <CardTitle>Sales History</CardTitle>
+        <TableDateFilter
+          date={dateRange}
+          onDateChange={handleDateChange}
+          onClearFilter={handleClearDateFilter}
+        />
       </CardHeader>
-      <CardContent className="p-0">
-        <div
+      <CardContent>
+        <div 
           ref={tableRef}
           className="relative h-[600px] overflow-auto"
         >
@@ -304,61 +292,52 @@ export function SalesTable({ sales }: SalesTableProps) {
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative"
+              width: '100%',
+              position: 'relative'
             }}
           >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const sale = filteredSales?.[virtualRow.index]
-              if (!sale) return null
-
-              const productSummary = getProductSummary(sale)
+            {rowVirtualizer.getVirtualItems().map(virtualRow => {
+              const sale = filteredSales[virtualRow.index]
               const isExpanded = expandedSaleId === sale.id
+              const productSummary = getProductSummary(sale)
+              const totalAmount = productSummary.reduce((total, product) => 
+                total + (!product.is_deleted ? product.total : 0), 0)
 
               return (
                 <div
                   key={sale.id}
-                  ref={(el) => {
-                    rowRefs.current[sale.id] = el
-                  }}
-                  className="absolute top-0 left-0 w-full"
+                  data-sale-id={sale.id}
                   style={{
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: isExpanded ? expandedHeights[sale.id] || 'auto' : 'auto',
+                    transform: `translateY(${virtualRow.start}px)`
                   }}
                 >
-                  <div className="flex items-center py-4 px-4 hover:bg-muted/50">
+                  <div className="flex items-center py-4 px-4 hover:bg-muted/50 cursor-pointer" onClick={() => handleToggleSale(sale.id)}>
                     <div className="w-[20%]">{formatDate(parseISO(sale.created_at))}</div>
                     <div className="w-[20%]">{sale.profile.name}</div>
-                    <div className="w-[20%]">{sale.sale_items.length} items</div>
-                    <div className="w-[30%]">
-                      <div className="flex flex-col">
-                        <TotalDisplay
-                          totalAmount={sale.total_amount}
-                          couponsUsed={sale.coupon_applied ? sale.coupons_used : 0}
-                        />
-                        <SaleStatusIcons sale={sale} />
-                      </div>
+                    <div className="w-[20%]">
+                      <SaleStatusIcons sale={sale} />
                     </div>
-                    <div className="w-[10%] text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggleSale(sale.id)}
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
+                    <div className="w-[30%]">
+                      <TotalDisplay 
+                        totalAmount={totalAmount} 
+                        couponsUsed={sale.coupon_applied ? sale.coupons_used : 0} 
+                      />
+                    </div>
+                    <div className="w-[10%]">
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
                     </div>
                   </div>
                   {isExpanded && (
-                    <SaleDetails
-                      sale={sale}
-                      productSummary={productSummary}
-                    />
+                    <SaleDetails sale={sale} productSummary={productSummary} />
                   )}
                 </div>
               )

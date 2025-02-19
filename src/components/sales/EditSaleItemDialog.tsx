@@ -112,21 +112,18 @@ export function EditSaleItemDialog({
 
     const fetchProducts = async () => {
       const supabase = createClient()
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('products')
         .select('id, name, price, stock')
         .eq('is_deleted', false)
         .order('name')
 
-      if (error) {
-        toast.error("Error", { description: "Failed to load products. Please try again." })
-        return
-      }
-
       if (data) {
         setProducts(data)
         const current = data.find(p => p.id === currentProductId)
         if (current) setSelectedProduct(current)
+      } else {
+        toast.error("Error", { description: "Failed to load products. Please try again." })
       }
     }
 
@@ -162,14 +159,14 @@ export function EditSaleItemDialog({
         userId
       })
 
-      if (result.error) throw new Error(result.error)
+      if (result.error) throw result.error
       
       toast.success("Sale item updated", {
         description: "The sale item has been successfully updated."
       })
       onEdit()
       setOpen(false)
-    } catch (error) {
+    } catch {
       toast.error("Error", {
         description: "Failed to update sale item. Please try again."
       })

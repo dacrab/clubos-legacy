@@ -51,7 +51,7 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
       .eq('id', params.id)
 
     if (profileError) {
-      return { error: profileError.message }
+      throw new Error(profileError.message)
     }
 
     redirect('/dashboard/users')

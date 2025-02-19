@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   // Allow access to root path, auth endpoints and static files
   if (
     path === "/" ||
-    path.startsWith('/auth/') ||
+    path.startsWith('/api/auth/') ||
     path.startsWith('/_next/') ||
     path.startsWith('/api/') ||
     path.match(/\.(ico|png|jpg|jpeg|svg|css|js)$/)
@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },

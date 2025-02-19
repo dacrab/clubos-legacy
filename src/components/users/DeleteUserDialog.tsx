@@ -49,10 +49,11 @@ export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
       setIsOpen(false)
       // Refresh the users list
       window.location.reload()
-    } catch (error: any) {
+    } catch (error) {
       console.error("Delete user error:", error)
+      const message = error instanceof Error ? error.message : "Failed to delete user. Please try again."
       toast.error("Error", {
-        description: error.message || "Failed to delete user. Please try again."
+        description: message
       })
     } finally {
       setIsLoading(false)
