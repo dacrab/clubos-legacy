@@ -112,7 +112,16 @@ export interface Sale {
   created_at: string
   updated_at: string
   profile: {
+    id: string
     name: string
+    email: string
+  }
+  register: {
+    id: string
+    coupons_used: number
+    opened_at: string
+    closed_at: string | null
+    closed_by_name: string | null
   }
   sale_items: SaleItem[]
 }
@@ -131,7 +140,10 @@ export interface SaleItem {
   deleted_by?: string
   deleted_at?: string
   products: {
+    id: string
     name: string
+    price: number
+    is_deleted: boolean
   }
 }
 

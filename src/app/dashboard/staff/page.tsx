@@ -8,8 +8,9 @@ import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
 import { SignOutButton } from "@/components/SignOutButton"
 import { useRef, useEffect, useState } from "react"
-import { TypedSupabaseClient, Profile, Register, Sale } from "@/types/app"
+import { TypedSupabaseClient, Profile, Register, Sale, SaleItem } from "@/types/app"
 
+// Types
 interface RawSaleItem {
   id: string
   quantity: number
@@ -21,11 +22,12 @@ interface RawSaleItem {
   is_deleted: boolean
   deleted_by: string | null
   deleted_at: string | null
-  products: {
+  product: {
     id: string
     name: string
+    price: number
     is_deleted: boolean
-  }[]
+  }
 }
 
 interface RawSale {
@@ -34,13 +36,59 @@ interface RawSale {
   total_amount: number
   coupon_applied: boolean
   coupons_used: number
-  registers: {
-    coupons_used: number
-  }[]
-  profiles: {
+  profiles: { 
+    id: string
     name: string
+    email: string 
   }[]
   sale_items: RawSaleItem[]
+  registers: { 
+    id: string
+    coupons_used: number
+    opened_at: string
+    closed_at: string | null
+    closed_by_name: string | null 
+  }[]
+}
+
+// Helper functions
+const transformSaleItems = (items: RawSaleItem[]): SaleItem[] => {
+  return items.map((item): SaleItem => ({
+    id: item.id,
+    quantity: item.quantity,
+    price_at_sale: item.price_at_sale,
+    products: item.product,
+    is_treat: item.is_treat,
+    last_edited_by: item.last_edited_by,
+    last_edited_at: item.last_edited_at,
+    is_deleted: item.is_deleted || false,
+    deleted_by: item.deleted_by,
+    deleted_at: item.deleted_at,
+    created_at: item.created_at
+  }))
+}
+
+const transformSales = (salesData: RawSale[]): Sale[] => {
+  return salesData.map((sale): Sale => ({
+    id: sale.id,
+    created_at: sale.created_at,
+    total_amount: sale.total_amount,
+    coupon_applied: sale.coupon_applied,
+    coupons_used: sale.coupons_used || 0,
+    profile: {
+      id: sale.profiles[0]?.id || '',
+      name: sale.profiles[0]?.name || '',
+      email: sale.profiles[0]?.email || ''
+    },
+    register: {
+      id: sale.registers[0]?.id || '',
+      coupons_used: sale.registers[0]?.coupons_used || 0,
+      opened_at: sale.registers[0]?.opened_at || '',
+      closed_at: sale.registers[0]?.closed_at || null,
+      closed_by_name: sale.registers[0]?.closed_by_name || null
+    },
+    sale_items: transformSaleItems(sale.sale_items)
+  }))
 }
 
 export default function StaffDashboardPage() {
@@ -58,10 +106,9 @@ export default function StaffDashboardPage() {
         id,
         created_at,
         total_amount,
-        created_by,
         coupon_applied,
         coupons_used,
-        registers!inner(coupons_used),
+        registers!inner(id, coupons_used, opened_at, closed_at, closed_by_name),
         sale_items!inner(
           id,
           quantity,
@@ -73,9 +120,14 @@ export default function StaffDashboardPage() {
           is_deleted,
           deleted_by,
           deleted_at,
-          products!inner(id, name, is_deleted)
+          product:products(
+            id,
+            name,
+            price,
+            is_deleted
+          )
         ),
-        profiles!inner(name)
+        profiles!inner(id, name, email)
       `)
       .order("created_at", { ascending: false })
       .limit(5)
@@ -85,45 +137,83 @@ export default function StaffDashboardPage() {
       return
     }
 
-    if (!salesData) {
-      setRecentSales([])
-      return
-    }
-
-    const transformedSales: Sale[] = (salesData as unknown as RawSale[]).map((sale) => ({
+    setRecentSales(salesData ? transformSales(salesData.map((sale: any): RawSale => ({
       id: sale.id,
       created_at: sale.created_at,
       total_amount: sale.total_amount,
       coupon_applied: sale.coupon_applied,
-      coupons_used: sale.coupons_used || 0,
-      profile: {
-        name: sale.profiles[0]?.name || ''
-      },
-      sale_items: sale.sale_items.map((item) => ({
+      coupons_used: sale.coupons_used,
+      profiles: sale.profiles.map((profile: any) => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email
+      })),
+      registers: sale.registers.map((register: any) => ({
+        id: register.id,
+        coupons_used: register.coupons_used,
+        opened_at: register.opened_at,
+        closed_at: register.closed_at,
+        closed_by_name: register.closed_by_name
+      })),
+      sale_items: sale.sale_items.map((item: any) => ({
         id: item.id,
         quantity: item.quantity,
         price_at_sale: item.price_at_sale,
-        products: {
-          id: item.products[0]?.id || '',
-          name: item.products[0]?.name || '',
-          is_deleted: item.products[0]?.is_deleted || false
-        },
         is_treat: item.is_treat,
+        created_at: item.created_at,
         last_edited_by: item.last_edited_by,
         last_edited_at: item.last_edited_at,
         is_deleted: item.is_deleted,
         deleted_by: item.deleted_by,
         deleted_at: item.deleted_at,
-        created_at: item.created_at
+        product: {
+          id: item.product?.[0]?.id || '',
+          name: item.product?.[0]?.name || '',
+          price: item.product?.[0]?.price || 0,
+          is_deleted: item.product?.[0]?.is_deleted || false
+        }
       }))
-    }))
-
-    setRecentSales(transformedSales)
+    }))) : [])
   }
 
   const handleRegisterClose = () => {
     recentSalesRef.current?.clearSales()
     setActiveRegister(null)
+  }
+
+  const setupSubscriptions = (supabase: TypedSupabaseClient) => {
+    const registerChannel = supabase
+      .channel('register-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'registers', filter: 'closed_at.is.not.null' },
+        handleRegisterClose
+      )
+      .subscribe()
+
+    const salesChannel = supabase
+      .channel('sales-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sales' },
+        () => fetchSalesData(supabase)
+      )
+      .subscribe()
+
+    const saleItemsChannel = supabase
+      .channel('sale-items-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sale_items' },
+        () => fetchSalesData(supabase)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(registerChannel)
+      supabase.removeChannel(salesChannel)
+      supabase.removeChannel(saleItemsChannel)
+    }
   }
 
   useEffect(() => {
@@ -171,59 +261,8 @@ export default function StaffDashboardPage() {
       }
     }
 
-    const setupSubscriptions = () => {
-      const supabase = createClient()
-      
-      const registerChannel = supabase
-        .channel('register-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'registers',
-            filter: 'closed_at.is.not.null'
-          },
-          handleRegisterClose
-        )
-        .subscribe()
-
-      const salesChannel = supabase
-        .channel('sales-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'sales'
-          },
-          () => fetchSalesData(supabase)
-        )
-        .subscribe()
-
-      const saleItemsChannel = supabase
-        .channel('sale-items-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'sale_items'
-          },
-          () => fetchSalesData(supabase)
-        )
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(registerChannel)
-        supabase.removeChannel(salesChannel)
-        supabase.removeChannel(saleItemsChannel)
-      }
-    }
-
     fetchData()
-    const cleanup = setupSubscriptions()
-
+    const cleanup = setupSubscriptions(createClient())
     return cleanup
   }, [])
 

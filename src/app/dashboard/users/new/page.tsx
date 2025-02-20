@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
 export default function NewUserPage() {
   async function createUser(formData: FormData) {
@@ -36,7 +37,7 @@ export default function NewUserPage() {
     })
 
     if (signUpError) {
-      return { error: signUpError.message }
+      throw new Error(signUpError.message)
     }
 
     // Update user role in profiles table
@@ -50,9 +51,10 @@ export default function NewUserPage() {
       .eq('email', email)
 
     if (profileError) {
-      return { error: profileError.message }
+      throw new Error(profileError.message)
     }
 
+    revalidatePath('/dashboard/users')
     redirect('/dashboard/users')
   }
 

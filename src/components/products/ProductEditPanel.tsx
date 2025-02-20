@@ -74,8 +74,8 @@ export function ProductEditPanel({
     description: product.description,
     price: product.price,
     stock: product.stock === -1 ? 0 : product.stock,
-    category: product.category,
-    subcategory: product.subcategory || "",
+    category: product.category?.name || "",
+    subcategory: product.subcategory?.name || "",
     image_url: product.image_url || "",
   })
 
@@ -301,7 +301,10 @@ export function ProductEditPanel({
                   value={formData.category}
                   onValueChange={value => handleInputChange("category", value)}
                   placeholder="Select category"
-                  options={categories.map(cat => ({ value: cat, label: cat }))}
+                  options={categories.map(cat => ({
+                    value: cat,
+                    label: cat
+                  }))}
                   required
                 />
 
@@ -311,7 +314,10 @@ export function ProductEditPanel({
                   value={formData.subcategory}
                   onValueChange={value => handleInputChange("subcategory", value)}
                   placeholder="Select subcategory"
-                  options={subcategories.map(sub => ({ value: sub, label: sub }))}
+                  options={subcategories.map(sub => ({
+                    value: sub,
+                    label: sub
+                  }))}
                   required
                 />
               </div>

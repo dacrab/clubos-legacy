@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns"
 import { ChevronDown, ChevronUp, Gift, Pencil, Trash2, Ticket } from "lucide-react"
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react"
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useLayoutEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { cn, formatCurrency } from "@/lib/utils"
 interface Product {
   id: string
   name: string
+  price: number
   is_deleted: boolean
 }
 
@@ -126,6 +127,15 @@ const SaleItem = ({ item, userId, onRefresh }: {
 }) => {
   const isZeroPrice = item.price_at_sale === 0 || item.is_treat
 
+  if (!item.products || !item.products.name) {
+    console.error('Missing product data:', item)
+    return (
+      <div className="text-sm text-red-600">
+        Error: Product data missing for sale item {item.id}
+      </div>
+    )
+  }
+
   return (
     <div className={cn("flex items-center justify-between", item.is_deleted && "opacity-50")}>
       <div className="space-y-1">
@@ -195,15 +205,26 @@ const SaleDetails = ({ sale, userId, onRefresh }: {
   const normalItems = getNormalItems(sale)
   const subtotal = calculateSubtotal(sale.sale_items)
 
+  // Debug log to see what's coming in
+  console.log('SaleDetails data:', { 
+    sale,
+    treatItems,
+    normalItems,
+    saleItems: sale.sale_items,
+    couponsUsed: sale.coupons_used,
+    subtotal,
+    finalTotal: subtotal - (sale.coupons_used * 2)
+  })
+
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
       <div className="space-y-4">
         <div className="flex items-center justify-between text-sm">
           <div className="flex gap-4">
-            {sale.coupon_applied && (
+            {sale.coupons_used > 0 && (
               <div className="flex items-center gap-1 text-emerald-600">
                 <Ticket className="h-4 w-4" />
-                <span>€2 Coupon Applied</span>
+                <span>{sale.coupons_used} Coupon{sale.coupons_used > 1 ? 's' : ''} Applied (-€{(sale.coupons_used * 2).toFixed(2)})</span>
               </div>
             )}
             {treatItems.length > 0 && (
@@ -236,6 +257,7 @@ export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
     const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set())
     const [expandedHeights, setExpandedHeights] = useState<Record<string, number>>({})
     const parentRef = useRef<HTMLDivElement>(null)
+    const virtualRowRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
     const rowVirtualizer = useVirtualizer({
       count: sales?.length || 0,
@@ -246,6 +268,38 @@ export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
       },
       overscan: 5,
     })
+
+    useLayoutEffect(() => {
+      const updateExpandedHeights = () => {
+        const newHeights: Record<string, number> = {}
+        let hasChanges = false
+
+        rowVirtualizer.getVirtualItems().forEach((virtualRow) => {
+          const sale = sales?.[virtualRow.index]
+          if (!sale || !expandedSales.has(sale.id)) return
+
+          const element = virtualRowRefs.current[virtualRow.index]
+          if (!element) return
+
+          const height = element.getBoundingClientRect().height
+          if (height !== expandedHeights[sale.id]) {
+            newHeights[sale.id] = height
+            hasChanges = true
+          }
+        })
+
+        if (hasChanges) {
+          setExpandedHeights(prev => ({
+            ...prev,
+            ...newHeights
+          }))
+        }
+      }
+
+      if (expandedSales.size > 0) {
+        updateExpandedHeights()
+      }
+    }, [expandedSales, sales, rowVirtualizer, expandedHeights])
 
     useEffect(() => {
       if (parentRef.current) {
@@ -273,7 +327,6 @@ export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
     }
 
     const handleRefresh = () => {
-      // This will trigger a re-render and re-measure of the virtualizer
       rowVirtualizer.measure()
     }
 
@@ -318,16 +371,8 @@ export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
                   <div
                     key={virtualRow.index}
                     data-index={virtualRow.index}
-                    ref={(el) => {
-                      if (el) {
-                        if (isExpanded) {
-                          const height = el.getBoundingClientRect().height
-                          setExpandedHeights(prev => ({
-                            ...prev,
-                            [sale.id]: height
-                          }))
-                        }
-                      }
+                    ref={el => {
+                      virtualRowRefs.current[virtualRow.index] = el
                     }}
                     className={cn(
                       "absolute top-0 left-0 w-full border-b p-4",

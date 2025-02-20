@@ -3,7 +3,6 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { NewUserDialog } from "@/components/users/NewUserDialog"
 import { EditUserDialog } from "@/components/users/EditUserDialog"
-import { DeleteUserDialog } from "@/components/users/DeleteUserDialog"
 import {
   Table,
   TableBody,
@@ -63,7 +62,6 @@ export default async function UsersPage() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <EditUserDialog user={user} />
-                    <DeleteUserDialog user={user} />
                   </div>
                 </TableCell>
               </TableRow>

@@ -13,21 +13,24 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { redirect } from "next/navigation"
+import { NextPageProps } from "@/types/app"
 
-interface EditUserPageProps {
-  params: {
-    id: string
-  }
+type EditUserParams = {
+  id: string
 }
 
+type EditUserPageProps = NextPageProps<EditUserParams>
+
 export default async function EditUserPage({ params }: EditUserPageProps) {
+  const resolvedParams = await params
+  
   const supabase = await createClient()
 
   // Fetch user data
   const { data: user } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', resolvedParams.id)
     .single()
 
   if (!user) {
@@ -48,7 +51,7 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
         role,
         name,
       })
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
 
     if (profileError) {
       throw new Error(profileError.message)

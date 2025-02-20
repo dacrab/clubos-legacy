@@ -2,14 +2,26 @@ import { createClient } from "@/lib/supabase/server"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { ProductsTable } from "@/components/products/ProductsTable"
-import { NewProductSheet } from "@/components/products/NewProductSheet"
-import { ManageCategoriesDialog } from "@/components/products/ManageCategoriesDialog"
+import { NewProductButton } from "@/components/products/NewProductButton"
+import { ManageCategoriesButton } from "@/components/products/ManageCategoriesButton"
+import { Product } from "@/types"
+
+type Category = {
+  id: string
+  name: string
+}
+
+type Subcategory = {
+  id: string
+  name: string
+  parent_id: string
+}
 
 export default async function ProductsPage() {
   const supabase = await createClient()
 
   // Fetch products with category and subcategory data
-  const { data: products = [] } = await supabase
+  const { data: productsData } = await supabase
     .from("products")
     .select(`
       *,
@@ -19,7 +31,7 @@ export default async function ProductsPage() {
     .order("name", { ascending: true })
 
   // Fetch categories (parent categories only)
-  const { data: categories = [] } = await supabase
+  const { data: categoriesData } = await supabase
     .from("categories")
     .select("id, name")
     .is("parent_id", null)
@@ -27,12 +39,17 @@ export default async function ProductsPage() {
     .order("name", { ascending: true })
 
   // Fetch subcategories
-  const { data: subcategories = [] } = await supabase
+  const { data: subcategoriesData } = await supabase
     .from("categories")
     .select("id, name, parent_id")
     .not("parent_id", "is", null)
     .eq("is_deleted", false)
     .order("name", { ascending: true })
+
+  // Ensure we have arrays even if the queries return null
+  const products = (productsData ?? []) as Product[]
+  const categories = (categoriesData ?? []) as Category[]
+  const subcategories = (subcategoriesData ?? []) as Subcategory[]
 
   return (
     <DashboardShell>
@@ -41,18 +58,12 @@ export default async function ProductsPage() {
         description="Manage your warehouse products"
       >
         <div className="flex gap-2">
-          <NewProductSheet 
-            categories={categories.map(c => c.name)} 
-            subcategories={subcategories.map(s => s.name)} 
-          />
-          <ManageCategoriesDialog 
-            existingCategories={categories.map(c => c.name)} 
-            existingSubcategories={subcategories.map(s => s.name)} 
-          />
+          <NewProductButton />
+          <ManageCategoriesButton />
         </div>
       </DashboardHeader>
       <ProductsTable 
-        products={products} 
+        products={products}
         categories={categories}
         subcategories={subcategories}
       />

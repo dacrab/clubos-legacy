@@ -19,7 +19,7 @@ import {
   DollarSign,
   Info,
 } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { Button } from "@/components/ui/button"
 import React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
@@ -55,22 +55,17 @@ interface TreatSummary {
 
 // Components
 const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
-  const couponDiscount = couponsUsed * 2
-  const subtotal = totalIncome // This is the sum of all non-treat, non-deleted items
-  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
-
   if (!couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
   }
 
   return (
-    <>
-      <div className="text-sm">Subtotal: {formatCurrency(subtotal)}</div>
-      <div className="text-sm text-red-600">
-        Coupon discount: -{formatCurrency(couponDiscount)}
+    <div className="font-medium">
+      Total: {formatCurrency(totalIncome)}
+      <div className="text-xs text-muted-foreground">
+        (Includes €{(couponsUsed * 2).toFixed(2)} coupon discount)
       </div>
-      <div className="font-medium">Final total: {formatCurrency(finalTotal)}</div>
-    </>
+    </div>
   )
 }
 
@@ -119,6 +114,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const tableRef = useRef<HTMLDivElement>(null)
   const [expandedHeights, setExpandedHeights] = useState<Record<string, number>>({})
+  const virtualRowRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const handleToggleRegister = (registerId: string) => {
     setExpandedRegisters(prev => {
@@ -164,6 +160,38 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     },
     overscan: 5,
   })
+
+  useLayoutEffect(() => {
+    const updateExpandedHeights = () => {
+      const newHeights: Record<string, number> = {}
+      let hasChanges = false
+
+      rowVirtualizer.getVirtualItems().forEach((virtualRow) => {
+        const register = filteredRegisters?.[virtualRow.index]
+        if (!register || !expandedRegisters.has(register.id)) return
+
+        const element = virtualRowRefs.current[virtualRow.index]
+        if (!element) return
+
+        const height = element.getBoundingClientRect().height
+        if (height !== expandedHeights[register.id]) {
+          newHeights[register.id] = height
+          hasChanges = true
+        }
+      })
+
+      if (hasChanges) {
+        setExpandedHeights(prev => ({
+          ...prev,
+          ...newHeights
+        }))
+      }
+    }
+
+    if (expandedRegisters.size > 0) {
+      updateExpandedHeights()
+    }
+  }, [expandedRegisters, filteredRegisters, rowVirtualizer, expandedHeights])
 
   useEffect(() => {
     if (tableRef.current) {
@@ -295,14 +323,8 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                   <div
                     key={virtualRow.index}
                     data-index={virtualRow.index}
-                    ref={(el) => {
-                      if (el && isExpanded) {
-                        const height = el.getBoundingClientRect().height
-                        setExpandedHeights(prev => ({
-                          ...prev,
-                          [register.id]: height
-                        }))
-                      }
+                    ref={el => {
+                      virtualRowRefs.current[virtualRow.index] = el
                     }}
                     className={`absolute top-0 left-0 w-full border-b p-4 ${
                       virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/50"

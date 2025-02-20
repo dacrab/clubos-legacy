@@ -1,50 +1,50 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
-import { type NextRequest, NextResponse } from "next/server"
-
-type RequestContext = {
-  params: { id: string }
-}
+import { NextRequest, NextResponse } from "next/server"
 
 export async function DELETE(
   request: NextRequest,
-  { params: { id } }: RequestContext
-) {
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const adminClient = createAdminClient()
 
-    // Verify admin user
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser) {
+    // Verify admin permissions
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const { data: currentProfile } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', currentUser.id)
+      .eq('id', user.id)
       .single()
 
-    if (currentProfile?.role !== 'admin') {
+    if (profile?.role !== 'admin') {
       return NextResponse.json(
-        { message: "Only admins can delete users" },
+        { message: "Only admins can delete users" }, 
         { status: 403 }
       )
     }
 
-    // Verify user exists
-    const { data: userToDelete } = await supabase
+    // Verify target user exists
+    const { data: targetUser } = await supabase
       .from('profiles')
       .select('email')
       .eq('id', id)
       .single()
 
-    if (!userToDelete) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
+    if (!targetUser) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      )
     }
 
-    // Delete user
+    // Delete the user
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(id)
     if (deleteError) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function DELETE(
       )
     }
 
-    // Verify deletion
+    // Verify deletion was successful
     const { data: deletedProfile } = await supabase
       .from('profiles')
       .select('id')
@@ -68,6 +68,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(null, { status: 200 })
+
   } catch (error) {
     console.error('Error deleting user:', error)
     return NextResponse.json(
