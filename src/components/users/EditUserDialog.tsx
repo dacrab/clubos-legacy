@@ -22,17 +22,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Pencil } from "lucide-react"
 import { PostgrestError } from "@supabase/supabase-js"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "staff" | "secretary"
-}
-
-interface EditUserDialogProps {
-  user: User
-}
+import { EditUserDialogProps } from "@/types/app"
 
 export function EditUserDialog({ user }: EditUserDialogProps) {
   const [isOpen, setIsOpen] = useState(false)

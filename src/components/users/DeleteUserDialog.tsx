@@ -14,16 +14,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  email: string
-}
-
-interface DeleteUserDialogProps {
-  user: User
-}
+import { DeleteUserDialogProps } from "@/types/app"
 
 export function DeleteUserDialog({ user }: DeleteUserDialogProps) {
   const [isOpen, setIsOpen] = useState(false)

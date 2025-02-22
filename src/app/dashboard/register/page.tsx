@@ -58,21 +58,40 @@ export default async function RegisterPage() {
     sales: register.sales?.map(sale => ({
       id: sale.id,
       total_amount: sale.total_amount,
+      created_at: register.created_at,
+      coupon_applied: false,
+      coupons_used: 0,
+      profile: {
+        id: register.closed_by || '',
+        name: register.closed_by_name || '',
+        email: ''
+      },
+      register: {
+        id: register.id,
+        coupons_used: register.coupons_used,
+        opened_at: register.opened_at,
+        closed_at: register.closed_at,
+        closed_by_name: register.closed_by_name
+      },
       sale_items: sale.sale_items?.map(item => ({
         id: item.id,
         quantity: item.quantity,
         price_at_sale: item.price_at_sale,
         is_treat: item.is_treat,
+        created_at: register.created_at,
         last_edited_by: item.last_edited_by,
         last_edited_at: item.last_edited_at,
         is_deleted: item.is_deleted,
         deleted_by: item.deleted_by,
         deleted_at: item.deleted_at,
         products: {
-          name: item.products[0]?.name ?? ''
+          id: '',
+          name: item.products[0]?.name ?? '',
+          price: 0,
+          is_deleted: false
         }
       }))
-    }))
+    })) ?? []
   })) ?? []
 
   return (

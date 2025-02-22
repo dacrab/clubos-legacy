@@ -17,15 +17,7 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
-
-interface CloseRegisterDialogProps {
-  activeRegisterId: string
-  totalAmount: number
-  itemsSold: number
-  couponsUsed: number
-  treatsCount: number
-  onRegisterClosed?: () => void
-}
+import { CloseRegisterDialogProps } from "@/types/app"
 
 export function CloseRegisterDialog({
   activeRegisterId,

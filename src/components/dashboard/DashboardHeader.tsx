@@ -1,10 +1,5 @@
 import { cn } from "@/lib/utils"
-
-interface DashboardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  heading: string
-  description?: string
-  children?: React.ReactNode
-}
+import { DashboardHeaderProps } from "@/types/app"
 
 export function DashboardHeader({
   heading,

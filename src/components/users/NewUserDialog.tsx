@@ -15,19 +15,20 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { UserPlus } from "lucide-react"
 import { z } from "zod"
+import { Role } from "@/types/app"
 
 const DOMAIN = "example.com"
 
 const userSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "staff", "secretary"])
+  role: z.enum(["admin", "staff", "secretary"] as const)
 })
 
 type UserFormData = {
   username: string
   password: string
-  role: "admin" | "staff" | "secretary"
+  role: Role
 }
 
 const initialFormData: UserFormData = {

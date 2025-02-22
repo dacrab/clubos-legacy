@@ -9,47 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditSaleItemDialog } from "@/components/sales/EditSaleItemDialog"
 import { DeleteSaleItemDialog } from "@/components/sales/DeleteProductDialog"
 import { cn, formatCurrency } from "@/lib/utils"
-
-// Type Definitions
-interface Product {
-  id: string
-  name: string
-  price: number
-  is_deleted: boolean
-}
-
-interface SaleItem {
-  id: string
-  quantity: number
-  price_at_sale: number
-  products: Product
-  is_treat: boolean
-  marked_as_treat_by?: string | null
-  marked_as_treat_at?: string | null
-  last_edited_by?: string | null
-  last_edited_at?: string | null
-  is_deleted?: boolean
-  deleted_by?: string | null
-  deleted_at?: string | null
-  created_at: string
-}
-
-interface Sale {
-  id: string
-  created_at: string
-  profile: {
-    name: string
-  }
-  sale_items: SaleItem[]
-  total_amount: number
-  coupons_used: number
-  coupon_applied: boolean
-}
+import type { Sale, SaleItem } from "@/types/app"
 
 interface RecentSalesProps {
   sales: Sale[] | null
   showEditStatus?: boolean
   userId: string
+}
+
+export interface RecentSalesRef {
+  clearSales: () => void
 }
 
 // Helper Functions
@@ -127,20 +96,25 @@ const SaleItem = ({ item, userId, onRefresh }: {
 }) => {
   const isZeroPrice = item.price_at_sale === 0 || item.is_treat
 
-  if (!item.products || !item.products.name) {
-    console.error('Missing product data:', item)
+  // Early return with error UI if item is invalid
+  if (!item) {
     return (
       <div className="text-sm text-red-600">
-        Error: Product data missing for sale item {item.id}
+        Error: Invalid sale item data
       </div>
     )
   }
+
+  // Handle missing product data gracefully
+  const productName = item.products?.name || 'Unknown Product'
+  const productId = item.products?.id || item.id
+  const productPrice = item.products?.price || item.price_at_sale
 
   return (
     <div className={cn("flex items-center justify-between", item.is_deleted && "opacity-50")}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium leading-none">{item.products.name}</p>
+          <p className="text-sm font-medium leading-none">{productName}</p>
           {isZeroPrice && (
             <div className="flex items-center gap-1 text-pink-600" title={`Marked as treat ${item.marked_as_treat_by ? `by ${item.marked_as_treat_by}` : ''}`}>
               <Gift className="h-3 w-3" />
@@ -165,16 +139,16 @@ const SaleItem = ({ item, userId, onRefresh }: {
           <>
             <EditSaleItemDialog
               saleItemId={item.id}
-              productName={item.products.name}
+              productName={productName}
               currentQuantity={item.quantity}
-              currentProductId={item.products.id}
+              currentProductId={productId}
               userId={userId}
               onEdit={onRefresh}
               createdAt={item.created_at}
             />
             <DeleteSaleItemDialog
               saleItemId={item.id}
-              productName={item.products.name}
+              productName={productName}
               userId={userId}
               onDelete={onRefresh}
               createdAt={item.created_at}
@@ -246,10 +220,6 @@ const SaleDetails = ({ sale, userId, onRefresh }: {
       </div>
     </div>
   )
-}
-
-export interface RecentSalesRef {
-  clearSales: () => void
 }
 
 export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(

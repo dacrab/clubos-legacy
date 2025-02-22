@@ -5,11 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
-
-interface SignOutButtonProps {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-}
+import { SignOutButtonProps } from "@/types/app";
 
 export function SignOutButton({ variant = "ghost", size = "icon" }: SignOutButtonProps) {
   const router = useRouter();
@@ -37,6 +33,7 @@ export function SignOutButton({ variant = "ghost", size = "icon" }: SignOutButto
       aria-label="Sign out"
     >
       <LogOut className="h-5 w-4" />
+      Log out
     </Button>
   );
 } 

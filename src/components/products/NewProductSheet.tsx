@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { NewProductSheetProps } from '@/types/app'
 
 import {
   Sheet,
@@ -36,12 +37,6 @@ const formSchema = z.object({
 })
 
 type FormValues = z.infer<typeof formSchema>
-
-interface NewProductSheetProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess?: () => void
-}
 
 export function NewProductSheet({ isOpen, onClose, onSuccess }: NewProductSheetProps) {
   const [isLoading, setIsLoading] = useState(false)

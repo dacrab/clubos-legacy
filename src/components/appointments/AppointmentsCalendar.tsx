@@ -10,12 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
-import { Appointment } from "@/types"
 import { format, isSameDay, parseISO } from "date-fns"
-
-interface AppointmentCardProps {
-  appointment: Appointment
-}
+import { AppointmentCardProps, AppointmentsCalendarProps } from "@/types/app"
 
 const AppointmentCard = ({ appointment }: AppointmentCardProps) => {
   const startTime = parseISO(appointment.start_time)
@@ -48,10 +44,6 @@ const AppointmentCard = ({ appointment }: AppointmentCardProps) => {
       </div>
     </div>
   )
-}
-
-interface AppointmentsCalendarProps {
-  appointments: Appointment[] | null
 }
 
 export function AppointmentsCalendar({

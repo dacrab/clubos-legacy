@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Sale } from "@/types"
 import { 
   Ticket, 
   ChevronDown, 
@@ -23,11 +22,7 @@ import {
 import { TableDateFilter } from "@/components/ui/table-date-filter"
 import type { DateRange } from "react-day-picker"
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
-
-// Types
-interface SalesTableProps {
-  sales: Sale[] | null
-}
+import { Sale, SalesTableProps } from "@/types/app"
 
 interface ProductSummary {
   name: string
@@ -37,6 +32,8 @@ interface ProductSummary {
   is_treat: boolean
   is_edited: boolean
   is_deleted: boolean
+  edit_count: number
+  delete_count: number
 }
 
 // Components
@@ -222,13 +219,17 @@ export function SalesTable({ sales }: SalesTableProps) {
       const key = `${item.products.name}-${Boolean(item.is_deleted) ? 'deleted' : 'active'}`
       const existing = productMap.get(key)
       const total = item.price_at_sale * item.quantity
+      const isEdited = Boolean(item.last_edited_by)
+      const isDeleted = Boolean(item.is_deleted)
 
       if (existing) {
         existing.quantity += item.quantity
         existing.total += total
         if (!item.is_treat) {
-          existing.is_edited = existing.is_edited || Boolean(item.last_edited_by)
-          existing.is_deleted = existing.is_deleted || Boolean(item.is_deleted)
+          existing.is_edited = existing.is_edited || isEdited
+          existing.is_deleted = existing.is_deleted || isDeleted
+          if (isEdited) existing.edit_count++
+          if (isDeleted) existing.delete_count++
         }
       } else {
         productMap.set(key, {
@@ -237,8 +238,10 @@ export function SalesTable({ sales }: SalesTableProps) {
           price: item.price_at_sale,
           total,
           is_treat: item.is_treat,
-          is_edited: !item.is_treat && Boolean(item.last_edited_by),
-          is_deleted: !item.is_treat && Boolean(item.is_deleted)
+          is_edited: !item.is_treat && isEdited,
+          is_deleted: !item.is_treat && isDeleted,
+          edit_count: isEdited ? 1 : 0,
+          delete_count: isDeleted ? 1 : 0
         })
       }
     })

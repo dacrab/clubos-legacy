@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { CalendarPlus } from "lucide-react"
 import { z } from "zod"
+import { AppointmentFormData } from "@/types/app"
 
 // Validation schema
 const appointmentSchema = z.object({
@@ -33,16 +34,6 @@ const appointmentSchema = z.object({
   notes: z.string().optional(),
   guests: z.number().min(0).optional(),
 })
-
-type AppointmentFormData = {
-  type: "football" | "party"
-  startTime: string
-  endTime: string
-  customerName: string
-  customerPhone: string
-  notes: string
-  guests?: number
-}
 
 const initialFormData: AppointmentFormData = {
   type: "football",

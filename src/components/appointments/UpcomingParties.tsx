@@ -6,11 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Appointment } from "@/types"
-
-interface UpcomingPartiesProps extends React.HTMLAttributes<HTMLDivElement> {
-  parties: Appointment[] | null
-}
+import { UpcomingPartiesProps } from "@/types/app"
 
 export function UpcomingParties({
   parties,

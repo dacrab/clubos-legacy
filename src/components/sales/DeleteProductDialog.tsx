@@ -14,14 +14,7 @@ import {
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 import { deleteSaleItem } from "@/app/dashboard/staff/actions"
-
-interface DeleteSaleItemDialogProps {
-  saleItemId: string
-  productName: string
-  userId: string
-  onDelete: () => void
-  createdAt: string
-}
+import { DeleteSaleItemDialogProps } from "@/types/app"
 
 export function DeleteSaleItemDialog({
   saleItemId,

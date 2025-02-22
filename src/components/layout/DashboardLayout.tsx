@@ -1,10 +1,6 @@
-import { ReactNode } from 'react';
 import { UserNav } from '@/components/UserNav';
 import { MainNav } from '@/components/MainNav';
-
-interface DashboardLayoutProps {
-  children: ReactNode;
-}
+import { DashboardLayoutProps } from '@/types/app';
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (

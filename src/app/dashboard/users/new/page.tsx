@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
+
+// UI Components
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,19 +15,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { redirect } from "next/navigation"
-import { revalidatePath } from "next/cache"
+
+// Database
+import { createClient } from "@/lib/supabase/server"
 
 export default function NewUserPage() {
+  // Server Actions
   async function createUser(formData: FormData) {
     'use server'
     
     const supabase = await createClient()
+    
+    // Get form data
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const name = formData.get('name') as string
     const role = formData.get('role') as 'admin' | 'staff' | 'secretary'
 
+    // Create auth user
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -40,7 +48,7 @@ export default function NewUserPage() {
       throw new Error(signUpError.message)
     }
 
-    // Update user role in profiles table
+    // Update user profile
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
@@ -58,6 +66,28 @@ export default function NewUserPage() {
     redirect('/dashboard/users')
   }
 
+  // Form Fields
+  const formFields = [
+    {
+      id: 'name',
+      label: 'Name',
+      type: 'text',
+      placeholder: 'Enter name',
+    },
+    {
+      id: 'email', 
+      label: 'Email',
+      type: 'email',
+      placeholder: 'Enter email',
+    },
+    {
+      id: 'password',
+      label: 'Password', 
+      type: 'password',
+      placeholder: 'Enter password',
+    }
+  ]
+
   return (
     <DashboardShell>
       <DashboardHeader
@@ -70,35 +100,18 @@ export default function NewUserPage() {
         </CardHeader>
         <CardContent>
           <form action={createUser} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Enter name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Enter email"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter password"
-                required
-              />
-            </div>
+            {formFields.map(field => (
+              <div key={field.id} className="space-y-2">
+                <Label htmlFor={field.id}>{field.label}</Label>
+                <Input
+                  id={field.id}
+                  name={field.id}
+                  type={field.type}
+                  placeholder={field.placeholder}
+                  required
+                />
+              </div>
+            ))}
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select name="role" required defaultValue="staff">
@@ -118,4 +131,4 @@ export default function NewUserPage() {
       </Card>
     </DashboardShell>
   )
-} 
+}

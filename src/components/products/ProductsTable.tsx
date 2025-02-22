@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Product } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Edit } from "lucide-react"
 import { ProductEditPanel } from "./ProductEditPanel"
@@ -22,13 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Image from "next/image"
-
-// Types
-interface ProductsTableProps {
-  products: Product[]
-  categories: Array<{ id: string; name: string }>
-  subcategories: Array<{ id: string; name: string; parent_id: string }>
-}
+import { Product, ProductsTableProps } from "@/types/app"
 
 interface StockStatus {
   label: string
@@ -83,19 +76,19 @@ export function ProductsTable({ products, categories, subcategories }: ProductsT
   }
 
   // Helper functions
-  const getStockStatus = (stock: number): StockStatus => {
+  const getStockStatus = (stock: number = 0): StockStatus => {
     if (stock === -1) return { label: "Unlimited", classes: "bg-blue-100 text-blue-800" }
     if (stock === 0) return { label: "Out of Stock", classes: "bg-red-100 text-red-800" }
     if (stock < 10) return { label: "Low Stock", classes: "bg-yellow-100 text-yellow-800" }
     return { label: "In Stock", classes: "bg-green-100 text-green-800" }
   }
 
-  const getCategoryName = (categoryId: string | null): string => {
+  const getCategoryName = (categoryId: string | null | undefined): string => {
     if (!categoryId) return ""
     return categories?.find(c => c.id === categoryId)?.name || ""
   }
 
-  const getSubcategoryName = (subcategoryId: string | null): string => {
+  const getSubcategoryName = (subcategoryId: string | null | undefined): string => {
     if (!subcategoryId) return ""
     return subcategories?.find(s => s.id === subcategoryId)?.name || ""
   }

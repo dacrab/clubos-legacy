@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Product } from "@/types"
 import { CategorySelector } from "./CategorySelector"
 import { ProductGrid } from "./ProductGrid"
 import { OrderSummary } from "./OrderSummary"
@@ -15,17 +14,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-
-interface OrderItem extends Product {
-  orderId: string
-  is_treat_selected: boolean
-}
-
-interface SalesPanelProps {
-  products: Product[] | null
-  isOpen: boolean
-  onClose: () => void
-}
+import { OrderItem, SalesPanelProps, Product } from "@/types/app"
 
 export function SalesPanel({ products, isOpen, onClose }: SalesPanelProps) {
   const router = useRouter()

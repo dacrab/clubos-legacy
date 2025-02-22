@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Register } from "@/types"
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -26,12 +25,9 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { TableDateFilter } from "@/components/ui/table-date-filter"
 import type { DateRange } from "react-day-picker"
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
+import { RegistersTableProps, Register } from "@/types/app"
 
 // Types
-interface RegistersTableProps {
-  registers: Register[] | null
-}
-
 interface ProductSummary {
   name: string
   quantity: number

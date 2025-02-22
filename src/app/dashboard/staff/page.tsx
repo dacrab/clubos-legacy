@@ -8,10 +8,16 @@ import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
 import { SignOutButton } from "@/components/SignOutButton"
 import { useRef, useEffect, useState } from "react"
-import { TypedSupabaseClient, Profile, Register, Sale, SaleItem } from "@/types/app"
+import { 
+  TypedSupabaseClient, 
+  Profile, 
+  Register, 
+  Sale, 
+  SaleItem,
+} from "@/types/app"
 
-// Types
-interface RawSaleItem {
+// Types for raw Supabase response
+interface SupabaseSaleItem {
   id: string
   quantity: number
   price_at_sale: number
@@ -27,54 +33,59 @@ interface RawSaleItem {
     name: string
     price: number
     is_deleted: boolean
-  }
+  } | null
 }
 
-interface RawSale {
+interface SupabaseSale {
   id: string
   created_at: string
   total_amount: number
   coupon_applied: boolean
   coupons_used: number
-  profiles: { 
+  profiles: {
     id: string
     name: string
-    email: string 
+    email: string
   }[]
-  sale_items: RawSaleItem[]
-  registers: { 
+  registers: {
     id: string
     coupons_used: number
     opened_at: string
     closed_at: string | null
-    closed_by_name: string | null 
+    closed_by_name: string | null
   }[]
+  sale_items: SupabaseSaleItem[]
 }
 
 // Helper functions
-const transformSaleItems = (items: RawSaleItem[]): SaleItem[] => {
+const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => {
   return items.map((item): SaleItem => ({
     id: item.id,
     quantity: item.quantity,
     price_at_sale: item.price_at_sale,
-    products: item.product,
+    products: {
+      id: item.product?.id || item.id,
+      name: item.product?.name || 'Product Deleted',
+      price: item.product?.price || item.price_at_sale,
+      is_deleted: item.product?.is_deleted || true
+    },
     is_treat: item.is_treat,
     last_edited_by: item.last_edited_by,
     last_edited_at: item.last_edited_at,
-    is_deleted: item.is_deleted || false,
+    is_deleted: item.is_deleted,
     deleted_by: item.deleted_by,
     deleted_at: item.deleted_at,
     created_at: item.created_at
   }))
 }
 
-const transformSales = (salesData: RawSale[]): Sale[] => {
+const transformSales = (salesData: SupabaseSale[]): Sale[] => {
   return salesData.map((sale): Sale => ({
     id: sale.id,
     created_at: sale.created_at,
     total_amount: sale.total_amount,
     coupon_applied: sale.coupon_applied,
-    coupons_used: sale.coupons_used || 0,
+    coupons_used: sale.coupons_used,
     profile: {
       id: sale.profiles[0]?.id || '',
       name: sale.profiles[0]?.name || '',
@@ -100,6 +111,44 @@ export default function StaffDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchSalesData = async (supabase: TypedSupabaseClient) => {
+    type RawSupabaseResponse = {
+      id: string
+      created_at: string
+      total_amount: number
+      coupon_applied: boolean
+      coupons_used: number
+      registers: {
+        id: string
+        coupons_used: number
+        opened_at: string
+        closed_at: string | null
+        closed_by_name: string | null
+      }[]
+      sale_items: {
+        id: string
+        quantity: number
+        price_at_sale: number
+        is_treat: boolean
+        created_at: string
+        last_edited_by: string | null
+        last_edited_at: string | null
+        is_deleted: boolean
+        deleted_by: string | null
+        deleted_at: string | null
+        product: {
+          id: string
+          name: string
+          price: number
+          is_deleted: boolean
+        } | null
+      }[]
+      profiles: {
+        id: string
+        name: string
+        email: string
+      }[]
+    }
+
     const { data: salesData, error: salesError } = await supabase
       .from("sales")
       .select(`
@@ -137,43 +186,22 @@ export default function StaffDashboardPage() {
       return
     }
 
-    setRecentSales(salesData ? transformSales(salesData.map((sale: any): RawSale => ({
-      id: sale.id,
-      created_at: sale.created_at,
-      total_amount: sale.total_amount,
-      coupon_applied: sale.coupon_applied,
-      coupons_used: sale.coupons_used,
-      profiles: sale.profiles.map((profile: any) => ({
-        id: profile.id,
-        name: profile.name,
-        email: profile.email
-      })),
-      registers: sale.registers.map((register: any) => ({
-        id: register.id,
-        coupons_used: register.coupons_used,
-        opened_at: register.opened_at,
-        closed_at: register.closed_at,
-        closed_by_name: register.closed_by_name
-      })),
-      sale_items: sale.sale_items.map((item: any) => ({
-        id: item.id,
-        quantity: item.quantity,
-        price_at_sale: item.price_at_sale,
-        is_treat: item.is_treat,
-        created_at: item.created_at,
-        last_edited_by: item.last_edited_by,
-        last_edited_at: item.last_edited_at,
-        is_deleted: item.is_deleted,
-        deleted_by: item.deleted_by,
-        deleted_at: item.deleted_at,
-        product: {
-          id: item.product?.[0]?.id || '',
-          name: item.product?.[0]?.name || '',
-          price: item.product?.[0]?.price || 0,
-          is_deleted: item.product?.[0]?.is_deleted || false
-        }
-      }))
-    }))) : [])
+    if (salesData) {
+      const typedSalesData = salesData as unknown as RawSupabaseResponse[]
+      const transformedSales = transformSales(typedSalesData.map(sale => ({
+        ...sale,
+        sale_items: sale.sale_items.map(item => ({
+          ...item,
+          product: item.product || {
+            id: item.id,
+            name: 'Product Deleted',
+            price: item.price_at_sale,
+            is_deleted: true
+          }
+        }))
+      })))
+      setRecentSales(transformedSales)
+    }
   }
 
   const handleRegisterClose = () => {
@@ -181,42 +209,42 @@ export default function StaffDashboardPage() {
     setActiveRegister(null)
   }
 
-  const setupSubscriptions = (supabase: TypedSupabaseClient) => {
-    const registerChannel = supabase
-      .channel('register-changes')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'registers', filter: 'closed_at.is.not.null' },
-        handleRegisterClose
-      )
-      .subscribe()
-
-    const salesChannel = supabase
-      .channel('sales-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sales' },
-        () => fetchSalesData(supabase)
-      )
-      .subscribe()
-
-    const saleItemsChannel = supabase
-      .channel('sale-items-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sale_items' },
-        () => fetchSalesData(supabase)
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(registerChannel)
-      supabase.removeChannel(salesChannel)
-      supabase.removeChannel(saleItemsChannel)
-    }
-  }
-
   useEffect(() => {
+    const setupSubscriptions = (supabase: TypedSupabaseClient) => {
+      const registerChannel = supabase
+        .channel('register-changes')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'registers', filter: 'closed_at.is.not.null' },
+          handleRegisterClose
+        )
+        .subscribe()
+
+      const salesChannel = supabase
+        .channel('sales-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'sales' },
+          () => fetchSalesData(supabase)
+        )
+        .subscribe()
+
+      const saleItemsChannel = supabase
+        .channel('sale-items-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'sale_items' },
+          () => fetchSalesData(supabase)
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(registerChannel)
+        supabase.removeChannel(salesChannel)
+        supabase.removeChannel(saleItemsChannel)
+      }
+    }
+
     const fetchData = async () => {
       try {
         const supabase = createClient()
@@ -263,34 +291,30 @@ export default function StaffDashboardPage() {
 
     fetchData()
     const cleanup = setupSubscriptions(createClient())
-    return cleanup
+    return () => {
+      cleanup()
+    }
   }, [])
 
   if (isLoading || !profile) {
-    return <div className="flex min-h-screen flex-col space-y-8 p-8">Loading...</div>
+    return <div className="flex h-full items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
   }
 
   return (
-    <div className="flex min-h-screen flex-col space-y-8 p-8">
-      <div className="flex items-center justify-between bg-card rounded-lg p-4 shadow-sm">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-bold">Staff Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {profile.name}</p>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Staff Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {profile.name}</p>
         </div>
         <SignOutButton />
       </div>
 
-      <div className="grid gap-4">
-        <RecentSales 
-          ref={recentSalesRef} 
-          sales={recentSales}
-          userId={user?.id || ''}
-        />
-      </div>
-
-      <div className="flex gap-4">
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-4">
         <NewSaleDialog />
         {activeRegister && (
           <CloseRegisterDialog
@@ -302,6 +326,20 @@ export default function StaffDashboardPage() {
             onRegisterClosed={handleRegisterClose}
           />
         )}
+      </div>
+
+      {/* Sales Section */}
+      <div className="grid gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Recent Sales</h2>
+            <RecentSales 
+              ref={recentSalesRef} 
+              sales={recentSales}
+              userId={user?.id || ''}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

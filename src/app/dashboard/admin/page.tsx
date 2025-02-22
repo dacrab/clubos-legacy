@@ -1,25 +1,68 @@
 'use client'
 
-import { User } from '@supabase/supabase-js'
 import { createClient } from "@/lib/supabase/client"
 import { RecentSales } from "@/components/dashboard/RecentSales"
 import { LowStockProducts } from "@/components/dashboard/LowStockProducts"
 import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
-import { SignOutButton } from "@/components/SignOutButton"
 import { useRef, useEffect, useState } from "react"
-import { TypedSupabaseClient, Profile, Register, Sale, SaleItem } from "@/types/app"
+import { 
+  TypedSupabaseClient, 
+  Profile, 
+  Register, 
+  Sale, 
+  SaleItem,
+  DashboardState,
+  RawSale,
+  RawSaleItem,
+} from "@/types/app"
 
-interface DashboardState {
-  user: User | null
-  profile: Profile | null
-  recentSales: Sale[]
-  activeRegister: Register | null
-  isLoading: boolean
-}
+const transformSaleItems = (items: RawSaleItem[]): SaleItem[] => (
+  items.map((item) => ({
+    id: item.id,
+    quantity: item.quantity,
+    price_at_sale: item.price_at_sale,
+    products: {
+      id: item.product?.id || item.id,
+      name: item.product?.name || 'Product Deleted',
+      price: item.product?.price || item.price_at_sale,
+      is_deleted: item.product?.is_deleted || true
+    },
+    is_treat: item.is_treat,
+    last_edited_by: item.last_edited_by || null,
+    last_edited_at: item.last_edited_at || null,
+    is_deleted: item.is_deleted || false,
+    deleted_by: item.deleted_by || null,
+    deleted_at: item.deleted_at || null,
+    created_at: item.created_at
+  }))
+)
 
-export default function AdminDashboardPage() {
+const transformSales = (salesData: RawSale[]): Sale[] => (
+  salesData.map((sale) => ({
+    id: sale.id,
+    created_at: sale.created_at,
+    total_amount: sale.total_amount,
+    coupon_applied: sale.coupon_applied,
+    coupons_used: sale.coupons_used || 0,
+    profile: {
+      id: sale.profiles[0]?.id || '',
+      name: sale.profiles[0]?.name || '',
+      email: sale.profiles[0]?.email || ''
+    },
+    register: {
+      id: sale.registers[0]?.id || '',
+      coupons_used: sale.registers[0]?.coupons_used || 0,
+      opened_at: sale.registers[0]?.opened_at || '',
+      closed_at: sale.registers[0]?.closed_at || null,
+      closed_by_name: sale.registers[0]?.closed_by_name || null
+    },
+    sale_items: transformSaleItems(sale.sale_items)
+  }))
+)
+
+const AdminDashboardPage = () => {
   const recentSalesRef = useRef<{ clearSales: () => void } | null>(null)
   const [state, setState] = useState<DashboardState>({
     user: null,
@@ -78,100 +121,63 @@ export default function AdminDashboardPage() {
     }
 
     if (!salesData) {
-      setState(prev => ({ ...prev, recentSales: [] }))
+      setState((prev) => ({ ...prev, recentSales: [] }))
       return
     }
 
-    const transformedSales: Sale[] = salesData.map((sale): Sale => ({
-      id: sale.id,
-      created_at: sale.created_at,
-      total_amount: sale.total_amount,
-      coupon_applied: sale.coupon_applied,
-      coupons_used: sale.coupons_used || 0,
-      profile: {
-        id: sale.profiles[0]?.id || '',
-        name: sale.profiles[0]?.name || '',
-        email: sale.profiles[0]?.email || ''
-      },
-      register: {
-        id: sale.registers[0]?.id || '',
-        coupons_used: sale.registers[0]?.coupons_used || 0,
-        opened_at: sale.registers[0]?.opened_at || '',
-        closed_at: sale.registers[0]?.closed_at || null,
-        closed_by_name: sale.registers[0]?.closed_by_name || null
-      },
-      sale_items: sale.sale_items.map((item): SaleItem => ({
-        id: item.id,
-        quantity: item.quantity,
-        price_at_sale: item.price_at_sale,
-        products: {
-          id: item.product?.[0]?.id || '',
-          name: item.product?.[0]?.name || '',
-          price: item.product?.[0]?.price || 0,
-          is_deleted: item.product?.[0]?.is_deleted || false
-        },
-        is_treat: item.is_treat,
-        last_edited_by: item.last_edited_by,
-        last_edited_at: item.last_edited_at,
-        is_deleted: item.is_deleted,
-        deleted_by: item.deleted_by,
-        deleted_at: item.deleted_at,
-        created_at: item.created_at
-      }))
-    }))
-
-    setState(prev => ({ ...prev, recentSales: transformedSales }))
-  }
-
-  const setupSubscriptions = (supabase: TypedSupabaseClient) => {
-    const channels = [
-      supabase
-        .channel('register-changes')
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'registers', filter: 'closed_at.is.not.null' },
-          () => {
-            recentSalesRef.current?.clearSales()
-            setState(prev => ({ ...prev, activeRegister: null }))
-          }
-        )
-        .subscribe(),
-
-      supabase
-        .channel('sales-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'sales' },
-          () => fetchSalesData(supabase)
-        )
-        .subscribe(),
-
-      supabase
-        .channel('sale-items-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'sale_items' },
-          () => fetchSalesData(supabase)
-        )
-        .subscribe()
-    ]
-
-    return () => channels.forEach(channel => supabase.removeChannel(channel))
+    const transformedSales = transformSales(salesData as unknown as RawSale[])
+    setState((prev) => ({ ...prev, recentSales: transformedSales }))
   }
 
   useEffect(() => {
+    const setupSubscriptions = (supabase: TypedSupabaseClient) => {
+      const handleRegisterChange = () => {
+        recentSalesRef.current?.clearSales()
+        setState((prev) => ({ ...prev, activeRegister: null }))
+      }
+
+      const channels = [
+        supabase
+          .channel('register-changes')
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'registers', filter: 'closed_at.is.not.null' },
+            handleRegisterChange
+          )
+          .subscribe(),
+
+        supabase
+          .channel('sales-changes')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'sales' },
+            () => fetchSalesData(supabase)
+          )
+          .subscribe(),
+
+        supabase
+          .channel('sale-items-changes')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'sale_items' },
+            () => fetchSalesData(supabase)
+          )
+          .subscribe()
+      ]
+
+      return () => channels.forEach((channel) => supabase.removeChannel(channel))
+    }
+
     const initializeDashboard = async () => {
       try {
         const supabase = createClient()
 
-        // Get user
         const { data: { user: userData }, error: authError } = await supabase.auth.getUser()
         if (!userData || authError) {
           redirect("/auth/sign-in")
           return
         }
 
-        // Get profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("id, role, name")
@@ -183,7 +189,6 @@ export default function AdminDashboardPage() {
           return
         }
 
-        // Get active register
         const { data: registerData, error: registerError } = await supabase
           .from("registers")
           .select("id, items_sold, coupons_used, treat_items_sold, total_amount, closed_at")
@@ -194,7 +199,7 @@ export default function AdminDashboardPage() {
           console.error("Error fetching active register:", registerError)
         }
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           user: userData,
           profile: profileData as Profile,
@@ -206,7 +211,7 @@ export default function AdminDashboardPage() {
 
       } catch (error) {
         console.error("Error loading dashboard:", error)
-        setState(prev => ({ ...prev, isLoading: false }))
+        setState((prev) => ({ ...prev, isLoading: false }))
       }
     }
 
@@ -214,7 +219,9 @@ export default function AdminDashboardPage() {
     const cleanup = setupSubscriptions(supabase)
     initializeDashboard()
 
-    return cleanup
+    return () => {
+      cleanup()
+    }
   }, [])
 
   if (state.isLoading || !state.profile) {
@@ -237,7 +244,6 @@ export default function AdminDashboardPage() {
               onRegisterClosed={() => recentSalesRef.current?.clearSales()}
             />
           )}
-          <SignOutButton />
         </div>
       </div>
       <div className="space-y-4">
@@ -253,3 +259,5 @@ export default function AdminDashboardPage() {
     </div>
   )
 }
+
+export default AdminDashboardPage

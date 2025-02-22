@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Product } from "@/types"
 import { Button } from "@/components/ui/button"
 import { FormField } from "@/components/ui/form-field"
 import { SelectField } from "@/components/ui/select-field"
@@ -46,14 +45,7 @@ import {
   Save,
   XCircle
 } from "lucide-react"
-
-interface ProductEditPanelProps {
-  product: Product
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  categories: string[]
-  subcategories: string[]
-}
+import { ProductEditPanelProps } from "@/types/app"
 
 export function ProductEditPanel({
   product,
@@ -66,7 +58,7 @@ export function ProductEditPanel({
   const [isLoading, setIsLoading] = useState(false)
   const [hasUnlimitedStock, setHasUnlimitedStock] = useState(product.stock === -1)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(product.image_url)
+  const [imagePreview, setImagePreview] = useState<string | null>(product.image_url || null)
   const [imageMethod, setImageMethod] = useState<"upload" | "url">("upload")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [formData, setFormData] = useState({

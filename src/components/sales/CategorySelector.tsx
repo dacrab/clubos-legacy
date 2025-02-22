@@ -1,20 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-
-interface Category {
-  id: string
-  name: string
-}
-
-interface CategorySelectorProps {
-  categories: Category[]
-  subcategories: Category[]
-  selectedCategory: string | null
-  selectedSubcategory: string | null
-  onSelectCategory: (categoryId: string | null) => void
-  onSelectSubcategory: (subcategoryId: string | null) => void
-}
+import { CategorySelectorProps } from "@/types/app"
 
 export function CategorySelector({
   categories,

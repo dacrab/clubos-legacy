@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { z } from "zod"
-import { signIn, getUserProfile } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
+import { LoginFormData, LoginErrorMessages } from "@/types/app"
 
 const DOMAIN = "example.com"
 
@@ -16,33 +17,17 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters")
 })
 
-
-const errorMessages = {
-  invalidCredentials: {
-    title: "Invalid credentials",
-    description: "The username or password you entered is incorrect."
-  },
-  profileError: {
-    title: "Profile error",
-    description: "Unable to retrieve your user profile. Please try again."
-  },
-  connectionError: {
-    title: "Connection error",
-    description: "Unable to connect to the server. Please check your internet connection and try again."
-  }
-} as const
-
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     password: ''
   })
   const router = useRouter()
 
-  const handleError = (errorType: keyof typeof errorMessages) => {
-    toast.error(errorMessages[errorType].title, {
-      description: errorMessages[errorType].description
+  const handleError = (errorType: keyof typeof LoginErrorMessages) => {
+    toast.error(LoginErrorMessages[errorType].title, {
+      description: LoginErrorMessages[errorType].description
     })
     setIsLoading(false)
   }
@@ -55,35 +40,58 @@ export function LoginForm() {
       const validatedData = loginSchema.parse(formData)
       const email = `${validatedData.username}@${DOMAIN}`
 
-      // Sign in with Supabase
-      await signIn(email, validatedData.password)
+      const supabase = createClient();
 
-      // Get user profile
-      const profile = await getUserProfile()
+      // Sign in with Supabase
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: validatedData.password,
+      });
+
+      if (signInError) {
+        console.error("Sign-in error:", signInError);
+        handleError('connectionError');
+        return;
+      }
+
+      // Get user profile and add null check
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
+      if (!user || userError) {
+        handleError('profileError');
+        return;
+      }
+
+      // Now TypeScript knows user is not null
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
       if (!profile || !['admin', 'staff', 'secretary'].includes(profile.role)) {
-        handleError('profileError')
-        return
+        handleError('profileError');
+        return;
       }
 
       toast.success("Welcome back!", {
         description: "Successfully signed in."
-      })
+      });
 
-      router.push(`/dashboard/${profile.role}`)
-      router.refresh()
+      router.push(`/dashboard/${profile.role}`);
+      router.refresh();
 
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error("Validation Error", {
           description: error.errors[0].message
-        })
+        });
       } else {
-        console.error("Login error:", error)
-        handleError('connectionError')
+        console.error("Login error:", error);
+        handleError('connectionError');
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 

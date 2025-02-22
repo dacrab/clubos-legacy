@@ -14,18 +14,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { ScrollArea } from '@/components/ui/scroll-area'
-
-interface Category {
-  id: string;
-  name: string;
-  parent_id: string | null;
-}
-
-interface ManageCategoriesDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
-}
+import { Category, ManageCategoriesDialogProps } from "@/types/app";
 
 export function ManageCategoriesDialog({
   isOpen,

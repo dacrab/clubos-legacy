@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { editSaleItem } from "@/app/dashboard/staff/actions"
 import { cn } from "@/lib/utils"
+import { EditSaleItemDialogProps, Product } from "@/types/app"
 
 // Dialog Components
 import {
@@ -31,23 +32,6 @@ import {
 
 // Constants
 const EDIT_TIME_LIMIT = 5 * 60 // 5 minutes in seconds
-
-interface Product {
-  id: string
-  name: string
-  price: number
-  stock: number
-}
-
-interface EditSaleItemDialogProps {
-  saleItemId: string
-  productName: string
-  currentQuantity: number
-  currentProductId: string
-  userId: string
-  onEdit: () => void
-  createdAt: string
-}
 
 export function EditSaleItemDialog({
   saleItemId,
@@ -114,14 +98,22 @@ export function EditSaleItemDialog({
       const supabase = createClient()
       const { data } = await supabase
         .from('products')
-        .select('id, name, price, stock')
+        .select('id, name, price, stock, is_deleted')
         .eq('is_deleted', false)
         .order('name')
 
       if (data) {
-        setProducts(data)
+        setProducts(data.map(p => ({
+          ...p,
+          is_deleted: p.is_deleted || false
+        })) as Product[])
         const current = data.find(p => p.id === currentProductId)
-        if (current) setSelectedProduct(current)
+        if (current) {
+          setSelectedProduct({
+            ...current,
+            is_deleted: current.is_deleted || false
+          } as Product)
+        }
       } else {
         toast.error("Error", { description: "Failed to load products. Please try again." })
       }

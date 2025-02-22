@@ -4,13 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { formatCurrency } from "@/lib/utils"
-
-interface Product {
-  id: string
-  name: string
-  stock: number
-  price: number
-}
+import { Product } from "@/types/app"
 
 export function LowStockProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -20,14 +14,17 @@ export function LowStockProducts() {
       const supabase = createClient()
       const { data } = await supabase
         .from("products")
-        .select("id, name, stock, price")
+        .select("id, name, stock, price, is_deleted")
         .gt("stock", -1)
         .lt("stock", 10)
         .eq("is_deleted", false)
         .order("stock", { ascending: true })
 
       if (data) {
-        setProducts(data)
+        setProducts(data.map(item => ({
+          ...item,
+          is_deleted: item.is_deleted || false
+        })) as Product[])
       }
     }
 
@@ -69,7 +66,7 @@ export function LowStockProducts() {
     )
   }
 
-  const getStockStatus = (stock: number) => {
+  const getStockStatus = (stock: number = 0) => {
     if (stock === 0) return { label: "Out of stock", color: "text-red-500" }
     if (stock < 5) return { label: "Critical", color: "text-orange-500" }
     return { label: "Low", color: "text-yellow-500" }
