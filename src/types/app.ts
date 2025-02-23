@@ -6,6 +6,12 @@ import { HTMLAttributes, ReactNode } from 'react'
 // Client type
 export type TypedSupabaseClient = SupabaseClient<Database>
 
+// Common types
+export type ID = string
+export type Timestamp = string
+export type Role = 'admin' | 'staff' | 'secretary'
+export type SearchParamsValue = Record<string, string | string[] | undefined>
+
 // Layout Types
 export interface DashboardLayoutProps {
   children: ReactNode
@@ -15,14 +21,7 @@ export interface StaffLayoutProps {
   children: ReactNode
 }
 
-// Common types
-export type ID = string
-export type Timestamp = string
-export type Role = 'admin' | 'staff' | 'secretary'
-
 // Request/Response types
-export type SearchParamsValue = Record<string, string | string[] | undefined>
-
 export type NextPageProps<T = Record<string, unknown>> = {
   params: Promise<T>
   searchParams?: Promise<SearchParamsValue>
@@ -307,6 +306,7 @@ export interface SaleItemProduct {
 export interface SaleItem extends BaseEntity {
   quantity: number
   price_at_sale: number
+  product: SaleItemProduct
   products: SaleItemProduct
   is_treat: boolean
   created_at: Timestamp
@@ -397,4 +397,64 @@ export const LoginErrorMessages = {
 // Provider Types
 export interface ReactQueryProviderProps {
   children: ReactNode
+}
+
+export interface ProductSummary {
+  name: string
+  quantity: number
+  price: number
+  total: number
+  is_treat: boolean
+  is_edited: boolean
+  is_deleted: boolean
+  edit_count: number
+  delete_count: number
+}
+
+export interface TreatSummary {
+  name: string
+  quantity: number
+  price: number
+  total: number
+  is_edited: boolean
+  is_deleted: boolean
+  edit_count: number
+  delete_count: number
+}
+
+export interface RegisterTableTotalDisplayProps {
+  totalIncome: number
+  couponsUsed: number
+}
+
+export interface RegisterTableStatusBadgeProps {
+  type: 'sale' | 'treat' | 'edited' | 'deleted'
+  children: React.ReactNode
+  count?: number
+}
+
+export interface RegisterTableHeaderCellProps {
+  icon: React.ReactNode
+  text: string
+  width: string
+}
+
+export interface RecentSalesRef {
+  refresh: () => void
+  clearSales: () => void
+}
+
+export interface SupabaseSale extends RawSale {
+  profiles: RawSaleProfile[]
+  registers: RawSaleRegister[]
+  sale_items: SupabaseSaleItem[]
+}
+
+export interface SupabaseSaleItem extends RawSaleItem {
+  product?: {
+    id: string
+    name: string
+    price: number
+    is_deleted: boolean
+  } | null
 }

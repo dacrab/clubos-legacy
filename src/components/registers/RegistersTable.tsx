@@ -1,6 +1,6 @@
 'use client';
 
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency, formatDate, cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -24,40 +24,27 @@ import React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { TableDateFilter } from "@/components/ui/table-date-filter"
 import type { DateRange } from "react-day-picker"
-import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
-import { RegistersTableProps, Register } from "@/types/app"
-
-// Types
-interface ProductSummary {
-  name: string
-  quantity: number
-  price: number
-  total: number
-  is_treat: boolean
-  is_edited: boolean
-  is_deleted: boolean
-  edit_count: number
-  delete_count: number
-}
-
-interface TreatSummary {
-  name: string
-  quantity: number
-  is_edited: boolean
-  is_deleted: boolean
-  edit_count: number
-  delete_count: number
-}
+import { isWithinInterval, parseISO, startOfDay, endOfDay, formatDistanceToNow } from "date-fns"
+import { 
+  RegistersTableProps, 
+  Register, 
+  ProductSummary,
+  TreatSummary,
+  RegisterTableTotalDisplayProps,
+  RegisterTableStatusBadgeProps,
+  RegisterTableHeaderCellProps
+} from "@/types/app"
+import { StatusIcon } from "@/components/sales/SaleComponents"
 
 // Components
-const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, couponsUsed: number }) => {
+const TotalDisplay = ({ totalIncome, couponsUsed }: RegisterTableTotalDisplayProps) => {
   if (!couponsUsed) {
     return <span className="font-medium">Total: {formatCurrency(totalIncome)}</span>
   }
 
   return (
     <div className="font-medium">
-      Total: {formatCurrency(totalIncome)}
+      <div>Total: {formatCurrency(totalIncome)}</div>
       <div className="text-xs text-muted-foreground">
         (Includes €{(couponsUsed * 2).toFixed(2)} coupon discount)
       </div>
@@ -65,19 +52,20 @@ const TotalDisplay = ({ totalIncome, couponsUsed }: { totalIncome: number, coupo
   )
 }
 
-const StatusBadge = ({ type, children, count }: { type: 'sale' | 'treat' | 'edited' | 'deleted', children: React.ReactNode, count?: number }) => {
+const StatusBadge = ({ type, children, count }: RegisterTableStatusBadgeProps) => {
   const styles = {
-    sale: "bg-green-100 text-green-800",
-    treat: "bg-pink-100 text-pink-800",
-    edited: "bg-yellow-100 text-yellow-800",
-    deleted: "bg-red-100 text-red-800"
+    sale: "text-green-600",
+    treat: "text-pink-600",
+    edited: "text-yellow-600",
+    deleted: "text-red-600"
   }
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${styles[type]}`}>
-      {children}
-      {count !== undefined && count > 1 ? ` (${count})` : ''}
-    </span>
+    <StatusIcon
+      count={count || 1}
+      color={styles[type]}
+      label={children?.toString() || type}
+    />
   )
 }
 
@@ -95,7 +83,7 @@ const TableHeader = () => (
   </div>
 )
 
-const HeaderCell = ({ icon, text, width }: { icon: React.ReactNode, text: string, width: string }) => (
+const HeaderCell = ({ icon, text, width }: RegisterTableHeaderCellProps) => (
   <div className={`w-[${width}] px-4 font-medium`}>
     <div className="flex items-center gap-2">
       {icon}
@@ -103,6 +91,171 @@ const HeaderCell = ({ icon, text, width }: { icon: React.ReactNode, text: string
     </div>
   </div>
 )
+
+const RegisterDetails = ({ register }: { register: Register }) => {
+  const productSummary = getProductSummary(register)
+  const treatSummary = getTreatSummary(register)
+
+  return (
+    <div className="px-4 pb-4">
+      <div className="rounded-lg border bg-muted/50 p-4">
+        <h3 className="font-medium mb-4">Products Sold</h3>
+        <div className="space-y-4">
+          {productSummary.length > 0 && (
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left font-medium py-2">Product</th>
+                  <th className="text-left font-medium py-2">Quantity</th>
+                  <th className="text-left font-medium py-2">Price</th>
+                  <th className="text-left font-medium py-2">Total</th>
+                  <th className="text-left font-medium py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productSummary.map((product, index) => (
+                  <tr key={index} className="border-t">
+                    <td className="py-2">{product.name}</td>
+                    <td className="py-2">{product.quantity}</td>
+                    <td className="py-2">{formatCurrency(product.price)}</td>
+                    <td className="py-2">{formatCurrency(product.total)}</td>
+                    <td className="py-2">
+                      <div className="flex gap-1">
+                        {product.is_edited && (
+                          <StatusBadge type="edited" count={product.edit_count}>
+                            Edited
+                          </StatusBadge>
+                        )}
+                        {product.is_deleted && (
+                          <StatusBadge type="deleted" count={product.delete_count}>
+                            Deleted
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {treatSummary.length > 0 && (
+            <>
+              <h3 className="font-medium mb-2 mt-6">Treats Given</h3>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left font-medium py-2">Product</th>
+                    <th className="text-left font-medium py-2">Quantity</th>
+                    <th className="text-left font-medium py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {treatSummary.map((treat, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="py-2">{treat.name}</td>
+                      <td className="py-2">{treat.quantity}</td>
+                      <td className="py-2">
+                        <div className="flex gap-1">
+                          {treat.is_edited && (
+                            <StatusBadge type="edited" count={treat.edit_count}>
+                              Edited
+                            </StatusBadge>
+                          )}
+                          {treat.is_deleted && (
+                            <StatusBadge type="deleted" count={treat.delete_count}>
+                              Deleted
+                            </StatusBadge>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Helper functions
+const getProductSummary = (register: Register): ProductSummary[] => {
+  const productMap = new Map<string, ProductSummary>()
+
+  register.sales?.forEach(sale => {
+    sale.sale_items?.forEach(item => {
+      if (!item.is_treat) {
+        const key = `${item.product.name}-${item.product.id}-${item.is_deleted ? 'deleted' : 'active'}`
+        const existing = productMap.get(key)
+        const total = item.price_at_sale * item.quantity
+        const isEdited = Boolean(item.last_edited_by)
+        const isDeleted = Boolean(item.is_deleted)
+
+        if (existing) {
+          existing.quantity += item.quantity
+          existing.total += total
+          existing.is_edited = existing.is_edited || isEdited
+          existing.is_deleted = existing.is_deleted || isDeleted
+          if (isEdited) existing.edit_count++
+          if (isDeleted) existing.delete_count++
+        } else {
+          productMap.set(key, {
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.price_at_sale,
+            total,
+            is_treat: item.is_treat,
+            is_edited: isEdited,
+            is_deleted: isDeleted,
+            edit_count: isEdited ? 1 : 0,
+            delete_count: isDeleted ? 1 : 0
+          })
+        }
+      }
+    })
+  })
+
+  return Array.from(productMap.values())
+}
+
+const getTreatSummary = (register: Register): TreatSummary[] => {
+  const treatMap = new Map<string, TreatSummary>()
+
+  register.sales?.forEach(sale => {
+    sale.sale_items?.forEach(item => {
+      if (item.is_treat) {
+        const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
+        const existing = treatMap.get(key)
+        const isEdited = Boolean(item.last_edited_by)
+        const isDeleted = Boolean(item.is_deleted)
+
+        if (existing) {
+          existing.quantity += item.quantity
+          existing.total += item.quantity * item.price_at_sale
+          existing.is_edited = existing.is_edited || isEdited
+          existing.is_deleted = existing.is_deleted || isDeleted
+          if (isEdited) existing.edit_count++
+          if (isDeleted) existing.delete_count++
+        } else {
+          treatMap.set(key, {
+            name: item.products.name,
+            quantity: item.quantity,
+            price: item.price_at_sale,
+            total: item.quantity * item.price_at_sale,
+            is_edited: isEdited,
+            is_deleted: isDeleted,
+            edit_count: isEdited ? 1 : 0,
+            delete_count: isDeleted ? 1 : 0
+          })
+        }
+      }
+    })
+  })
+
+  return Array.from(treatMap.values())
+}
 
 // Main Component
 export function RegistersTable({ registers }: RegistersTableProps) {
@@ -205,79 +358,6 @@ export function RegistersTable({ registers }: RegistersTableProps) {
     )
   }
 
-  const getProductSummary = (register: Register): ProductSummary[] => {
-    const productMap = new Map<string, ProductSummary>()
-
-    register.sales?.forEach(sale => {
-      sale.sale_items?.forEach(item => {
-        if (!item.is_treat) {
-          const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
-          const existing = productMap.get(key)
-          const total = item.price_at_sale * item.quantity
-          const isEdited = Boolean(item.last_edited_by)
-          const isDeleted = Boolean(item.is_deleted)
-
-          if (existing) {
-            existing.quantity += item.quantity
-            existing.total += total
-            existing.is_edited = existing.is_edited || isEdited
-            existing.is_deleted = existing.is_deleted || isDeleted
-            if (isEdited) existing.edit_count++
-            if (isDeleted) existing.delete_count++
-          } else {
-            productMap.set(key, {
-              name: item.products.name,
-              quantity: item.quantity,
-              price: item.price_at_sale,
-              total,
-              is_treat: item.is_treat,
-              is_edited: isEdited,
-              is_deleted: isDeleted,
-              edit_count: isEdited ? 1 : 0,
-              delete_count: isDeleted ? 1 : 0
-            })
-          }
-        }
-      })
-    })
-
-    return Array.from(productMap.values())
-  }
-
-  const getTreatSummary = (register: Register): TreatSummary[] => {
-    const treatMap = new Map<string, TreatSummary>()
-
-    register.sales?.forEach(sale => {
-      sale.sale_items?.forEach(item => {
-        if (item.is_treat) {
-          const key = `${item.products.name}-${item.is_deleted ? 'deleted' : 'active'}`
-          const existing = treatMap.get(key)
-          const isEdited = Boolean(item.last_edited_by)
-          const isDeleted = Boolean(item.is_deleted)
-
-          if (existing) {
-            existing.quantity += item.quantity
-            existing.is_edited = existing.is_edited || isEdited
-            existing.is_deleted = existing.is_deleted || isDeleted
-            if (isEdited) existing.edit_count++
-            if (isDeleted) existing.delete_count++
-          } else {
-            treatMap.set(key, {
-              name: item.products.name,
-              quantity: item.quantity,
-              is_edited: isEdited,
-              is_deleted: isDeleted,
-              edit_count: isEdited ? 1 : 0,
-              delete_count: isDeleted ? 1 : 0
-            })
-          }
-        }
-      })
-    })
-
-    return Array.from(treatMap.values())
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -312,8 +392,6 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                 if (!register) return null
 
                 const isExpanded = expandedRegisters.has(register.id)
-                const productSummary = getProductSummary(register)
-                const treatSummary = getTreatSummary(register)
 
                 return (
                   <div
@@ -322,9 +400,10 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                     ref={el => {
                       virtualRowRefs.current[virtualRow.index] = el
                     }}
-                    className={`absolute top-0 left-0 w-full border-b p-4 ${
+                    className={cn(
+                      "absolute top-0 left-0 w-full border-b p-4",
                       virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/50"
-                    }`}
+                    )}
                     style={{
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
@@ -359,88 +438,7 @@ export function RegistersTable({ registers }: RegistersTableProps) {
                         </Button>
                       </div>
                     </div>
-                    {isExpanded && (
-                      <div className="px-4 pb-4">
-                        <div className="rounded-lg border bg-muted/50 p-4">
-                          <h3 className="font-medium mb-4">Products Sold</h3>
-                          <div className="space-y-4">
-                            {productSummary.length > 0 && (
-                              <table className="w-full">
-                                <thead>
-                                  <tr>
-                                    <th className="text-left font-medium py-2">Product</th>
-                                    <th className="text-left font-medium py-2">Quantity</th>
-                                    <th className="text-left font-medium py-2">Price</th>
-                                    <th className="text-left font-medium py-2">Total</th>
-                                    <th className="text-left font-medium py-2">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {productSummary.map((product, index) => (
-                                    <tr key={index} className="border-t">
-                                      <td className="py-2">{product.name}</td>
-                                      <td className="py-2">{product.quantity}</td>
-                                      <td className="py-2">{formatCurrency(product.price)}</td>
-                                      <td className="py-2">{formatCurrency(product.total)}</td>
-                                      <td className="py-2">
-                                        <div className="flex gap-1">
-                                          {product.is_edited && (
-                                            <StatusBadge type="edited" count={product.edit_count}>
-                                              Edited
-                                            </StatusBadge>
-                                          )}
-                                          {product.is_deleted && (
-                                            <StatusBadge type="deleted" count={product.delete_count}>
-                                              Deleted
-                                            </StatusBadge>
-                                          )}
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                            {treatSummary.length > 0 && (
-                              <>
-                                <h3 className="font-medium mb-2 mt-6">Treats Given</h3>
-                                <table className="w-full">
-                                  <thead>
-                                    <tr>
-                                      <th className="text-left font-medium py-2">Product</th>
-                                      <th className="text-left font-medium py-2">Quantity</th>
-                                      <th className="text-left font-medium py-2">Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {treatSummary.map((treat, index) => (
-                                      <tr key={index} className="border-t">
-                                        <td className="py-2">{treat.name}</td>
-                                        <td className="py-2">{treat.quantity}</td>
-                                        <td className="py-2">
-                                          <div className="flex gap-1">
-                                            {treat.is_edited && (
-                                              <StatusBadge type="edited" count={treat.edit_count}>
-                                                Edited
-                                              </StatusBadge>
-                                            )}
-                                            {treat.is_deleted && (
-                                              <StatusBadge type="deleted" count={treat.delete_count}>
-                                                Deleted
-                                              </StatusBadge>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    {isExpanded && <RegisterDetails register={register} />}
                   </div>
                 )
               })}

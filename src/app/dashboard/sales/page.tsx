@@ -21,11 +21,12 @@ const transformSaleItem = (item: RawSaleItem): SaleItem => ({
   is_deleted: item.is_deleted || false,
   deleted_by: item.deleted_by || null,
   deleted_at: item.deleted_at || null,
+  product_id: item.product_id,
   products: {
-    id: item.products[0]?.id ?? '',
-    name: item.products[0]?.name ?? '',
-    price: item.products[0]?.price ?? 0,
-    is_deleted: item.products[0]?.is_deleted ?? false
+    id: item.product?.id || '',
+    name: item.product?.name || 'Product Deleted',
+    price: item.product?.price || 0,
+    is_deleted: item.product?.is_deleted || false
   }
 })
 
@@ -89,7 +90,7 @@ export default async function SalesPage() {
         is_deleted,
         deleted_by,
         deleted_at,
-        products:products(
+        product:products(
           id,
           name,
           price,
@@ -99,7 +100,7 @@ export default async function SalesPage() {
     `)
     .order("created_at", { ascending: false })
 
-  const sales = (rawSales as RawSaleResponse[]).map(transformSale)
+  const sales = (rawSales as unknown as RawSaleResponse[]).map(transformSale)
 
   return (
     <DashboardShell>

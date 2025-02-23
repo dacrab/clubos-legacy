@@ -2,7 +2,7 @@
 
 import { User } from '@supabase/supabase-js'
 import { createClient } from "@/lib/supabase/client"
-import { RecentSales, RecentSalesRef } from "@/components/dashboard/RecentSales"
+import { RecentSales } from "@/components/dashboard/RecentSales"   
 import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
@@ -14,55 +14,23 @@ import {
   Register, 
   Sale, 
   SaleItem,
+  RecentSalesRef,
+  SupabaseSale,
+  SupabaseSaleItem,
 } from "@/types/app"
 
-// Types for raw Supabase response
-interface SupabaseSaleItem {
-  id: string
-  quantity: number
-  price_at_sale: number
-  is_treat: boolean
-  created_at: string
-  last_edited_by: string | null
-  last_edited_at: string | null
-  is_deleted: boolean
-  deleted_by: string | null
-  deleted_at: string | null
-  product: {
-    id: string
-    name: string
-    price: number
-    is_deleted: boolean
-  } | null
-}
-
-interface SupabaseSale {
-  id: string
-  created_at: string
-  total_amount: number
-  coupon_applied: boolean
-  coupons_used: number
-  profiles: {
-    id: string
-    name: string
-    email: string
-  }[]
-  registers: {
-    id: string
-    coupons_used: number
-    opened_at: string
-    closed_at: string | null
-    closed_by_name: string | null
-  }[]
-  sale_items: SupabaseSaleItem[]
-}
-
 // Helper functions
-const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => {
-  return items.map((item): SaleItem => ({
+const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => (
+  items.map((item) => ({
     id: item.id,
     quantity: item.quantity,
     price_at_sale: item.price_at_sale,
+    product: {
+      id: item.product?.id || item.id,
+      name: item.product?.name || 'Product Deleted',
+      price: item.product?.price || item.price_at_sale,
+      is_deleted: item.product?.is_deleted || true
+    },
     products: {
       id: item.product?.id || item.id,
       name: item.product?.name || 'Product Deleted',
@@ -70,40 +38,44 @@ const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => {
       is_deleted: item.product?.is_deleted || true
     },
     is_treat: item.is_treat,
-    last_edited_by: item.last_edited_by,
-    last_edited_at: item.last_edited_at,
-    is_deleted: item.is_deleted,
-    deleted_by: item.deleted_by,
-    deleted_at: item.deleted_at,
+    last_edited_by: item.last_edited_by || null,
+    last_edited_at: item.last_edited_at || null,
+    is_deleted: item.is_deleted || false,
+    deleted_by: item.deleted_by || null,
+    deleted_at: item.deleted_at || null,
     created_at: item.created_at
   }))
-}
+)
 
-const transformSales = (salesData: SupabaseSale[]): Sale[] => {
+const transformSales = (salesData: any[]): Sale[] => {
   return salesData.map((sale): Sale => ({
     id: sale.id,
     created_at: sale.created_at,
+    updated_at: sale.created_at,
     total_amount: sale.total_amount,
     coupon_applied: sale.coupon_applied,
     coupons_used: sale.coupons_used,
     profile: {
-      id: sale.profiles[0]?.id || '',
-      name: sale.profiles[0]?.name || '',
-      email: sale.profiles[0]?.email || ''
+      id: sale.profiles?.id || '',
+      name: sale.profiles?.name || '',
+      email: sale.profiles?.email || ''
     },
     register: {
-      id: sale.registers[0]?.id || '',
-      coupons_used: sale.registers[0]?.coupons_used || 0,
-      opened_at: sale.registers[0]?.opened_at || '',
-      closed_at: sale.registers[0]?.closed_at || null,
-      closed_by_name: sale.registers[0]?.closed_by_name || null
+      id: sale.registers?.id || '',
+      coupons_used: sale.registers?.coupons_used || 0,
+      opened_at: sale.registers?.opened_at || '',
+      closed_at: sale.registers?.closed_at || null,
+      closed_by_name: sale.registers?.closed_by_name || null
     },
-    sale_items: transformSaleItems(sale.sale_items)
+    sale_items: transformSaleItems(sale.sale_items || [])
   }))
 }
 
 export default function StaffDashboardPage() {
-  const recentSalesRef = useRef<RecentSalesRef>(null)
+    const recentSalesRef = useRef<RecentSalesRef>({
+    clearSales: () => {},
+    refresh: () => {}
+  })
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [recentSales, setRecentSales] = useState<Sale[]>([])
@@ -188,18 +160,7 @@ export default function StaffDashboardPage() {
 
     if (salesData) {
       const typedSalesData = salesData as unknown as RawSupabaseResponse[]
-      const transformedSales = transformSales(typedSalesData.map(sale => ({
-        ...sale,
-        sale_items: sale.sale_items.map(item => ({
-          ...item,
-          product: item.product || {
-            id: item.id,
-            name: 'Product Deleted',
-            price: item.price_at_sale,
-            is_deleted: true
-          }
-        }))
-      })))
+      const transformedSales = transformSales(typedSalesData)
       setRecentSales(transformedSales)
     }
   }

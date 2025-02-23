@@ -1,97 +1,26 @@
 'use client'
 
 import { formatDistanceToNow } from "date-fns"
-import { ChevronDown, ChevronUp, Gift, Pencil, Trash2, Ticket } from "lucide-react"
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react"
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useLayoutEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditSaleItemDialog } from "@/components/sales/EditSaleItemDialog"
 import { DeleteSaleItemDialog } from "@/components/sales/DeleteProductDialog"
-import { cn, formatCurrency } from "@/lib/utils"
-import type { Sale, SaleItem } from "@/types/app"
-
-interface RecentSalesProps {
-  sales: Sale[] | null
-  showEditStatus?: boolean
-  userId: string
-}
-
-export interface RecentSalesRef {
-  clearSales: () => void
-}
-
-// Helper Functions
-const getTreatItems = (sale: Sale) => sale.sale_items.filter(item => item.is_treat)
-const getNormalItems = (sale: Sale) => sale.sale_items.filter(item => !item.is_treat)
-const calculateSubtotal = (items: SaleItem[]) => 
-  items.reduce((total, item) => total + (item.is_deleted ? 0 : item.quantity * item.price_at_sale), 0)
-
-const TotalDisplay = ({ subtotal, couponsUsed }: { subtotal: number, couponsUsed: number }) => {
-  const couponDiscount = couponsUsed * 2
-  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
-
-  if (!couponsUsed) {
-    return <span className="font-medium">Total: {formatCurrency(subtotal)}</span>
-  }
-
-  return (
-    <>
-      <div className="text-sm">Subtotal: {formatCurrency(subtotal)}</div>
-      <div className="text-sm text-red-600">
-        Coupon discount: -{formatCurrency(couponDiscount)}
-      </div>
-      <div className="font-medium">Final total: {formatCurrency(finalTotal)}</div>
-    </>
-  )
-}
-
-const SaleHeader = ({ sale, isExpanded, onToggle }: { 
-  sale: Sale, 
-  isExpanded: boolean, 
-  onToggle: () => void 
-}) => {
-  const treatItems = getTreatItems(sale)
-  const subtotal = calculateSubtotal(sale.sale_items)
-  const totalCoupons = sale.coupons_used || 0
-
-  return (
-    <div className="flex items-center justify-between">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium leading-none">Order #{sale.id.slice(-4)}</p>
-          {totalCoupons > 0 && (
-            <div className="flex items-center gap-1 text-emerald-600" title={`${totalCoupons} Coupon${totalCoupons > 1 ? 's' : ''} Applied (€${(totalCoupons * 2).toFixed(2)})`}>
-              <Ticket className="h-4 w-4" />
-              <span className="text-xs">x{totalCoupons}</span>
-            </div>
-          )}
-          {treatItems.length > 0 && (
-            <div className="flex items-center gap-1 text-pink-600" title={`${treatItems.length} Treat Item${treatItems.length > 1 ? 's' : ''}`}>
-              <Gift className="h-4 w-4" />
-              <span className="text-xs">x{treatItems.length}</span>
-            </div>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(sale.created_at), { addSuffix: true })} by {sale.profile.name}
-        </p>
-      </div>
-      <div className="flex items-center space-x-4">
-        <div className="text-right">
-          <TotalDisplay subtotal={subtotal} couponsUsed={totalCoupons} />
-        </div>
-        <Button variant="ghost" size="sm" onClick={onToggle} className="h-8 w-8 p-0">
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-      </div>
-    </div>
-  )
-}
+import { cn } from "@/lib/utils"
+import type { Sale, SaleItem, RecentSalesProps, RecentSalesRef } from "@/types/app"
+import { 
+  TotalDisplay, 
+  SaleStatusIcons, 
+  getTreatItems, 
+  getNormalItems, 
+  calculateSubtotal 
+} from "@/components/sales/SaleComponents"
 
 const SaleItem = ({ item, userId, onRefresh }: { 
-  item: SaleItem, 
-  userId: string, 
+  item: SaleItem
+  userId: string
   onRefresh: () => void 
 }) => {
   const isZeroPrice = item.price_at_sale === 0 || item.is_treat
@@ -115,15 +44,9 @@ const SaleItem = ({ item, userId, onRefresh }: {
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium leading-none">{productName}</p>
-          {isZeroPrice && (
-            <div className="flex items-center gap-1 text-pink-600" title={`Marked as treat ${item.marked_as_treat_by ? `by ${item.marked_as_treat_by}` : ''}`}>
-              <Gift className="h-3 w-3" />
-              <span className="text-xs">Treat</span>
-            </div>
-          )}
         </div>
         <p className="text-sm text-muted-foreground">
-          Quantity: {item.quantity} | Price: {formatCurrency(item.price_at_sale)}
+          Quantity: {item.quantity} | Price: {isZeroPrice ? "Free" : `€${item.price_at_sale.toFixed(2)}`}
           {item.marked_as_treat_at && (
             <span className="ml-2 text-pink-600">
               (Marked as treat {formatDistanceToNow(new Date(item.marked_as_treat_at), { addSuffix: true })})
@@ -133,7 +56,7 @@ const SaleItem = ({ item, userId, onRefresh }: {
       </div>
       <div className="flex items-center space-x-2">
         <p className="text-sm font-medium">
-          {isZeroPrice ? <span className="text-pink-800">Free</span> : formatCurrency(item.quantity * item.price_at_sale)}
+          {isZeroPrice ? <span className="text-pink-800">Free</span> : `€${(item.quantity * item.price_at_sale).toFixed(2)}`}
         </p>
         {!item.is_deleted && (
           <>
@@ -170,50 +93,51 @@ const SaleItem = ({ item, userId, onRefresh }: {
   )
 }
 
+const SaleHeader = ({ sale, isExpanded, onToggle }: { 
+  sale: Sale
+  isExpanded: boolean
+  onToggle: () => void 
+}) => {
+  const subtotal = calculateSubtotal(sale.sale_items)
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium leading-none">Order #{sale.id.slice(-4)}</p>
+          <SaleStatusIcons sale={sale} />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {formatDistanceToNow(new Date(sale.created_at), { addSuffix: true })} by {sale.profile.name}
+        </p>
+      </div>
+      <div className="flex items-center space-x-4">
+        <div className="text-right">
+          <TotalDisplay subtotal={subtotal} couponsUsed={sale.coupons_used} />
+        </div>
+        <Button variant="ghost" size="sm" onClick={onToggle} className="h-8 w-8 p-0">
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 const SaleDetails = ({ sale, userId, onRefresh }: { 
-  sale: Sale, 
-  userId: string, 
+  sale: Sale
+  userId: string
   onRefresh: () => void 
 }) => {
   const treatItems = getTreatItems(sale)
   const normalItems = getNormalItems(sale)
   const subtotal = calculateSubtotal(sale.sale_items)
 
-  // Debug log to see what's coming in
-  console.log('SaleDetails data:', { 
-    sale,
-    treatItems,
-    normalItems,
-    saleItems: sale.sale_items,
-    couponsUsed: sale.coupons_used,
-    subtotal,
-    finalTotal: subtotal - (sale.coupons_used * 2)
-  })
-
   return (
     <div className="rounded-lg border bg-muted/50 p-4">
       <div className="space-y-4">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex gap-4">
-            {sale.coupons_used > 0 && (
-              <div className="flex items-center gap-1 text-emerald-600">
-                <Ticket className="h-4 w-4" />
-                <span>{sale.coupons_used} Coupon{sale.coupons_used > 1 ? 's' : ''} Applied (-€{(sale.coupons_used * 2).toFixed(2)})</span>
-              </div>
-            )}
-            {treatItems.length > 0 && (
-              <div className="flex items-center gap-1 text-pink-600">
-                <Gift className="h-4 w-4" />
-                <span>{treatItems.length} Treat Item{treatItems.length > 1 ? 's' : ''}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
         {[...normalItems, ...treatItems].map(item => (
           <SaleItem key={item.id} item={item} userId={userId} onRefresh={onRefresh} />
         ))}
-
         <div className="flex flex-col space-y-2 border-t pt-4">
           <TotalDisplay subtotal={subtotal} couponsUsed={sale.coupons_used} />
         </div>

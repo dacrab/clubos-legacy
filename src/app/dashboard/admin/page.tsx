@@ -16,6 +16,7 @@ import {
   DashboardState,
   RawSale,
   RawSaleItem,
+  RecentSalesRef,
 } from "@/types/app"
 
 const transformSaleItems = (items: RawSaleItem[]): SaleItem[] => (
@@ -23,6 +24,12 @@ const transformSaleItems = (items: RawSaleItem[]): SaleItem[] => (
     id: item.id,
     quantity: item.quantity,
     price_at_sale: item.price_at_sale,
+    product: {
+      id: item.product?.id || item.id,
+      name: item.product?.name || 'Product Deleted',
+      price: item.product?.price || item.price_at_sale,
+      is_deleted: item.product?.is_deleted || true
+    },
     products: {
       id: item.product?.id || item.id,
       name: item.product?.name || 'Product Deleted',
@@ -63,7 +70,10 @@ const transformSales = (salesData: RawSale[]): Sale[] => (
 )
 
 const AdminDashboardPage = () => {
-  const recentSalesRef = useRef<{ clearSales: () => void } | null>(null)
+  const recentSalesRef = useRef<RecentSalesRef>({
+    clearSales: () => {},
+    refresh: () => {}
+  })
   const [state, setState] = useState<DashboardState>({
     user: null,
     profile: null,
