@@ -2,48 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { DashboardShell } from "@/components/dashboard/DashboardShell"
 import { RegistersTable } from "@/components/registers/RegistersTable"
-import { Register,SaleItemProduct } from "@/types/app"
-
-interface RawSaleItem {
-  id: string
-  quantity: number
-  price_at_sale: number
-  is_treat: boolean
-  last_edited_by: string | null
-  last_edited_at: string | null
-  is_deleted: boolean
-  deleted_by: string | null
-  deleted_at: string | null
-  product_id: string
-  product: {
-    id: string
-    name: string
-    price: number
-    is_deleted: boolean
-  } | null
-}
-
-interface RawSale {
-  id: string
-  total_amount: number
-  created_at: string
-  sale_items: RawSaleItem[]
-}
-
-interface RawRegister {
-  id: string
-  opened_at: string
-  closed_at: string | null
-  items_sold: number
-  coupons_used: number
-  treat_items_sold: number
-  total_amount: number
-  closed_by: string | null
-  created_at: string
-  updated_at: string
-  closed_by_name: string | null
-  sales: RawSale[]
-}
+import type { Register, SaleItemProduct } from "@/types/app"
+import type { RawRegister } from "@/types/supabase"
 
 export default async function RegisterPage() {
   const supabase = await createClient()

@@ -4,24 +4,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatCurrency } from "@/lib/utils"
 import { Minus, Plus, Trash2, Gift } from "lucide-react"
-
-interface OrderItem {
-  id: string
-  orderId: string
-  name: string
-  price: number
-  is_treat_selected: boolean
-}
-
-interface OrderSummaryProps {
-  items: OrderItem[]
-  couponsCount: number
-  onRemoveItem: (orderId: string) => void
-  onToggleTreat: (orderId: string) => void
-  onAddCoupon: () => void
-  onRemoveCoupon: () => void
-  onCompleteSale?: () => void
-}
+import type { OrderSummaryProps } from "@/types"
 
 export function OrderSummary({
   items,

@@ -9,7 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditSaleItemDialog } from "@/components/sales/EditSaleItemDialog"
 import { DeleteSaleItemDialog } from "@/components/sales/DeleteProductDialog"
 import { cn } from "@/lib/utils"
-import type { Sale, SaleItem, RecentSalesProps, RecentSalesRef } from "@/types/app"
+import type { 
+  SaleItem, 
+  RecentSalesRef,
+  RecentSalesProps,
+  SaleItemRowProps,
+  SaleHeaderProps,
+  SaleDetailsProps 
+} from "@/types"
 import { 
   TotalDisplay, 
   SaleStatusIcons, 
@@ -18,11 +25,7 @@ import {
   calculateSubtotal 
 } from "@/components/sales/SaleComponents"
 
-const SaleItem = ({ item, userId, onRefresh }: { 
-  item: SaleItem
-  userId: string
-  onRefresh: () => void 
-}) => {
+const SaleItem = ({ item, userId, onRefresh }: SaleItemRowProps) => {
   const isZeroPrice = item.price_at_sale === 0 || item.is_treat
 
   // Early return with error UI if item is invalid
@@ -37,7 +40,6 @@ const SaleItem = ({ item, userId, onRefresh }: {
   // Handle missing product data gracefully
   const productName = item.products?.name || 'Unknown Product'
   const productId = item.products?.id || item.id
-  const productPrice = item.products?.price || item.price_at_sale
 
   return (
     <div className={cn("flex items-center justify-between", item.is_deleted && "opacity-50")}>
@@ -93,11 +95,7 @@ const SaleItem = ({ item, userId, onRefresh }: {
   )
 }
 
-const SaleHeader = ({ sale, isExpanded, onToggle }: { 
-  sale: Sale
-  isExpanded: boolean
-  onToggle: () => void 
-}) => {
+const SaleHeader = ({ sale, isExpanded, onToggle }: SaleHeaderProps) => {
   const subtotal = calculateSubtotal(sale.sale_items)
 
   return (
@@ -123,11 +121,7 @@ const SaleHeader = ({ sale, isExpanded, onToggle }: {
   )
 }
 
-const SaleDetails = ({ sale, userId, onRefresh }: { 
-  sale: Sale
-  userId: string
-  onRefresh: () => void 
-}) => {
+const SaleDetails = ({ sale, userId, onRefresh }: SaleDetailsProps) => {
   const treatItems = getTreatItems(sale)
   const normalItems = getNormalItems(sale)
   const subtotal = calculateSubtotal(sale.sale_items)
@@ -205,6 +199,9 @@ export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
       clearSales: () => {
         setExpandedSales(new Set())
         setExpandedHeights({})
+      },
+      refresh: () => {
+        rowVirtualizer.measure()
       }
     }))
 

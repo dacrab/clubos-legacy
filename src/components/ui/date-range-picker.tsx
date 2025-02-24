@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { addDays, format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -13,13 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-
-interface DateRangePickerProps {
-  className?: string
-  date: DateRange | undefined
-  onDateChange: (date: DateRange | undefined) => void
-  align?: "start" | "center" | "end"
-}
+import type { DateRangePickerProps } from "@/types/components"
 
 export function DateRangePicker({
   className,
@@ -35,7 +29,7 @@ export function DateRangePicker({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[300px] justify-start text-left font-normal",
+              "w-full justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -55,17 +49,14 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align={align}>
-          <div className="flex flex-col space-y-3">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={date?.from}
-              selected={date}
-              onSelect={onDateChange}
-              numberOfMonths={2}
-              className="rounded-md"
-            />
-          </div>
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={date?.from}
+            selected={date}
+            onSelect={onDateChange}
+            numberOfMonths={2}
+          />
         </PopoverContent>
       </Popover>
     </div>

@@ -48,7 +48,6 @@ const SaleItemRow = ({ item, userId, onRefresh }: {
 
   const productName = item.products?.name || 'Unknown Product'
   const productId = item.products?.id || item.id
-  const productPrice = item.products?.price || item.price_at_sale
 
   return (
     <div className={cn("flex items-center justify-between py-2", item.is_deleted && "opacity-50")}>

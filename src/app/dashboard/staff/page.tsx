@@ -15,14 +15,15 @@ import {
   Sale, 
   SaleItem,
   RecentSalesRef,
-  SupabaseSale,
-  SupabaseSaleItem,
+  SupabaseSaleItem
 } from "@/types/app"
+import { RawSupabaseResponse } from "@/types/supabase"
 
 // Helper functions
 const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => (
   items.map((item) => ({
     id: item.id,
+    sale_id: item.sale_id,
     quantity: item.quantity,
     price_at_sale: item.price_at_sale,
     product: {
@@ -47,25 +48,25 @@ const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => (
   }))
 )
 
-const transformSales = (salesData: any[]): Sale[] => {
+const transformSales = (salesData: RawSupabaseResponse[]): Sale[] => {
   return salesData.map((sale): Sale => ({
     id: sale.id,
-    created_at: sale.created_at,
-    updated_at: sale.created_at,
     total_amount: sale.total_amount,
     coupon_applied: sale.coupon_applied,
     coupons_used: sale.coupons_used,
+    created_at: sale.created_at,
+    updated_at: sale.created_at,
     profile: {
-      id: sale.profiles?.id || '',
-      name: sale.profiles?.name || '',
-      email: sale.profiles?.email || ''
+      id: sale.profiles[0]?.id || '',
+      name: sale.profiles[0]?.name || '',
+      email: sale.profiles[0]?.email || ''
     },
     register: {
-      id: sale.registers?.id || '',
-      coupons_used: sale.registers?.coupons_used || 0,
-      opened_at: sale.registers?.opened_at || '',
-      closed_at: sale.registers?.closed_at || null,
-      closed_by_name: sale.registers?.closed_by_name || null
+      id: sale.registers[0]?.id || '',
+      coupons_used: sale.registers[0]?.coupons_used || 0,
+      opened_at: sale.registers[0]?.opened_at || '',
+      closed_at: sale.registers[0]?.closed_at || null,
+      closed_by_name: sale.registers[0]?.closed_by_name || null
     },
     sale_items: transformSaleItems(sale.sale_items || [])
   }))
@@ -83,44 +84,6 @@ export default function StaffDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchSalesData = async (supabase: TypedSupabaseClient) => {
-    type RawSupabaseResponse = {
-      id: string
-      created_at: string
-      total_amount: number
-      coupon_applied: boolean
-      coupons_used: number
-      registers: {
-        id: string
-        coupons_used: number
-        opened_at: string
-        closed_at: string | null
-        closed_by_name: string | null
-      }[]
-      sale_items: {
-        id: string
-        quantity: number
-        price_at_sale: number
-        is_treat: boolean
-        created_at: string
-        last_edited_by: string | null
-        last_edited_at: string | null
-        is_deleted: boolean
-        deleted_by: string | null
-        deleted_at: string | null
-        product: {
-          id: string
-          name: string
-          price: number
-          is_deleted: boolean
-        } | null
-      }[]
-      profiles: {
-        id: string
-        name: string
-        email: string
-      }[]
-    }
-
     const { data: salesData, error: salesError } = await supabase
       .from("sales")
       .select(`

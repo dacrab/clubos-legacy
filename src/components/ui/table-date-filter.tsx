@@ -1,17 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
-import { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
-import { DateRangePickerWithPresets } from "@/components/ui/date-range-picker"
-
-interface TableDateFilterProps {
-  date: DateRange | undefined
-  onDateChange: (date: DateRange | undefined) => void
-  onClearFilter: () => void
-  className?: string
-}
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { cn } from "@/lib/utils"
+import type { TableDateFilterProps } from "@/types/components"
 
 export function TableDateFilter({
   date,
@@ -20,21 +13,19 @@ export function TableDateFilter({
   className
 }: TableDateFilterProps) {
   return (
-    <div className="flex items-center gap-2">
-      <DateRangePickerWithPresets
+    <div className={cn("flex items-center gap-2", className)}>
+      <DateRangePicker
         date={date}
         onDateChange={onDateChange}
-        className={className}
+        align="end"
       />
       {date && (
         <Button
           variant="ghost"
-          size="icon"
           onClick={onClearFilter}
-          className="h-8 w-8"
+          className="px-2 h-8"
         >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Clear date filter</span>
+          Reset
         </Button>
       )}
     </div>

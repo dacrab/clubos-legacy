@@ -21,12 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Image from "next/image"
-import { Product, ProductsTableProps } from "@/types/app"
-
-interface StockStatus {
-  label: string
-  classes: string
-}
+import type { Product } from "@/types"
+import type { ProductsTableProps, StockStatus } from "@/types/components"
 
 // Component
 export function ProductsTable({ products, categories, subcategories }: ProductsTableProps) {

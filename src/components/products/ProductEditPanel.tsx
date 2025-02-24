@@ -241,25 +241,26 @@ export function ProductEditPanel({
             <form id="editForm" onSubmit={handleSubmit} className="space-y-4 py-4">
               <FormField
                 id="name"
+                type="text"
                 name="name"
                 label="Name"
                 icon={Package}
                 value={formData.name}
-                onChange={e => handleInputChange("name", e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("name", e.target.value)}
                 required
               />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   id="price"
+                  type="number"
                   name="price"
                   label="Price"
                   icon={DollarSign}
-                  type="number"
                   min="0"
                   step="0.01"
                   value={formData.price}
-                  onChange={e => handleInputChange("price", Number(e.target.value))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("price", Number(e.target.value))}
                   required
                 />
 
@@ -275,14 +276,16 @@ export function ProductEditPanel({
                   </div>
                   <FormField
                     id="stock"
-                    name="stock"
-                    icon={Boxes}
                     type="number"
+                    name="stock"
+                    label="Stock"
+                    icon={Boxes}
                     min="0"
                     value={formData.stock}
-                    onChange={e => handleInputChange("stock", Number(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("stock", Number(e.target.value))}
                     required
-                    disabled={hasUnlimitedStock} label={""}                />
+                    disabled={hasUnlimitedStock}
+                  />
                 </div>
               </div>
 
@@ -342,10 +345,11 @@ export function ProductEditPanel({
                   <TabsContent value="url" className="mt-4">
                     <FormField
                       type="url"
+                      name="image_url"
                       label="Image URL"
                       placeholder="Paste image URL here"
                       value={formData.image_url}
-                      onChange={(e) => handleImageUrl(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleImageUrl(e.target.value)}
                       icon={LinkIcon}
                     />
                   </TabsContent>

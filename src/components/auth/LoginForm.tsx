@@ -17,6 +17,8 @@ const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters")
 })
 
+const ALLOWED_ROLES = ['admin', 'staff', 'secretary'] as const
+
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<LoginFormData>({
@@ -24,6 +26,7 @@ export function LoginForm() {
     password: ''
   })
   const router = useRouter()
+  const supabase = createClient()
 
   const handleError = (errorType: keyof typeof LoginErrorMessages) => {
     toast.error(LoginErrorMessages[errorType].title, {
@@ -32,67 +35,76 @@ export function LoginForm() {
     setIsLoading(false)
   }
 
+  const validateCredentials = (data: LoginFormData) => {
+    return loginSchema.parse(data)
+  }
+
+  const signInUser = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
+  }
+
+  const getUserProfile = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (!user || error) throw new Error("Failed to get user profile")
+    return user
+  }
+
+  const getRole = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single()
+
+    if (!profile || !ALLOWED_ROLES.includes(profile.role as typeof ALLOWED_ROLES[number])) {
+      throw new Error("Invalid user role")
+    }
+
+    return profile.role
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (isLoading) return
     setIsLoading(true)
 
     try {
-      const validatedData = loginSchema.parse(formData)
+      const validatedData = validateCredentials(formData)
       const email = `${validatedData.username}@${DOMAIN}`
 
-      const supabase = createClient();
-
-      // Sign in with Supabase
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: validatedData.password,
-      });
-
-      if (signInError) {
-        console.error("Sign-in error:", signInError);
-        handleError('connectionError');
-        return;
-      }
-
-      // Get user profile and add null check
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (!user || userError) {
-        handleError('profileError');
-        return;
-      }
-
-      // Now TypeScript knows user is not null
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile || !['admin', 'staff', 'secretary'].includes(profile.role)) {
-        handleError('profileError');
-        return;
-      }
+      await signInUser(email, validatedData.password)
+      const user = await getUserProfile()
+      const role = await getRole(user.id)
 
       toast.success("Welcome back!", {
         description: "Successfully signed in."
-      });
+      })
 
-      router.push(`/dashboard/${profile.role}`);
-      router.refresh();
+      router.push(`/dashboard/${role}`)
 
     } catch (error) {
+      console.error("Login error:", error)
+      
       if (error instanceof z.ZodError) {
         toast.error("Validation Error", {
           description: error.errors[0].message
-        });
+        })
       } else {
-        console.error("Login error:", error);
-        handleError('connectionError');
+        handleError('connectionError')
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
+  }
+
+  const handleInputChange = (field: keyof LoginFormData) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }))
   }
 
   return (
@@ -110,7 +122,7 @@ export function LoginForm() {
             <Input
               id="username"
               value={formData.username}
-              onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+              onChange={handleInputChange('username')}
               placeholder="Your Username"
               type="text"
               autoComplete="username"
@@ -125,7 +137,7 @@ export function LoginForm() {
             type="password"
             placeholder="Your Password"
             value={formData.password}
-            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+            onChange={handleInputChange('password')}
             autoComplete="current-password"
             className="w-full"
           />

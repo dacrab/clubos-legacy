@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
 import { ToastProvider } from '@/components/providers/ToastProvider';
+import { RootLayoutProps } from '@/types';
 import './globals.css';
 
 const fontSans = FontSans({
@@ -27,10 +28,6 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
-
-interface RootLayoutProps {
-  children: React.ReactNode;
-}
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (

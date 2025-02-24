@@ -24,7 +24,7 @@ import React from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { TableDateFilter } from "@/components/ui/table-date-filter"
 import type { DateRange } from "react-day-picker"
-import { isWithinInterval, parseISO, startOfDay, endOfDay, formatDistanceToNow } from "date-fns"
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
 import { 
   RegistersTableProps, 
   Register, 

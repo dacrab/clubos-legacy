@@ -21,7 +21,12 @@ const transformSaleItem = (item: RawSaleItem): SaleItem => ({
   is_deleted: item.is_deleted || false,
   deleted_by: item.deleted_by || null,
   deleted_at: item.deleted_at || null,
-  product_id: item.product_id,
+  product: {
+    id: item.product?.id || '',
+    name: item.product?.name || 'Product Deleted',
+    price: item.product?.price || 0,
+    is_deleted: item.product?.is_deleted || false
+  },
   products: {
     id: item.product?.id || '',
     name: item.product?.name || 'Product Deleted',
