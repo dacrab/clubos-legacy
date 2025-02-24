@@ -3,16 +3,67 @@ import { Database } from './supabase'
 import { User } from '@supabase/supabase-js'
 import { HTMLAttributes, ReactNode } from 'react'
 
-// Client type
+// Core Types
 export type TypedSupabaseClient = SupabaseClient<Database>
-
-// Common types
 export type ID = string
 export type Timestamp = string
 export type Role = 'admin' | 'staff' | 'secretary'
 export type SearchParamsValue = Record<string, string | string[] | undefined>
 
-// Layout Types
+// Base Interfaces
+export interface BaseEntity {
+  id: ID
+  created_at?: Timestamp
+  updated_at?: Timestamp
+}
+
+// Auth & User Types
+export interface LoginFormData {
+  username: string
+  password: string
+}
+
+export const LoginErrorMessages = {
+  invalidCredentials: {
+    title: "Invalid credentials",
+    description: "The username or password you entered is incorrect."
+  },
+  profileError: {
+    title: "Profile error", 
+    description: "Unable to retrieve your user profile. Please try again."
+  },
+  connectionError: {
+    title: "Connection error",
+    description: "Unable to connect to the server. Please check your internet connection and try again."
+  }
+} as const
+
+export interface UserBase {
+  id: string
+  name: string
+  email: string
+  role?: Role
+}
+
+export interface Profile extends BaseEntity {
+  role: Role
+  name: string
+}
+
+export interface DeleteUserDialogProps {
+  user: UserBase
+}
+
+export interface EditUserDialogProps {
+  user: UserBase & { role: Role }
+}
+
+export interface SignOutButtonProps {
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  size?: "default" | "sm" | "lg" | "icon"
+}
+
+// Layout & Component Types
 export interface DashboardLayoutProps {
   children: ReactNode
 }
@@ -21,20 +72,22 @@ export interface StaffLayoutProps {
   children: ReactNode
 }
 
-// Request/Response types
-export type NextPageProps<T = Record<string, unknown>> = {
-  params: Promise<T>
-  searchParams?: Promise<SearchParamsValue>
-}
-
-// Dashboard Components
 export interface DashboardHeaderProps extends HTMLAttributes<HTMLDivElement> {
   heading: string
   description?: string
   children?: React.ReactNode
 }
 
-// Product Types
+export interface ReactQueryProviderProps {
+  children: ReactNode
+}
+
+export type NextPageProps<T = Record<string, unknown>> = {
+  params: Promise<T>
+  searchParams?: Promise<SearchParamsValue>
+}
+
+// Product & Category Types
 export interface Category {
   id: string
   name: string
@@ -124,6 +177,53 @@ export interface CategorySelectorProps {
   onSelectSubcategory: (subcategoryId: string | null) => void
 }
 
+export interface SalesTableProps {
+  sales: Sale[] | null
+}
+
+export interface SaleItemProduct {
+  id: string
+  name: string
+  price: number
+  is_deleted: boolean
+}
+
+export interface SaleItem extends BaseEntity {
+  quantity: number
+  price_at_sale: number
+  product: SaleItemProduct
+  products: SaleItemProduct
+  is_treat: boolean
+  created_at: Timestamp
+  marked_as_treat_by?: string | null
+  marked_as_treat_at?: Timestamp | null
+  last_edited_by: ID | null
+  last_edited_at: Timestamp | null
+  is_deleted: boolean
+  deleted_by: ID | null
+  deleted_at: Timestamp | null
+}
+
+export interface Sale extends BaseEntity {
+  created_at: Timestamp
+  total_amount: number
+  coupon_applied: boolean
+  coupons_used: number
+  profile: {
+    id: ID
+    name: string
+    email: string
+  }
+  register: {
+    id: ID
+    coupons_used: number
+    opened_at: Timestamp
+    closed_at: Timestamp | null
+    closed_by_name: string | null
+  }
+  sale_items: SaleItem[]
+}
+
 export interface DeleteSaleItemDialogProps {
   saleItemId: string
   productName: string
@@ -142,11 +242,26 @@ export interface EditSaleItemDialogProps {
   createdAt: string
 }
 
-export interface SalesTableProps {
-  sales: Sale[] | null
+// Register Types
+export interface Register extends BaseEntity {
+  items_sold: number
+  coupons_used: number
+  treat_items_sold: number
+  total_amount: number
+  closed_at: Timestamp | null
+  opened_at: Timestamp
+  profiles?: {
+    id: string
+    name: string
+    email: string
+  }
+  sales?: Sale[]
 }
 
-// Register Types
+export interface RegistersTableProps {
+  registers: Register[] | null
+}
+
 export interface CloseRegisterDialogProps {
   activeRegisterId: string
   totalAmount: number
@@ -156,32 +271,72 @@ export interface CloseRegisterDialogProps {
   onRegisterClosed?: () => void
 }
 
-export interface RegistersTableProps {
-  registers: Register[] | null
+export interface RegisterTableTotalDisplayProps {
+  totalIncome: number
+  couponsUsed: number
 }
 
-// User Types
-export interface UserBase {
-  id: string
-  name: string
-  email: string
-  role?: Role
+export interface RegisterTableStatusBadgeProps {
+  type: 'sale' | 'treat' | 'edited' | 'deleted'
+  children: React.ReactNode
+  count?: number
 }
 
-export interface DeleteUserDialogProps {
-  user: UserBase
+export interface RegisterTableHeaderCellProps {
+  icon: React.ReactNode
+  text: string
+  width: string
 }
 
-export interface EditUserDialogProps {
-  user: UserBase & { role: Role }
+// Appointment Types
+export interface Appointment extends BaseEntity {
+  type: 'football' | 'party'
+  start_time: string
+  end_time: string
+  customer_name: string
+  customer_phone: string
+  notes?: string
+  guests?: number
+  created_by: string
 }
 
-export interface SignOutButtonProps {
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
-  size?: "default" | "sm" | "lg" | "icon"
+export interface AppointmentCardProps {
+  appointment: Appointment
 }
 
-// Raw Data interfaces for Supabase responses
+export interface AppointmentsCalendarProps {
+  appointments: Appointment[] | null
+}
+
+export interface UpcomingPartiesProps extends React.HTMLAttributes<HTMLDivElement> {
+  parties: Appointment[] | null
+}
+
+export type AppointmentFormData = {
+  type: "football" | "party"
+  startTime: string
+  endTime: string
+  customerName: string
+  customerPhone: string
+  notes: string
+  guests?: number
+}
+
+// Dashboard State Types
+export interface DashboardState {
+  user: User | null
+  profile: Profile | null
+  recentSales: Sale[]
+  activeRegister: Register | null
+  isLoading: boolean
+}
+
+export interface RecentSalesRef {
+  refresh: () => void
+  clearSales: () => void
+}
+
+// Raw Supabase Response Types
 export interface RawSaleProduct {
   id: string
   name: string
@@ -259,144 +414,19 @@ export interface RawSale {
   sale_items: RawSaleItem[]
 }
 
-// Dashboard State interfaces
-export interface DashboardState {
-  user: User | null
-  profile: Profile | null
-  recentSales: Sale[]
-  activeRegister: Register | null
-  isLoading: boolean
+export interface SupabaseSale extends RawSale {
+  profiles: RawSaleProfile[]
+  registers: RawSaleRegister[]
+  sale_items: SupabaseSaleItem[]
 }
 
-// Entity interfaces
-export interface BaseEntity {
-  id: ID
-  created_at?: Timestamp
-  updated_at?: Timestamp
-}
-
-export interface Profile extends BaseEntity {
-  role: Role
-  name: string
-}
-
-export interface Register extends BaseEntity {
-  items_sold: number
-  coupons_used: number
-  treat_items_sold: number
-  total_amount: number
-  closed_at: Timestamp | null
-  opened_at: Timestamp
-  profiles?: {
+export interface SupabaseSaleItem extends RawSaleItem {
+  product?: {
     id: string
     name: string
-    email: string
-  }
-  sales?: Sale[]
-}
-
-// Product Types for Sales
-export interface SaleItemProduct {
-  id: string
-  name: string
-  price: number
-  is_deleted: boolean
-}
-
-export interface SaleItem extends BaseEntity {
-  quantity: number
-  price_at_sale: number
-  product: SaleItemProduct
-  products: SaleItemProduct
-  is_treat: boolean
-  created_at: Timestamp
-  marked_as_treat_by?: ID | null
-  marked_as_treat_at?: Timestamp | null
-  last_edited_by: ID | null
-  last_edited_at: Timestamp | null
-  is_deleted: boolean
-  deleted_by: ID | null
-  deleted_at: Timestamp | null
-}
-
-export interface Sale extends BaseEntity {
-  created_at: Timestamp
-  total_amount: number
-  coupon_applied: boolean
-  coupons_used: number
-  profile: {
-    id: ID
-    name: string
-    email: string
-  }
-  register: {
-    id: ID
-    coupons_used: number
-    opened_at: Timestamp
-    closed_at: Timestamp | null
-    closed_by_name: string | null
-  }
-  sale_items: SaleItem[]
-}
-
-// Appointment Types
-export interface AppointmentCardProps {
-  appointment: Appointment
-}
-
-export interface AppointmentsCalendarProps {
-  appointments: Appointment[] | null
-}
-
-export interface UpcomingPartiesProps extends React.HTMLAttributes<HTMLDivElement> {
-  parties: Appointment[] | null
-}
-
-export interface Appointment extends BaseEntity {
-  type: 'football' | 'party'
-  start_time: string
-  end_time: string
-  customer_name: string
-  customer_phone: string
-  notes?: string
-  guests?: number
-  created_by: string
-}
-
-export type AppointmentFormData = {
-  type: "football" | "party"
-  startTime: string
-  endTime: string
-  customerName: string
-  customerPhone: string
-  notes: string
-  guests?: number
-}
-
-// Auth Types
-export interface LoginFormData {
-  username: string
-  password: string
-}
-
-export const LoginErrorMessages = {
-  invalidCredentials: {
-    title: "Invalid credentials",
-    description: "The username or password you entered is incorrect."
-  },
-  profileError: {
-    title: "Profile error",
-    description: "Unable to retrieve your user profile. Please try again."
-  },
-  connectionError: {
-    title: "Connection error",
-    description: "Unable to connect to the server. Please check your internet connection and try again."
-  }
-} as const
-
-// Provider Types
-export interface ReactQueryProviderProps {
-  children: ReactNode
+    price: number
+    is_deleted: boolean
+  } | null
 }
 
 export interface ProductSummary {
@@ -420,41 +450,4 @@ export interface TreatSummary {
   is_deleted: boolean
   edit_count: number
   delete_count: number
-}
-
-export interface RegisterTableTotalDisplayProps {
-  totalIncome: number
-  couponsUsed: number
-}
-
-export interface RegisterTableStatusBadgeProps {
-  type: 'sale' | 'treat' | 'edited' | 'deleted'
-  children: React.ReactNode
-  count?: number
-}
-
-export interface RegisterTableHeaderCellProps {
-  icon: React.ReactNode
-  text: string
-  width: string
-}
-
-export interface RecentSalesRef {
-  refresh: () => void
-  clearSales: () => void
-}
-
-export interface SupabaseSale extends RawSale {
-  profiles: RawSaleProfile[]
-  registers: RawSaleRegister[]
-  sale_items: SupabaseSaleItem[]
-}
-
-export interface SupabaseSaleItem extends RawSaleItem {
-  product?: {
-    id: string
-    name: string
-    price: number
-    is_deleted: boolean
-  } | null
 }

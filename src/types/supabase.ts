@@ -1,3 +1,4 @@
+// Basic JSON type used throughout database
 export type Json =
   | string
   | number
@@ -6,6 +7,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Raw types from database queries
 export interface RawSaleItem {
   id: string
   quantity: number
@@ -89,9 +91,11 @@ export interface RawSupabaseResponse {
   }[]
 }
 
+// Database schema types
 export interface Database {
   public: {
     Tables: {
+      // Products table
       products: {
         Row: {
           id: string
@@ -133,6 +137,7 @@ export interface Database {
           is_deleted?: boolean
         }
       }
+      // Sales table
       sales: {
         Row: {
           id: string
@@ -159,6 +164,7 @@ export interface Database {
           register_id?: string | null
         }
       }
+      // Registers table
       registers: {
         Row: {
           id: string
@@ -188,6 +194,7 @@ export interface Database {
           treats_count?: number
         }
       }
+      // Appointments table
       appointments: {
         Row: {
           id: string
@@ -231,4 +238,4 @@ export interface Database {
       [_ in never]: never
     }
   }
-} 
+}

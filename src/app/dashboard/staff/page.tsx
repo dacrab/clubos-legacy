@@ -2,87 +2,28 @@
 
 import { User } from '@supabase/supabase-js'
 import { createClient } from "@/lib/supabase/client"
-import { RecentSales } from "@/components/dashboard/RecentSales"   
+import { RecentSales } from "@/components/dashboard/RecentSales"
+import type { RecentSalesRef, RawProfile } from "@/types/sales"
 import { NewSaleDialog } from "@/components/sales/NewSaleDialog"
 import { CloseRegisterDialog } from "@/components/registers/CloseRegisterDialog"
 import { redirect } from "next/navigation"
 import { SignOutButton } from "@/components/SignOutButton"
 import { useRef, useEffect, useState } from "react"
-import { 
-  TypedSupabaseClient, 
-  Profile, 
-  Register, 
-  Sale, 
-  SaleItem,
-  RecentSalesRef,
-  SupabaseSaleItem
-} from "@/types/app"
-import { RawSupabaseResponse } from "@/types/supabase"
-
-// Helper functions
-const transformSaleItems = (items: SupabaseSaleItem[]): SaleItem[] => (
-  items.map((item) => ({
-    id: item.id,
-    sale_id: item.sale_id,
-    quantity: item.quantity,
-    price_at_sale: item.price_at_sale,
-    product: {
-      id: item.product?.id || item.id,
-      name: item.product?.name || 'Product Deleted',
-      price: item.product?.price || item.price_at_sale,
-      is_deleted: item.product?.is_deleted || true
-    },
-    products: {
-      id: item.product?.id || item.id,
-      name: item.product?.name || 'Product Deleted',
-      price: item.product?.price || item.price_at_sale,
-      is_deleted: item.product?.is_deleted || true
-    },
-    is_treat: item.is_treat,
-    last_edited_by: item.last_edited_by || null,
-    last_edited_at: item.last_edited_at || null,
-    is_deleted: item.is_deleted || false,
-    deleted_by: item.deleted_by || null,
-    deleted_at: item.deleted_at || null,
-    created_at: item.created_at
-  }))
-)
-
-const transformSales = (salesData: RawSupabaseResponse[]): Sale[] => {
-  return salesData.map((sale): Sale => ({
-    id: sale.id,
-    total_amount: sale.total_amount,
-    coupon_applied: sale.coupon_applied,
-    coupons_used: sale.coupons_used,
-    created_at: sale.created_at,
-    updated_at: sale.created_at,
-    profile: {
-      id: sale.profiles[0]?.id || '',
-      name: sale.profiles[0]?.name || '',
-      email: sale.profiles[0]?.email || ''
-    },
-    register: {
-      id: sale.registers[0]?.id || '',
-      coupons_used: sale.registers[0]?.coupons_used || 0,
-      opened_at: sale.registers[0]?.opened_at || '',
-      closed_at: sale.registers[0]?.closed_at || null,
-      closed_by_name: sale.registers[0]?.closed_by_name || null
-    },
-    sale_items: transformSaleItems(sale.sale_items || [])
-  }))
-}
+import { TypedSupabaseClient, Profile, Register, Sale } from "@/types/app"
+import { transformSales } from "@/types/sales"
 
 export default function StaffDashboardPage() {
-    const recentSalesRef = useRef<RecentSalesRef>({
-    clearSales: () => {},
-    refresh: () => {}
-  })
+  // Refs
+  const recentSalesRef = useRef<RecentSalesRef>(null)
+
+  // State
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [recentSales, setRecentSales] = useState<Sale[]>([])
   const [activeRegister, setActiveRegister] = useState<Register | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Data fetching
   const fetchSalesData = async (supabase: TypedSupabaseClient) => {
     const { data: salesData, error: salesError } = await supabase
       .from("sales")
@@ -122,17 +63,60 @@ export default function StaffDashboardPage() {
     }
 
     if (salesData) {
-      const typedSalesData = salesData as unknown as RawSupabaseResponse[]
+      // Transform the data to match our expected types
+      const typedSalesData = salesData.map(sale => {
+        const transformedSaleItems = sale.sale_items.map(item => {
+          const productData = Array.isArray(item.product) ? item.product[0] : item.product
+          return {
+            ...item,
+            product: productData ? {
+              id: productData.id,
+              name: productData.name,
+              price: productData.price,
+              is_deleted: productData.is_deleted
+            } : null
+          }
+        })
+
+        const transformedProfiles = sale.profiles.map((profile): RawProfile => ({
+          id: profile.id || '',
+          name: profile.name || '',
+          email: profile.email || '',
+          role: 'staff'
+        }))
+
+        const transformedRegisters = sale.registers.map(register => ({
+          id: register.id,
+          coupons_used: register.coupons_used,
+          opened_at: register.opened_at,
+          closed_at: register.closed_at,
+          closed_by_name: register.closed_by_name
+        }))
+
+        return {
+          id: sale.id,
+          created_at: sale.created_at,
+          total_amount: sale.total_amount,
+          coupon_applied: sale.coupon_applied,
+          coupons_used: sale.coupons_used,
+          sale_items: transformedSaleItems,
+          profiles: transformedProfiles,
+          registers: transformedRegisters
+        }
+      })
+
       const transformedSales = transformSales(typedSalesData)
       setRecentSales(transformedSales)
     }
   }
 
+  // Event handlers
   const handleRegisterClose = () => {
     recentSalesRef.current?.clearSales()
     setActiveRegister(null)
   }
 
+  // Initial data load
   useEffect(() => {
     const setupSubscriptions = (supabase: TypedSupabaseClient) => {
       const registerChannel = supabase
@@ -237,8 +221,7 @@ export default function StaffDashboardPage() {
         <SignOutButton />
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex gap-4 items-center">
         <NewSaleDialog />
         {activeRegister && (
           <CloseRegisterDialog
@@ -252,18 +235,12 @@ export default function StaffDashboardPage() {
         )}
       </div>
 
-      {/* Sales Section */}
-      <div className="grid gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Recent Sales</h2>
-            <RecentSales 
-              ref={recentSalesRef} 
-              sales={recentSales}
-              userId={user?.id || ''}
-            />
-          </div>
-        </div>
+      <div className="grid gap-4">
+        <RecentSales 
+          ref={recentSalesRef} 
+          sales={recentSales}
+          userId={user?.id || ''}
+        />
       </div>
     </div>
   )

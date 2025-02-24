@@ -1,4 +1,4 @@
-// Core types from app.ts
+// Core types
 export {
   type ID,
   type Timestamp,
@@ -6,20 +6,40 @@ export {
   type SearchParamsValue,
   type TypedSupabaseClient,
   type BaseEntity,
+} from './app'
+
+// User & Profile types
+export {
   type Profile,
+} from './app'
+
+// Product & Category types
+export {
   type Product,
-  type Category,
+  type Category, 
   type Subcategory,
+} from './app'
+
+// Sales types
+export {
   type SaleItemProduct,
   type SaleItem,
   type Sale,
   type Register,
+} from './app'
+
+// Appointment types
+export {
   type Appointment,
+} from './app'
+
+// Dashboard types
+export {
   type DashboardState,
   type RecentSalesRef
 } from './app'
 
-// UI component types from ui.ts
+// UI component types
 export {
   type ButtonProps,
   type InputProps,
@@ -35,7 +55,16 @@ export {
   type SheetDescriptionProps
 } from './ui'
 
-// Component prop types from components.ts
+// Form & Input components
+export {
+  type FormFieldProps,
+  type SelectFieldProps,
+  type DatePickerProps,
+  type DateRangePickerProps,
+  type TableDateFilterProps,
+} from './components'
+
+// Product components
 export {
   type OrderItem,
   type OrderSummaryProps,
@@ -43,21 +72,24 @@ export {
   type StockStatus,
   type ProductsTableProps,
   type ProductEditPanelProps,
+} from './components'
+
+// Sales components
+export {
   type RecentSalesProps,
   type SaleItemRowProps,
   type SaleHeaderProps,
   type SaleDetailsProps,
-  type FormFieldProps,
-  type SelectFieldProps,
-  type DatePickerProps,
-  type DateRangePickerProps,
-  type TableDateFilterProps,
   type RegistersTableProps,
   type CloseRegisterDialogProps,
+} from './components'
+
+// Auth components
+export {
   type SignOutButtonProps
 } from './components'
 
-// Layout types from layout.ts
+// Layout types
 export {
   type RootLayoutProps,
   type DashboardLayoutProps,
@@ -65,10 +97,10 @@ export {
   type DashboardHeaderProps
 } from './layout'
 
-// Database types from supabase.ts
+// Database types
 export {
   type Json,
   type Database,
   type SupabaseSaleItem,
   type RawSupabaseResponse
-} from './supabase' 
+} from './supabase'

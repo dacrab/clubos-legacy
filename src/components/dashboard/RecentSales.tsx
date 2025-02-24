@@ -1,51 +1,105 @@
 'use client'
 
 import { formatDistanceToNow } from "date-fns"
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Gift, Pencil, Trash2, Ticket } from "lucide-react"
 import { useState, useEffect, forwardRef, useImperativeHandle, useRef, useLayoutEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditSaleItemDialog } from "@/components/sales/EditSaleItemDialog"
 import { DeleteSaleItemDialog } from "@/components/sales/DeleteProductDialog"
-import { cn } from "@/lib/utils"
-import type { 
-  SaleItem, 
-  RecentSalesRef,
-  RecentSalesProps,
-  SaleItemRowProps,
-  SaleHeaderProps,
-  SaleDetailsProps 
-} from "@/types"
+import { cn, formatCurrency } from "@/lib/utils"
+import type { Sale, SaleItem } from "@/types/app"
 import { 
-  TotalDisplay, 
-  SaleStatusIcons, 
-  getTreatItems, 
-  getNormalItems, 
-  calculateSubtotal 
-} from "@/components/sales/SaleComponents"
+  RecentSalesProps, 
+  SaleHeaderProps,
+  SaleItemProps,
+  SaleDetailsProps,
+  TotalDisplayProps,
+  RecentSalesRef
+} from "@/types/sales"
 
-const SaleItem = ({ item, userId, onRefresh }: SaleItemRowProps) => {
-  const isZeroPrice = item.price_at_sale === 0 || item.is_treat
+// Helper Functions
+const getTreatItems = (sale: Sale) => sale.sale_items.filter(item => item.is_treat)
+const getNormalItems = (sale: Sale) => sale.sale_items.filter(item => !item.is_treat)
+const calculateSubtotal = (items: SaleItem[]) => 
+  items.reduce((total, item) => total + (item.is_deleted ? 0 : item.quantity * item.price_at_sale), 0)
 
-  // Early return with error UI if item is invalid
-  if (!item) {
-    return (
-      <div className="text-sm text-red-600">
-        Error: Invalid sale item data
-      </div>
-    )
+const TotalDisplay = ({ subtotal, couponsUsed }: TotalDisplayProps) => {
+  const couponDiscount = couponsUsed * 2
+  const finalTotal = Math.max(0, subtotal - couponDiscount) // Ensure total doesn't go below 0
+
+  if (!couponsUsed) {
+    return <span className="font-medium">Total: {formatCurrency(subtotal)}</span>
   }
 
-  // Handle missing product data gracefully
-  const productName = item.products?.name || 'Unknown Product'
-  const productId = item.products?.id || item.id
+  return (
+    <>
+      <div className="text-sm">Subtotal: {formatCurrency(subtotal)}</div>
+      <div className="text-sm text-red-600">
+        Coupon discount: -{formatCurrency(couponDiscount)}
+      </div>
+      <div className="font-medium">Final total: {formatCurrency(finalTotal)}</div>
+    </>
+  )
+}
+
+const SaleHeader = ({ sale, isExpanded, onToggle }: SaleHeaderProps) => {
+  const treatItems = getTreatItems(sale)
+  const subtotal = calculateSubtotal(sale.sale_items)
+  const totalCoupons = sale.coupons_used || 0
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium leading-none">Order #{sale.id.slice(-4)}</p>
+          {totalCoupons > 0 && (
+            <div className="flex items-center gap-1 text-emerald-600" title={`${totalCoupons} Coupon${totalCoupons > 1 ? 's' : ''} Applied (€${(totalCoupons * 2).toFixed(2)})`}>
+              <Ticket className="h-4 w-4" />
+              <span className="text-xs">x{totalCoupons}</span>
+            </div>
+          )}
+          {treatItems.length > 0 && (
+            <div className="flex items-center gap-1 text-pink-600" title={`${treatItems.length} Treat Item${treatItems.length > 1 ? 's' : ''}`}>
+              <Gift className="h-4 w-4" />
+              <span className="text-xs">x{treatItems.length}</span>
+            </div>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {formatDistanceToNow(new Date(sale.created_at), { addSuffix: true })} by {sale.profile.name}
+        </p>
+      </div>
+      <div className="flex items-center space-x-4">
+        <div className="text-right">
+          <TotalDisplay subtotal={subtotal} couponsUsed={totalCoupons} />
+        </div>
+        <Button variant="ghost" size="sm" onClick={onToggle} className="h-8 w-8 p-0">
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+const SaleItem = ({ item, userId, onRefresh }: SaleItemProps) => {
+  if (!item.products || !item.products.name) {
+    console.error('Missing product data:', item);
+    return (
+      <div className="text-sm text-red-600" role="alert">
+        Error: Product data missing for sale item {item.id}
+      </div>
+    );
+  }
+
+  const isZeroPrice = item.price_at_sale === 0 || item.is_treat
 
   return (
     <div className={cn("flex items-center justify-between", item.is_deleted && "opacity-50")}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium leading-none">{productName}</p>
+          <p className="text-sm font-medium leading-none">{item.products.name}</p>
         </div>
         <p className="text-sm text-muted-foreground">
           Quantity: {item.quantity} | Price: {isZeroPrice ? "Free" : `€${item.price_at_sale.toFixed(2)}`}
@@ -64,16 +118,16 @@ const SaleItem = ({ item, userId, onRefresh }: SaleItemRowProps) => {
           <>
             <EditSaleItemDialog
               saleItemId={item.id}
-              productName={productName}
+              productName={item.products.name}
               currentQuantity={item.quantity}
-              currentProductId={productId}
+              currentProductId={item.products.id}
               userId={userId}
               onEdit={onRefresh}
               createdAt={item.created_at}
             />
             <DeleteSaleItemDialog
               saleItemId={item.id}
-              productName={productName}
+              productName={item.products.name}
               userId={userId}
               onDelete={onRefresh}
               createdAt={item.created_at}
@@ -90,32 +144,6 @@ const SaleItem = ({ item, userId, onRefresh }: SaleItemRowProps) => {
             <Trash2 className="h-3 w-3" />
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-const SaleHeader = ({ sale, isExpanded, onToggle }: SaleHeaderProps) => {
-  const subtotal = calculateSubtotal(sale.sale_items)
-
-  return (
-    <div className="flex items-center justify-between">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium leading-none">Order #{sale.id.slice(-4)}</p>
-          <SaleStatusIcons sale={sale} />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {formatDistanceToNow(new Date(sale.created_at), { addSuffix: true })} by {sale.profile.name}
-        </p>
-      </div>
-      <div className="flex items-center space-x-4">
-        <div className="text-right">
-          <TotalDisplay subtotal={subtotal} couponsUsed={sale.coupons_used} />
-        </div>
-        <Button variant="ghost" size="sm" onClick={onToggle} className="h-8 w-8 p-0">
-          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
       </div>
     </div>
   )
@@ -140,6 +168,7 @@ const SaleDetails = ({ sale, userId, onRefresh }: SaleDetailsProps) => {
   )
 }
 
+export { type RecentSalesRef }
 export const RecentSales = forwardRef<RecentSalesRef, RecentSalesProps>(
   ({ sales, userId }, ref) => {
     const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set())

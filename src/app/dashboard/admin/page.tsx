@@ -82,6 +82,11 @@ const AdminDashboardPage = () => {
     isLoading: true
   })
 
+  const handleRegisterClose = () => {
+    recentSalesRef.current?.clearSales()
+    setState(prev => ({ ...prev, activeRegister: null }))
+  }
+
   const fetchSalesData = async (supabase: TypedSupabaseClient) => {
     const { data: salesData, error: salesError } = await supabase
       .from("sales")
@@ -251,7 +256,7 @@ const AdminDashboardPage = () => {
               itemsSold={state.activeRegister.items_sold}
               couponsUsed={state.activeRegister.coupons_used}
               treatsCount={state.activeRegister.treat_items_sold}
-              onRegisterClosed={() => recentSalesRef.current?.clearSales()}
+              onRegisterClosed={handleRegisterClose}
             />
           )}
         </div>
