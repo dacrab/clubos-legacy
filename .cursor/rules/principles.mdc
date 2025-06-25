@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Core Principles
+
+## KISS (Keep It Simple, Stupid)
+- Favor simplicity over complexity
+- Choose straightforward implementations over clever solutions
+- Minimize dependencies and abstraction layers
+
+## Avoid Breaking Changes
+- Maintain backward compatibility
+- Test changes thoroughly before implementation
+- Consider the impact on other parts of the application
+
+## Understand Code Before Modifying
+- Read and understand existing code before making changes
+- Respect established patterns and conventions
+- Analyze component relationships before modifications
+
+## Rule Citation
+When implementing features or making changes, cite specific rules being followed:
+- Example: "Following rules: Component Reuse, TypeScript, Error Handling"
+- Format should be at the beginning of your code changes
+- Abbreviate rule descriptions to single words or phrases when appropriate
+
+## Git Practices
+- Use descriptive prefixes for commit messages:
+  - `fix:` for bug fixes
+  - `feat:` for new features
+  - `perf:` for performance improvements
+  - `docs:` for documentation changes
+  - `style:` for style/formatting changes
+  - `refactor:` for code refactoring
+  - `test:` for adding/updating tests
+  - `chore:` for maintenance tasks
+- Keep commit messages concise and lowercase
+- Reference issue numbers when applicable
+- Document rule changes with "rules:" prefix

@@ -1,0 +1,132 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Code Quality
+
+## Concise Technical Code
+
+Write clear, focused code that solves the problem directly:
+
+```typescript
+// Good: Concise and clear
+function getUserDisplayName(user: User): string {
+  return user.firstName && user.lastName 
+    ? `${user.firstName} ${user.lastName}`
+    : user.email;
+}
+
+// Avoid: Unnecessarily verbose
+function getNameForUserDisplay(user: User): string {
+  let displayName = '';
+  if (user.firstName && user.lastName) {
+    displayName = user.firstName + ' ' + user.lastName;
+  } else {
+    displayName = user.email;
+  }
+  return displayName;
+}
+```
+
+## Functional and Declarative Patterns
+
+Prefer functional patterns over imperative ones:
+
+```typescript
+// Good: Functional approach
+const activeUsers = users.filter(user => user.isActive);
+const userNames = activeUsers.map(user => user.name);
+
+// Avoid: Imperative approach
+const userNames = [];
+for (let i = 0; i < users.length; i++) {
+  if (users[i].isActive) {
+    userNames.push(users[i].name);
+  }
+}
+```
+
+## Iteration Over Duplication
+
+Extract repeated patterns into reusable components or functions:
+
+```typescript
+// Good: Create a reusable component
+function FormField({ label, id, ...props }: FormFieldProps) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} {...props} />
+    </div>
+  );
+}
+
+// Usage
+<FormField label="Email" id="email" type="email" />
+<FormField label="Password" id="password" type="password" />
+
+// Avoid: Duplicating the same structure
+<div className="grid gap-2">
+  <Label htmlFor="email">Email</Label>
+  <Input id="email" type="email" />
+</div>
+<div className="grid gap-2">
+  <Label htmlFor="password">Password</Label>
+  <Input id="password" type="password" />
+</div>
+```
+
+## Descriptive Variable Names
+
+Use clear, descriptive variable names:
+
+```typescript
+// Good: Descriptive names
+const isLoading = true;
+const hasError = false;
+const userCount = users.length;
+
+// Avoid: Unclear names
+const loading = true;
+const error = false;
+const n = users.length;
+```
+
+## ESLint and Prettier
+
+Follow the project's ESLint and Prettier configuration for consistent formatting:
+
+```typescript
+// Good: Follows project linting rules
+function calculateTotal(items: Item[]): number {
+  return items.reduce((total, item) => total + item.price, 0);
+}
+
+// Avoid: Inconsistent formatting
+function   calculateTotal (items:Item[]):number
+{
+  return items.reduce((total,item)=>total+item.price,0)
+}
+```
+
+## Documentation
+
+Document complex logic but avoid unnecessary comments:
+
+```typescript
+// Good: Document complex logic
+// Calculate price with tiered discounts based on quantity
+function calculatePriceWithDiscount(quantity: number, basePrice: number): number {
+  if (quantity >= 100) return basePrice * 0.7;  // 30% discount
+  if (quantity >= 50) return basePrice * 0.8;   // 20% discount
+  if (quantity >= 10) return basePrice * 0.9;   // 10% discount
+  return basePrice;
+}
+
+// Avoid: Obvious comments
+// Get the user's name
+function getUserName(user) {  // This gets the user's name
+  return user.name;  // Return the name
+}
+```

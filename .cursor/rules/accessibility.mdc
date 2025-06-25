@@ -1,0 +1,124 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Accessibility
+
+Follow web accessibility standards to ensure the application is usable by everyone, including people with disabilities.
+
+## Semantic HTML
+
+Use semantic HTML elements that clearly describe their meaning:
+
+```tsx
+// Good: Semantic structure
+<header>
+  <nav>
+    <ul>
+      <li><a href="/">Home</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+  <section>
+    <h1>Page Title</h1>
+    <article>
+      <h2>Article Title</h2>
+      <p>Content...</p>
+    </article>
+  </section>
+</main>
+<footer>
+  <p>© 2023 Proteas</p>
+</footer>
+
+// Avoid: Non-semantic divs
+<div class="header">
+  <div class="nav">
+    <div class="nav-items">
+      <div><a href="/">Home</a></div>
+    </div>
+  </div>
+</div>
+```
+
+## ARIA Attributes
+
+Use ARIA attributes when necessary, but prefer semantic HTML:
+
+```tsx
+// Only use ARIA when semantic HTML isn't sufficient
+<button 
+  aria-label="Close dialog" 
+  aria-pressed={isPressed}
+  onClick={closeDialog}
+>
+  <svg>...</svg>
+</button>
+```
+
+## Keyboard Navigation
+
+Ensure all interactive elements are keyboard accessible:
+
+```tsx
+// Ensure proper focus management
+const DialogContent = ({ children }: { children: React.ReactNode }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Save last active element
+    const lastActiveElement = document.activeElement;
+    
+    // Focus the dialog content
+    contentRef.current?.focus();
+    
+    return () => {
+      // Restore focus when dialog closes
+      if (lastActiveElement instanceof HTMLElement) {
+        lastActiveElement.focus();
+      }
+    };
+  }, []);
+  
+  return (
+    <div 
+      ref={contentRef}
+      tabIndex={-1}
+      role="dialog"
+    >
+      {children}
+    </div>
+  );
+};
+```
+
+## Color Contrast
+
+Ensure sufficient color contrast for text and interactive elements:
+
+- Text should have a contrast ratio of at least 4.5:1 against its background
+- Use Tailwind's built-in contrast utilities when needed
+
+```tsx
+// Good: High contrast text
+<p className="text-gray-900 bg-white">High contrast text</p>
+
+// Avoid: Low contrast
+<p className="text-gray-400 bg-gray-300">Low contrast text</p>
+```
+
+## Screen Reader Text
+
+Include screen reader text for icons and visual elements without text:
+
+```tsx
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
+
+// For icons that need labels
+<button>
+  <svg>...</svg>
+  <VisuallyHidden>Close menu</VisuallyHidden>
+</button>
+```

@@ -1,155 +1,253 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-import { z } from "zod"
-import { createClient } from "@/lib/supabase/client"
-import { LoginFormData, LoginErrorMessages } from "@/types/app"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
+import { Eye, EyeOff, User } from "lucide-react";
+import { toast } from "sonner";
 
-const DOMAIN = "example.com"
+// UI Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Card, CardContent } from "@/components/ui/card";
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Please enter your username"),
-  password: z.string().min(6, "Password must be at least 6 characters")
-})
+// Constants & Types
+import { 
+  API_ERROR_MESSAGES, 
+  DIALOG_MESSAGES,
+  VALIDATION,
+  PASSWORD_MIN_LENGTH 
+} from "@/lib/constants";
+import { Database } from "@/types/supabase";
+import { cn } from "@/lib/utils";
 
-const ALLOWED_ROLES = ['admin', 'staff', 'secretary'] as const
+interface FormState {
+  username: string;
+  password: string;
+  loading: boolean;
+  showPassword: boolean;
+}
 
-export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<LoginFormData>({
-    username: '',
-    password: ''
-  })
-  const router = useRouter()
-  const supabase = createClient()
-
-  const handleError = (errorType: keyof typeof LoginErrorMessages) => {
-    toast.error(LoginErrorMessages[errorType].title, {
-      description: LoginErrorMessages[errorType].description
-    })
-    setIsLoading(false)
-  }
-
-  const validateCredentials = (data: LoginFormData) => {
-    return loginSchema.parse(data)
-  }
-
-  const signInUser = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
-  }
-
-  const getUserProfile = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (!user || error) throw new Error("Failed to get user profile")
-    return user
-  }
-
-  const getRole = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .single()
-
-    if (!profile || !ALLOWED_ROLES.includes(profile.role as typeof ALLOWED_ROLES[number])) {
-      throw new Error("Invalid user role")
+const STYLES = {
+  form: {
+    container: "space-y-4",
+    field: {
+      container: "space-y-2",
+      input: {
+        base: "pr-10",
+        withIcon: "pr-20"
+      }
     }
-
-    return profile.role
+  },
+  loading: {
+    container: "flex justify-center items-center min-h-[200px]"
+  },
+  icon: {
+    container: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2",
+    button: "h-6 px-2 text-muted-foreground hover:text-foreground",
+    loading: "text-muted-foreground"
   }
+} as const;
+
+export default function LoginForm() {
+  const [formState, setFormState] = useState<FormState>({
+    username: "",
+    password: "",
+    loading: false,
+    showPassword: false,
+  });
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  const router = useRouter();
+  const supabase = createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const verifyUserProfile = useCallback(async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (error || !profile) throw new Error('Profile verification failed');
+    return profile;
+  }, [supabase]);
+
+  const validateForm = () => {
+    const isValid = formState.username.length >= VALIDATION.USERNAME_MIN_LENGTH &&
+                   formState.password.length >= PASSWORD_MIN_LENGTH;
+    if (!isValid) toast.error(API_ERROR_MESSAGES.INVALID_REQUEST);
+    return isValid;
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (isLoading) return
-    setIsLoading(true)
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setFormState(prev => ({ ...prev, loading: true }));
 
     try {
-      const validatedData = validateCredentials(formData)
-      const email = `${validatedData.username}@${DOMAIN}`
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: `${formState.username.trim().toLowerCase()}@example.com`,
+        password: formState.password,
+      });
 
-      await signInUser(email, validatedData.password)
-      const user = await getUserProfile()
-      const role = await getRole(user.id)
+      if (error || !data?.session) throw error || new Error('No session');
 
-      toast.success("Welcome back!", {
-        description: "Successfully signed in."
-      })
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.session.user.id)
+        .single();
 
-      router.push(`/dashboard/${role}`)
-
-    } catch (error) {
-      console.error("Login error:", error)
-      
-      if (error instanceof z.ZodError) {
-        toast.error("Validation Error", {
-          description: error.errors[0].message
-        })
-      } else {
-        handleError('connectionError')
+      if (userError) {
+        console.error('User error:', userError);
+        throw userError;
       }
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
-  const handleInputChange = (field: keyof LoginFormData) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }))
+      if (!userData) {
+        throw new Error('User not found');
+      }
+
+      try {
+        await verifyUserProfile(data.session.user.id);
+      } catch (verifyError) {
+        console.error('Verification error:', verifyError);
+        // Sign out the user if verification fails
+        await supabase.auth.signOut();
+        throw new Error('Profile verification failed');
+      }
+      
+      toast.success("Επιτυχής σύνδεση");
+      
+      // Add a small delay before redirecting to ensure session is established
+      await new Promise(resolve => setTimeout(resolve, 500));
+      router.replace("/dashboard");
+    } catch (error) {
+      console.error('Login error:', error);
+      const message = error instanceof Error && error.message.includes('Invalid login credentials')
+        ? 'Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης'
+        : API_ERROR_MESSAGES.SERVER_ERROR;
+      toast.error(message);
+    } finally {
+      setFormState(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) return;
+        await verifyUserProfile(user.id);
+        router.replace('/dashboard');
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (event === 'SIGNED_IN') router.replace('/dashboard');
+        if (event === 'SIGNED_OUT') router.replace('/');
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [router, supabase, verifyUserProfile]);
+
+  if (isInitializing) {
+    return (
+      <div className={STYLES.loading.container}>
+        <LoadingSpinner size="lg" />
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto w-full max-w-sm space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your credentials to sign in
-        </p>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
-          <div className="relative">
-            <Input
-              id="username"
-              value={formData.username}
-              onChange={handleInputChange('username')}
-              placeholder="Your Username"
-              type="text"
-              autoComplete="username"
-              className="w-full pr-24"
-            />
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSubmit} className={STYLES.form.container} method="POST">
+          <div className={STYLES.form.field.container}>
+            <Label htmlFor="username">Όνομα Χρήστη</Label>
+            <div className="relative">
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="Εισάγετε το όνομα χρήστη" 
+                value={formState.username}
+                onChange={(e) => setFormState(prev => ({ ...prev, username: e.target.value.trim() }))}
+                disabled={formState.loading}
+                className={STYLES.form.field.input.base}
+                required
+                minLength={VALIDATION.USERNAME_MIN_LENGTH}
+                maxLength={VALIDATION.USERNAME_MAX_LENGTH}
+                autoComplete="username"
+              />
+              <div className={STYLES.icon.container}>
+                {formState.loading ? (
+                  <LoadingSpinner size="sm" className={STYLES.icon.loading} />
+                ) : (
+                  <User className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Your Password"
-            value={formData.password}
-            onChange={handleInputChange('password')}
-            autoComplete="current-password"
-            className="w-full"
-          />
-        </div>
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing in..." : "Sign In"}
-        </Button>
-      </form>
-    </div>
-  )
+
+          <div className={STYLES.form.field.container}>
+            <Label htmlFor="password">Κωδικός</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={formState.showPassword ? "text" : "password"}
+                placeholder="Εισάγετε τον κωδικό σας"
+                value={formState.password}
+                onChange={(e) => setFormState(prev => ({ ...prev, password: e.target.value.trim() }))}
+                disabled={formState.loading}
+                className={STYLES.form.field.input.withIcon}
+                required
+                minLength={PASSWORD_MIN_LENGTH}
+                autoComplete="current-password"
+              />
+              <div className={STYLES.icon.container}>
+                {formState.loading && (
+                  <LoadingSpinner size="sm" className={STYLES.icon.loading} />
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn("h-6 px-2", STYLES.icon.button)}
+                  onClick={() => setFormState(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                  disabled={formState.loading}
+                >
+                  {formState.showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <LoadingButton 
+            type="submit" 
+            className="w-full" 
+            loading={formState.loading}
+            loadingText={DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}
+          >
+            Σύνδεση
+          </LoadingButton>
+        </form>
+      </CardContent>
+    </Card>
+  );
 }

@@ -1,0 +1,32 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Project Structure
+
+This medical practice management application is built with Next.js App Router, TypeScript, and Supabase.
+
+## Key Directories
+
+- [src/app](mdc:src/app): Next.js App Router pages and API routes
+  - [src/app/actions](mdc:src/app/actions): Server actions for form submissions
+  - [src/app/dashboard](mdc:src/app/dashboard): Dashboard pages for the application
+  - [src/app/api](mdc:src/app/api): API routes for backend functionality
+
+- [src/components](mdc:src/components): Reusable React components
+  - [src/components/ui](mdc:src/components/ui): Shared UI components based on shadcn/ui
+  - [src/components/dashboard](mdc:src/components/dashboard): Dashboard-specific components
+  - [src/components/layout](mdc:src/components/layout): Layout components
+  - [src/components/auth](mdc:src/components/auth): Authentication components
+
+- [src/lib](mdc:src/lib): Utility functions and shared libraries
+- [src/hooks](mdc:src/hooks): Custom React hooks
+- [src/types](mdc:src/types): TypeScript type definitions
+
+## Configuration Files
+
+- [package.json](mdc:package.json): Project dependencies and scripts
+- [tsconfig.json](mdc:tsconfig.json): TypeScript configuration
+- [tailwind.config.ts](mdc:tailwind.config.ts): Tailwind CSS configuration
+- [components.json](mdc:components.json): shadcn/ui component configuration

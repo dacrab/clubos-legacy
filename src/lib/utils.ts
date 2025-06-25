@@ -1,28 +1,21 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+ 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(amount);
-};
+export function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
-export const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-};
-
-export const calculateTotal = (items: { price: number; quantity: number }[]) => {
-  return items.reduce((total, item) => total + item.price * item.quantity, 0);
-};
-
-export const applyCoupon = (total: number, couponValue: number = 2) => {
-  return Math.max(0, total - couponValue);
-}; 
+export function formatPrice(price: number) {
+  return `${price.toFixed(2)}€`;
+}

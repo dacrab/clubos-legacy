@@ -1,0 +1,115 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Error Handling
+
+## Client-Side Error Handling
+
+Use try/catch for async operations and show user-friendly error messages:
+
+```typescript
+'use client'
+
+import { useState } from 'react';
+import { toast } from '@/components/ui/use-toast';
+
+export function DataAction() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleAction() {
+    setIsLoading(true);
+    try {
+      const result = await performAction();
+      toast({
+        title: "Success",
+        description: "Operation completed successfully",
+      });
+    } catch (error) {
+      console.error("Action failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to complete action. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <button onClick={handleAction} disabled={isLoading}>
+      {isLoading ? 'Processing...' : 'Submit'}
+    </button>
+  );
+}
+```
+
+## Server-Side Error Handling
+
+For server components and API routes:
+
+```typescript
+// In a server component
+export default async function DataComponent() {
+  try {
+    const data = await fetchData();
+    return <DataDisplay data={data} />;
+  } catch (error) {
+    // Log the detailed error server-side
+    console.error("Server error:", error);
+    
+    // Return a user-friendly error UI
+    return <ErrorDisplay message="Failed to load data" />;
+  }
+}
+
+// In an API route
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    // Process data...
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("API error:", error);
+    return Response.json(
+      { 
+        error: "Failed to process request",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, 
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Error Boundaries
+
+Use Error Boundaries for catching and handling runtime errors:
+
+```typescript
+'use client'
+
+import { useEffect } from 'react';
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    // Log the error to an error reporting service
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button onClick={() => reset()}>Try again</button>
+    </div>
+  );
+}
+```

@@ -1,0 +1,67 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# shadcn/ui Components
+
+This project uses [shadcn/ui](https://ui.shadcn.com/) as its component library. These are not installed as dependencies but copied into the project codebase in `src/components/ui`.
+
+## Using Existing Components
+
+When building UI, always check for existing components in `src/components/ui` before creating new ones:
+
+```typescript
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export function LoginForm() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Login</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" />
+          </div>
+          <Button type="submit">Login</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Installing New Components
+
+If a needed component isn't available, install it using the shadcn CLI:
+
+```bash
+npx shadcn-ui@latest add [component-name]
+```
+
+Document any newly installed components by adding them to this rule.
+
+## Available Components
+
+The project currently includes these shadcn/ui components:
+
+- **Layout**: Card, Sheet, Tabs
+- **Forms**: Button, Input, Label, Select, Checkbox, Form
+- **Feedback**: Toast, Alert, Progress
+- **Overlay**: Dialog, Popover
+- **Data Display**: Table, Accordion, Avatar
+- **Navigation**: Breadcrumb, Dropdown Menu
+
+## Theming
+
+The project uses a custom theme defined in `tailwind.config.ts`. All components inherit these theme variables for consistent styling.

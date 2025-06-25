@@ -1,0 +1,79 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Coding Standards
+
+## TypeScript
+
+- Use TypeScript for all code
+- Prefer interfaces over types for object definitions
+- Use const objects with 'as const' instead of enums
+- Use explicit return types for all functions
+- Use absolute imports with @/ prefix
+
+Example:
+```typescript
+interface UserProps {
+  id: string;
+  name: string;
+  role: UserRole;
+}
+
+const UserRoles = {
+  ADMIN: 'admin',
+  DOCTOR: 'doctor',
+  STAFF: 'staff',
+} as const;
+
+type UserRole = typeof UserRoles[keyof typeof UserRoles];
+
+// Function with explicit return type
+function getUserDisplayName(user: UserProps): string {
+  return `${user.name} (${user.role})`;
+}
+```
+
+## Component Development
+
+- Use functional components with TypeScript interfaces
+- Use composition over inheritance
+- Extract business logic to custom hooks (src/hooks)
+- Implement proper prop interfaces for flexibility
+
+```typescript
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+
+interface CounterProps {
+  initialCount?: number;
+  onCountChange?: (count: number) => void;
+}
+
+export function Counter({ 
+  initialCount = 0, 
+  onCountChange 
+}: CounterProps) {
+  const [count, setCount] = useState(initialCount);
+  
+  const increment = () => {
+    const newCount = count + 1;
+    setCount(newCount);
+    onCountChange?.(newCount);
+  };
+  
+  return (
+    <Button onClick={increment}>
+      Count: {count}
+    </Button>
+  );
+}
+```
+
+## UI and Styling
+
+- Use Tailwind CSS for styling
+- Leverage shadcn/ui components from @/components/ui
+- Follow a consistent color scheme from the theme
+- Use responsive design patterns with Tailwind breakpoints

@@ -1,0 +1,31 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Proteas Project Overview
+
+## About the Project
+- Medical practice management web application built with Next.js, TypeScript, and Supabase
+- Focus on server-side rendering, type safety, and modern UI/UX with shadcn/ui
+- **IMPORTANT**: This is NOT a todo application - understand the codebase before modifications
+
+## Tech Stack
+- Next.js - React framework with App Router
+- TypeScript - Static typing for JavaScript
+- Tailwind CSS - Utility-first CSS framework
+- Shadcn UI - Component library built on Radix UI
+- Supabase - Backend as a Service (auth, database, storage)
+- React Server Components - Server-rendered React components
+
+## Getting Started
+
+Before making changes:
+1. Read through relevant rule files in `.cursor/rules/`
+2. Understand the directory structure in `project-structure.mdc`
+3. Follow coding conventions in `coding-standards.mdc`
+4. Reference existing components for styling patterns
+
+## Project Organization
+
+Key project files and directories are organized according to the structure described in `project-structure.mdc`. All code should follow the established patterns and conventions.

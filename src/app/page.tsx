@@ -1,34 +1,68 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { LoginForm } from "@/components/auth/LoginForm"
+import { redirect } from "next/navigation";
+import { createServerSupabase } from "@/lib/supabase-server";
+import { LockKeyhole } from "lucide-react";
+import LoginForm from "@/components/auth/LoginForm";
+import { Suspense } from "react";
+import { DIALOG_MESSAGES } from "@/lib/constants";
 
-export default async function LoginPage() {
-  const supabase = await createClient()
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[200px]">
+      <div className="text-muted-foreground">{DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}</div>
+    </div>
+  );
+}
 
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+function Header() {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="inline-block p-2 rounded-full bg-primary/10">
+        <LockKeyhole className="h-5 w-5 text-primary" />
+      </div>
+      <h1 className="text-xl font-bold gradient-text">
+        Σύστημα Διαχείρισης
+      </h1>
+      <p className="text-muted-foreground text-xs">
+        Συνδεθείτε για να συνεχίσετε
+      </p>
+    </div>
+  );
+}
 
-    // If user is authenticated, get their profile and redirect
-    if (user && !userError) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single()
+function Footer() {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-center text-xs text-muted-foreground">
+        <p>Σε περίπτωση προβλήματος, επικοινωνήστε με τον διαχειριστή</p>
+      </div>
+      <div className="text-center text-xs text-muted-foreground/60">
+        <p>
+          &copy; {new Date().getFullYear()} Designed & Developed by <a href="https://dacrab.github.io" target="_blank" rel="noopener noreferrer" className="text-primary">DaCrab</a>
+        </p>
+      </div>
+    </div>
+  );
+}
 
-      // Redirect to appropriate dashboard based on role
-      if (profile?.role) {
-        redirect(`/dashboard/${profile.role}`)
-      }
-    }
-  } catch (error) {
-    console.error("Auth check error:", error)
+export default async function Home() {
+  const supabase = await createServerSupabase(false);
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    return redirect("/dashboard");
   }
 
-  // Show login form for unauthenticated users
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <LoginForm />
-    </main>
-  )
+    <div className="fixed inset-0 flex items-center justify-center bg-background bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
+      <div className="w-full max-w-sm mx-auto px-3">
+        <div className="p-3 sm:p-4 bg-card rounded-xl border shadow-soft hover:shadow-soft-hover flex flex-col gap-3 sm:gap-4 transition-all duration-300">
+          <Header />
+          <Suspense fallback={<LoadingFallback />}>
+            <LoginForm />
+          </Suspense>
+          <Footer />
+        </div>
+      </div>
+    </div>
+  );
 }

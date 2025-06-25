@@ -1,4 +1,4 @@
-// Basic JSON type used throughout database
+// ======= Common Types =======
 export type Json =
   | string
   | number
@@ -7,235 +7,362 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-// Raw types from database queries
-export interface RawSaleItem {
-  id: string
-  quantity: number
-  price_at_sale: number
-  is_treat: boolean
-  last_edited_by: string | null
-  last_edited_at: string | null
-  is_deleted: boolean
-  deleted_by: string | null
-  deleted_at: string | null
-  product_id: string
-  product: {
-    id: string
-    name: string
-    price: number
-    is_deleted: boolean
-  } | null
-}
+export type DateRange = {
+  startDate: string | null;
+  endDate: string | null;
+};
 
-export interface RawSale {
-  id: string
-  total_amount: number
-  created_at: string
-  sale_items: RawSaleItem[]
-}
+export type TimeRange = {
+  startTime: string;
+  endTime: string;
+};
 
-export interface RawRegister {
-  id: string
-  opened_at: string
-  closed_at: string | null
-  items_sold: number
-  coupons_used: number
-  treat_items_sold: number
-  total_amount: number
-  closed_by: string | null
-  created_at: string
-  updated_at: string
-  closed_by_name: string | null
-  sales: RawSale[]
-}
+export type PaymentMethodType = 'cash' | 'card' | 'treat';
 
-export interface SupabaseSaleItem {
-  id: string
-  sale_id: string
-  quantity: number
-  price_at_sale: number
-  is_treat: boolean
-  last_edited_by: string | null
-  last_edited_at: string | null
-  is_deleted: boolean
-  deleted_by: string | null
-  deleted_at: string | null
-  product_id: string
-  created_at: string
-  product?: {
-    id: string
-    name: string
-    price: number
-    is_deleted: boolean
-  } | null
-}
+// ======= Database Row Types =======
+export type Code = Database['public']['Tables']['codes']['Row'] & {
+  category?: Database['public']['Tables']['categories']['Row'];
+};
 
-export interface RawSupabaseResponse {
-  id: string
-  created_at: string
-  total_amount: number
-  coupon_applied: boolean
-  coupons_used: number
-  registers: {
-    id: string
-    coupons_used: number
-    opened_at: string
-    closed_at: string | null
-    closed_by_name: string | null
-  }[]
-  sale_items: SupabaseSaleItem[]
-  profiles: {
-    id: string
-    name: string
-    email: string
-  }[]
-}
+export type Category = Database['public']['Tables']['categories']['Row']
 
-// Database schema types
+export type Sale = Database['public']['Tables']['sales']['Row'] & {
+  code: {
+    name: string;
+    price: number;
+    image_url?: string | null;
+    category?: {
+      id: string;
+      name: string;
+    }
+  };
+};
+
+export type User = Database['public']['Tables']['users']['Row']
+export type Appointment = Database['public']['Tables']['appointments']['Row']
+export type FootballFieldBooking = Database['public']['Tables']['football_field_bookings']['Row']
+export type RegisterSession = Database['public']['Tables']['register_sessions']['Row']
+
+export type RegisterClosing = Database['public']['Tables']['register_closings']['Row'] & {
+  closer?: {
+    username: string;
+  };
+};
+
+// ======= Database Schema =======
 export interface Database {
   public: {
     Tables: {
-      // Products table
-      products: {
+      users: {
         Row: {
           id: string
+          username: string
+          role: 'admin' | 'staff'
           created_at: string
-          name: string
-          description: string | null
-          price: number
-          stock: number
-          category: string
-          subcategory: string | null
-          image_url: string | null
-          is_treat: boolean
-          is_deleted: boolean
+          updated_at: string
         }
         Insert: {
-          id?: string
+          id: string
+          username: string
+          role?: 'admin' | 'staff'
           created_at?: string
-          name: string
-          description?: string | null
-          price: number
-          stock: number
-          category: string
-          subcategory?: string | null
-          image_url?: string | null
-          is_treat?: boolean
-          is_deleted?: boolean
+          updated_at?: string
         }
         Update: {
           id?: string
+          username?: string
+          role?: 'admin' | 'staff'
           created_at?: string
-          name?: string
-          description?: string | null
-          price?: number
-          stock?: number
-          category?: string
-          subcategory?: string | null
-          image_url?: string | null
-          is_treat?: boolean
-          is_deleted?: boolean
+          updated_at?: string
         }
       }
-      // Sales table
+      categories: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          parent_id: string | null
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          parent_id?: string | null
+          created_at?: string
+          created_by: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          parent_id?: string | null
+          created_at?: string
+          created_by?: string
+        }
+      }
+      codes: {
+        Row: {
+          id: string
+          name: string
+          price: number
+          stock: number
+          category_id: string | null
+          image_url: string | null
+          created_at: string
+          created_by: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          price: number
+          stock?: number
+          category_id?: string | null
+          image_url?: string | null
+          created_at?: string
+          created_by: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          price?: number
+          stock?: number
+          category_id?: string | null
+          image_url?: string | null
+          created_at?: string
+          created_by?: string
+          updated_at?: string | null
+        }
+      }
       sales: {
         Row: {
           id: string
+          register_session_id: string
+          code_id: string
+          quantity: number
+          unit_price: number
+          total_price: number
+          discount_amount: number
+          final_price: number
+          payment_method: PaymentMethodType
+          is_treat: boolean
+          coffee_options: Json | null
+          sold_by: string
           created_at: string
-          total: number
-          items: Json[]
-          coupon_applied: boolean
-          register_id: string | null
+          is_edited: boolean
+          is_deleted: boolean
+          original_quantity: number | null
+          original_code: string | null
+          edited_at: string | null
+          edited_by: string | null
         }
         Insert: {
           id?: string
+          register_session_id: string
+          code_id: string
+          quantity: number
+          unit_price: number
+          total_price: number
+          discount_amount?: number
+          final_price: number
+          payment_method: PaymentMethodType
+          is_treat?: boolean
+          coffee_options?: Json | null
+          sold_by: string
           created_at?: string
-          total: number
-          items: Json[]
-          coupon_applied?: boolean
-          register_id?: string | null
+          is_edited?: boolean
+          is_deleted?: boolean
+          original_quantity?: number | null
+          original_code?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
         }
         Update: {
           id?: string
+          register_session_id?: string
+          code_id?: string
+          quantity?: number
+          unit_price?: number
+          total_price?: number
+          discount_amount?: number
+          final_price?: number
+          payment_method?: PaymentMethodType
+          is_treat?: boolean
+          coffee_options?: Json | null
+          sold_by?: string
           created_at?: string
-          total?: number
-          items?: Json[]
-          coupon_applied?: boolean
-          register_id?: string | null
+          is_edited?: boolean
+          is_deleted?: boolean
+          original_quantity?: number | null
+          original_code?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
         }
       }
-      // Registers table
-      registers: {
+      register_sessions: {
         Row: {
           id: string
-          created_at: string
+          opened_at: string
+          opened_by: string
           closed_at: string | null
-          total: number
-          items_count: number
-          coupons_count: number
-          treats_count: number
+          closed_by: string | null
+          initial_cash: number
+          final_cash: number
+          cash_payments_total: number
+          card_payments_total: number
+          treats_total: number
+          notes: Json | null
+          created_at: string
         }
         Insert: {
           id?: string
-          created_at?: string
+          opened_at?: string
+          opened_by: string
           closed_at?: string | null
-          total: number
-          items_count: number
-          coupons_count: number
-          treats_count: number
+          closed_by?: string | null
+          initial_cash: number
+          final_cash?: number
+          cash_payments_total?: number
+          card_payments_total?: number
+          treats_total?: number
+          notes?: Json | null
+          created_at?: string
         }
         Update: {
           id?: string
-          created_at?: string
+          opened_at?: string
+          opened_by?: string
           closed_at?: string | null
-          total?: number
-          items_count?: number
-          coupons_count?: number
-          treats_count?: number
+          closed_by?: string | null
+          initial_cash?: number
+          final_cash?: number
+          cash_payments_total?: number
+          card_payments_total?: number
+          treats_total?: number
+          notes?: Json | null
+          created_at?: string
         }
       }
-      // Appointments table
+      register_closings: {
+        Row: {
+          id: string
+          register_session_id: string
+          closed_by: string
+          cash_amount: number
+          card_amount: number
+          treats_total: number
+          treats_count: number
+          card_count: number
+          notes: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          register_session_id: string
+          closed_by: string
+          cash_amount: number
+          card_amount: number
+          treats_total: number
+          treats_count: number
+          card_count: number
+          notes?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          register_session_id?: string
+          closed_by?: string
+          cash_amount?: number
+          card_amount?: number
+          treats_total?: number
+          treats_count?: number
+          card_count?: number
+          notes?: Json | null
+          created_at?: string
+        }
+      }
+      football_field_bookings: {
+        Row: {
+          id: string
+          who_booked: string
+          booking_datetime: string
+          contact_details: string
+          field_number: number
+          num_players: number
+          notes: string | null
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          who_booked: string
+          booking_datetime: string
+          contact_details: string
+          field_number: number
+          num_players: number
+          notes?: string | null
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          who_booked?: string
+          booking_datetime?: string
+          contact_details?: string
+          field_number?: number
+          num_players?: number
+          notes?: string | null
+          user_id?: string
+          created_at?: string
+        }
+      }
       appointments: {
         Row: {
           id: string
+          who_booked: string
+          date_time: string
+          contact_details: string
+          num_children: number
+          num_adults: number
+          notes: string | null
           created_at: string
-          start_time: string
-          end_time: string
-          title: string
-          description: string | null
-          type: 'football' | 'party'
-          status: 'pending' | 'confirmed' | 'cancelled'
         }
         Insert: {
           id?: string
+          who_booked: string
+          date_time: string
+          contact_details: string
+          num_children: number
+          num_adults: number
+          notes?: string | null
           created_at?: string
-          start_time: string
-          end_time: string
-          title: string
-          description?: string | null
-          type: 'football' | 'party'
-          status?: 'pending' | 'confirmed' | 'cancelled'
         }
         Update: {
           id?: string
+          who_booked?: string
+          date_time?: string
+          contact_details?: string
+          num_children?: number
+          num_adults?: number
+          notes?: string | null
           created_at?: string
-          start_time?: string
-          end_time?: string
-          title?: string
-          description?: string | null
-          type?: 'football' | 'party'
-          status?: 'pending' | 'confirmed' | 'cancelled'
         }
       }
     }
-    Views: {
-      [_ in never]: never
-    }
     Functions: {
-      [_ in never]: never
+      close_register: {
+        Args: {
+          p_register_session_id: string;
+          p_notes?: Json;
+        };
+        Returns: string;
+      }
     }
     Enums: {
-      [_ in never]: never
+      payment_method_type: 'cash' | 'card' | 'treat'
     }
   }
 }

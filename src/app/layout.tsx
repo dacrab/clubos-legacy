@@ -1,56 +1,62 @@
-import type { Metadata, Viewport } from 'next';
-import { Inter as FontSans } from 'next/font/google';
-import { cn } from '@/lib/utils';
-import { ThemeProvider } from '@/components/theme-provider';
-import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider';
-import { ToastProvider } from '@/components/providers/ToastProvider';
-import { RootLayoutProps } from '@/types';
-import './globals.css';
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { LoadingProvider } from "@/components/providers/loading-provider";
+import { Toaster } from 'sonner';
+import { PageWrapper } from "@/components/ui/page-wrapper";
 
-const fontSans = FontSans({
-  subsets: ['latin'],
-  variable: '--font-sans',
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
-  title: 'Proteas POS',
-  description: 'A custom POS system with warehouse management',
-  icons: {
-    icon: '/favicon.ico',
-  },
+  title: "Σύστημα Διαχείρισης",
+  description: "Σύστημα διαχείρισης κωδικών και πωλήσεων",
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
-  ],
+export const viewport = {
+  themeColor: "#000000",
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  colorScheme: "dark light",
 };
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head />
-      <body className={cn(
-        'min-h-screen bg-background font-sans antialiased',
-        fontSans.variable
-      )}>
-        <ReactQueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-            storageKey="pos-theme"
-          >
-            <div className="relative flex min-h-screen flex-col">
+    <html lang="el" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#000000" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <LoadingProvider>
+            <PageWrapper variant="root">
               {children}
-            </div>
-            <ToastProvider />
-          </ThemeProvider>
-        </ReactQueryProvider>
+            </PageWrapper>
+            <Toaster position="top-right" />
+          </LoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

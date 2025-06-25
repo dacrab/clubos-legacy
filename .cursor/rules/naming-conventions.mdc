@@ -1,0 +1,94 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Naming Conventions
+
+## Directory Names
+- Use lowercase with dashes for directories
+- Make names descriptive of the content
+
+Examples:
+```
+src/components/dashboard/user-management/
+src/components/auth/login-form/
+src/lib/data-fetching/
+```
+
+## Component Names
+- Use PascalCase for component files and exports
+- Name should reflect the component's purpose
+- Include the file extension `.tsx` for React components
+
+Examples:
+```typescript
+// UserProfile.tsx
+export function UserProfile() { /* ... */ }
+
+// AppointmentForm.tsx
+export function AppointmentForm() { /* ... */ }
+
+// DataTable.tsx
+export function DataTable() { /* ... */ }
+```
+
+## Utility Names
+- Use camelCase for utility files and functions
+- Group related utilities in descriptively named files
+
+Examples:
+```typescript
+// dateUtils.ts
+export function formatDate(date: Date): string { /* ... */ }
+export function isDateInPast(date: Date): boolean { /* ... */ }
+
+// stringUtils.ts
+export function capitalize(str: string): string { /* ... */ }
+export function truncate(str: string, length: number): string { /* ... */ }
+```
+
+## Type and Interface Names
+- Use PascalCase for type and interface names
+- Be descriptive and specific
+- Use `Props` suffix for component props
+- Use `Context` suffix for context objects
+
+Examples:
+```typescript
+// User-related types
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+// Component props
+interface TableProps {
+  data: unknown[];
+  columns: Column[];
+  isLoading?: boolean;
+}
+
+// Context types
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+```
+
+## Exports
+- Prefer named exports over default exports
+- Export from the definition when possible
+
+Examples:
+```typescript
+// Good: Named exports
+export function Button() { /* ... */ }
+export function IconButton() { /* ... */ }
+
+// Instead of default exports
+function Button() { /* ... */ }
+export default Button;
+```

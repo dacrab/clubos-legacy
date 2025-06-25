@@ -1,0 +1,94 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Next.js Patterns
+
+## App Router
+
+This project uses Next.js App Router architecture:
+
+- Page routes are defined by folders in `src/app`
+- Each route requires a `page.tsx` file to be publicly accessible
+- Layout components are defined in `layout.tsx` files
+- API routes are placed in `src/app/api/[route]/route.ts`
+- Loading states use `loading.tsx`
+- Error handling uses `error.tsx`
+
+## Server Components
+
+The project uses React Server Components wherever possible:
+
+- Components are Server Components by default
+- Client Components are explicitly marked with `'use client'` directive
+- Keep data-fetching in Server Components
+- Move interactivity to Client Components
+
+Example Server Component:
+```typescript
+// This is a Server Component by default
+export default async function UserList() {
+  const users = await fetchUsers();
+  
+  return (
+    <div>
+      <h1>User List</h1>
+      <ul>
+        {users.map(user => (
+          <li key={user.id}>{user.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+Example Client Component:
+```typescript
+'use client'
+
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Count: {count}
+    </button>
+  );
+}
+```
+
+## Server Actions
+
+The project uses Server Actions for form submissions and data mutations:
+
+- Server Actions are defined in `src/app/actions`
+- They are imported into components that need them
+- Use `formAction` for React forms
+
+Example:
+```typescript
+// src/app/actions/user-actions.ts
+'use server'
+
+export async function createUser(formData: FormData) {
+  const name = formData.get('name') as string;
+  // Process and save user
+  return { success: true };
+}
+
+// Usage in a component
+import { createUser } from '@/app/actions/user-actions';
+
+export default function UserForm() {
+  return (
+    <form action={createUser}>
+      <input name="name" />
+      <button type="submit">Create User</button>
+    </form>
+  );
+}
+```

@@ -1,0 +1,119 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# State Management
+
+## React Context
+
+Use React Context for global state when appropriate:
+
+```typescript
+// src/components/providers/ExampleProvider.tsx
+'use client'
+
+import { createContext, useContext, useState, ReactNode } from 'react';
+
+interface ExampleContextType {
+  value: string;
+  setValue: (value: string) => void;
+}
+
+const ExampleContext = createContext<ExampleContextType | undefined>(undefined);
+
+export function ExampleProvider({ children }: { children: ReactNode }) {
+  const [value, setValue] = useState('');
+
+  return (
+    <ExampleContext.Provider value={{ value, setValue }}>
+      {children}
+    </ExampleContext.Provider>
+  );
+}
+
+export function useExample() {
+  const context = useContext(ExampleContext);
+  if (context === undefined) {
+    throw new Error('useExample must be used within an ExampleProvider');
+  }
+  return context;
+}
+```
+
+## Server Components
+
+- Use Server Components for data fetching whenever possible
+- Keep state management in client components only
+- Pass fetched data from server components to client components via props
+
+```typescript
+// Server Component (page.tsx)
+import { ClientComponent } from './client-component';
+
+export default async function Page() {
+  // Fetch data directly in the server component
+  const data = await fetchData();
+  
+  // Pass data to client component
+  return <ClientComponent initialData={data} />;
+}
+```
+
+## useEffect Cleanup
+
+Always clean up side effects in useEffect:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react';
+
+export function DataComponent() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      const response = await fetch('/api/data');
+      const result = await response.json();
+      
+      // Only update state if component is still mounted
+      if (isMounted) {
+        setData(result);
+      }
+    };
+    
+    fetchData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+  
+  return <div>{/* Render data */}</div>;
+}
+```
+
+## Supabase State Persistence
+
+Use Supabase for persisting state when needed:
+
+```typescript
+// Example of storing user preferences
+async function saveUserPreference(userId: string, theme: string) {
+  const { error } = await supabase
+    .from('user_preferences')
+    .upsert({ user_id: userId, theme })
+    .select();
+    
+  if (error) {
+    console.error('Failed to save preference:', error);
+    return false;
+  }
+  
+  return true;
+}
+```
