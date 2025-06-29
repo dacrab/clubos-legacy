@@ -2,9 +2,12 @@ import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import DashboardLayoutClient from "@/components/dashboard/DashboardLayoutClient";
 import { Metadata } from "next";
-import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Database } from "@/types/supabase";
 import { cookies } from "next/headers";
+import Header from "@/components/dashboard/Header";
+import { cn } from "@/lib/utils";
+import { UserProfile } from "@/types/next";
+import { DashboardContextSetter } from "@/components/dashboard/DashboardContextSetter";
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -32,7 +35,6 @@ export default async function DashboardLayout({
   );
   
   try {
-    // Authentication check
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
@@ -40,7 +42,6 @@ export default async function DashboardLayout({
       return redirect('/');
     }
 
-    // Get user data
     const { data: userData, error: userDataError } = await supabase
       .from('users')
       .select('username, role, id, created_at, updated_at')    
@@ -52,12 +53,18 @@ export default async function DashboardLayout({
       return redirect('/');
     }
 
+    const isAdmin = userData.role === 'admin';
+
     return (
-      <PageWrapper variant="dashboard">
-        <DashboardLayoutClient user={user} profile={userData}>
-          {children}
-        </DashboardLayoutClient>
-      </PageWrapper>
+      <>
+        <DashboardContextSetter isSidebarVisible={isAdmin} />
+        <div className={cn("flex flex-1 flex-col", isAdmin && "lg:pl-72")}>
+          <Header user={user} profile={userData} />
+          <DashboardLayoutClient user={user} profile={userData as UserProfile}>
+            {children}
+          </DashboardLayoutClient>
+        </div>
+      </>
     );
   } catch (error) {
     console.error('Dashboard layout error:', error);

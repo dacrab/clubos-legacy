@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
-import useSWR from 'swr';
-import { toast } from 'sonner';
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
+import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
+import FootballFieldBookingForm from './FootballFieldBookingForm';
+import { formatDateStringWithGreekAmPm } from '@/lib/utils/date';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,56 +16,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   FOOTBALL_BOOKING_MESSAGES,
-  FORM_LABELS,
+  FORM_LABELS, 
   BUTTON_LABELS, 
   PLACEHOLDERS,
   DIALOG_MESSAGES,
   DATE_FORMAT
 } from '@/lib/constants';
+import type { FootballFieldBooking } from '@/types/bookings';
 
 interface FootballFieldBookingsListProps {
   showUpcomingOnly?: boolean;
   emptyState?: React.ReactNode;
 }
 
-type FootballFieldBooking = Database['public']['Tables']['football_field_bookings']['Row'];
-
-const formatDateWithGreekAmPm = (dateString: string) => {
-  try {
-    return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, { locale: el });
-  } catch (error) {
-    return dateString;
-  }
-};
-
 export default function FootballFieldBookingsList({ showUpcomingOnly = false, emptyState }: FootballFieldBookingsListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<FootballFieldBooking>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const [isMutating, setIsMutating] = useState(false);
+  
+  const { bookings = [], error, isLoading, updateBooking, deleteBooking } = useFootballFieldBookings();
 
-  const { data: bookings = [], error, isLoading, mutate } = useSWR<FootballFieldBooking[]>(
-    'football_field_bookings',
-    async () => {
-      const { data, error } = await supabase
-        .from('football_field_bookings')
-        .select('*')
-        .order('booking_datetime', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    }
-  );
-
-  const filteredBookings = React.useMemo(() => {
+  const filteredBookings = useMemo(() => {
+    if (!bookings) return [];
     if (!showUpcomingOnly) return bookings;
 
     const now = new Date();
@@ -88,51 +64,24 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId || !editForm.booking_datetime || !editForm.who_booked || 
-        !editForm.contact_details || !editForm.field_number) {
-      toast.error(FOOTBALL_BOOKING_MESSAGES.REQUIRED_FIELDS);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('football_field_bookings')
-        .update(editForm)
-        .eq('id', editingId);
-
-      if (error) throw error;
-
-      toast.success(FOOTBALL_BOOKING_MESSAGES.UPDATE_SUCCESS);
+    if (!editingId) return;
+    
+    setIsMutating(true);
+    const { success } = await updateBooking(editingId, editForm);
+    if(success){
       setEditingId(null);
       setEditForm({});
-      mutate();
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
     }
+    setIsMutating(false);
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedBookingId) return;
-    setIsDeleting(true);
-
-    try {
-      const { error } = await supabase
-        .from('football_field_bookings')
-        .delete()
-        .eq('id', selectedBookingId);
-
-      if (error) throw error;
-
-      toast.success(FOOTBALL_BOOKING_MESSAGES.DELETE_SUCCESS);
-      mutate();
-    } catch (error) {
-      console.error('Error deleting booking:', error);
-      toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-    }
+    
+    setIsMutating(true);
+    await deleteBooking(selectedBookingId);
+    setDeleteDialogOpen(false);
+    setIsMutating(false);
   };
 
   if (error) return <div className="text-center py-4 text-destructive">{FOOTBALL_BOOKING_MESSAGES.FETCH_ERROR}</div>;
@@ -168,7 +117,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                       <Input
                         id="who_booked"
                         value={editForm.who_booked || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, who_booked: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, who_booked: e.target.value }))}
                         placeholder={PLACEHOLDERS.WHO_BOOKED}
                         className="h-8 sm:h-10 text-sm sm:text-base"
                       />
@@ -179,7 +128,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                         id="booking_datetime"
                         type="datetime-local"
                         value={editForm.booking_datetime || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, booking_datetime: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, booking_datetime: e.target.value }))}
                         className="h-8 sm:h-10 text-sm sm:text-base"
                       />
                     </div>
@@ -190,7 +139,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                     <Input
                       id="contact_details"
                       value={editForm.contact_details || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, contact_details: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, contact_details: e.target.value }))}
                       placeholder={PLACEHOLDERS.CONTACT_DETAILS}
                       className="h-8 sm:h-10 text-sm sm:text-base"
                     />
@@ -201,7 +150,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                       <Label htmlFor="field_number" className="text-sm sm:text-base">{FORM_LABELS.FIELD_NUMBER}</Label>
                       <Select
                         value={editForm.field_number?.toString()}
-                        onValueChange={(value) => setEditForm(prev => ({ ...prev, field_number: parseInt(value) }))}
+                        onValueChange={(value) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, field_number: parseInt(value) }))}
                       >
                         <SelectTrigger id="field_number" className="h-8 sm:h-10 text-sm sm:text-base">
                           <SelectValue placeholder="Επιλέξτε γήπεδο" />
@@ -219,7 +168,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                         id="num_players"
                         type="number"
                         value={editForm.num_players || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, num_players: parseInt(e.target.value) }))}
+                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, num_players: parseInt(e.target.value) }))}
                         min="2"
                         max="12"
                         placeholder={PLACEHOLDERS.NUM_PLAYERS}
@@ -233,7 +182,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                     <Textarea
                       id="notes"
                       value={editForm.notes || ''}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, notes: e.target.value }))}
                       rows={3}
                       placeholder={PLACEHOLDERS.NOTES}
                       className="text-sm sm:text-base resize-none min-h-[80px]"
@@ -258,7 +207,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                       size="sm"
                       onClick={handleSaveEdit}
                       className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
-                      loading={isDeleting}
+                      loading={isMutating}
                       loadingText={DIALOG_MESSAGES.SAVE_LOADING}
                     >
                       <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -272,10 +221,10 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                     <div>
                       <h3 className="font-medium text-foreground text-sm sm:text-base">{booking.who_booked}</h3>
                       <p className="text-xs sm:text-sm text-muted-foreground">
-                        {formatDateWithGreekAmPm(booking.booking_datetime)}
+                        {formatDateStringWithGreekAmPm(booking.booking_datetime)}
                       </p>
                       <p className="text-[10px] xs:text-xs text-muted-foreground mt-1">
-                        {FORM_LABELS.CREATED_AT}: {formatDateWithGreekAmPm(booking.created_at)}
+                        {FORM_LABELS.CREATED_AT}: {formatDateStringWithGreekAmPm(booking.created_at)}
                         {' '}({formatDistanceToNow(new Date(booking.created_at), { addSuffix: true, locale: el })})
                       </p>
                     </div>
@@ -331,7 +280,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
         title={DIALOG_MESSAGES.DELETE_BOOKING_TITLE}
         description={DIALOG_MESSAGES.DELETE_BOOKING_DESCRIPTION}
         onConfirm={handleDeleteConfirm}
-        loading={isDeleting}
+        loading={isMutating}
       />
     </>
   );

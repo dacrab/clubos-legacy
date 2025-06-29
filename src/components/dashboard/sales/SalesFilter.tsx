@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { el } from 'date-fns/locale/el';
 import { CalendarIcon, X, Filter } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,18 +15,9 @@ import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
 
-interface SalesDateRange {
-  startDate: string;
-  endDate: string;
-}
-
 interface TimeRange {
   startTime: string;
   endTime: string;
-}
-
-interface SalesFilterProps {
-  onFilterChange: (dateRange: SalesDateRange, timeRange: TimeRange) => void;
 }
 
 const getDateRangeForQuickSelect = (value: string): { start: Date, end: Date } | null => {
@@ -38,16 +30,16 @@ const getDateRangeForQuickSelect = (value: string): { start: Date, end: Date } |
       end: new Date()
     },
     YESTERDAY: {
-      start: new Date(today.setDate(today.getDate() - 1)),
-      end: new Date(today.setHours(23, 59, 59, 999))
+      start: new Date(new Date().setDate(new Date().getDate() - 1)),
+      end: new Date(new Date().setDate(new Date().getDate() - 1))
     },
     THIS_WEEK: {
-      start: new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1))),
+      start: new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)),
       end: new Date()
     },
     LAST_WEEK: {
-      start: new Date(today.setDate(today.getDate() - today.getDay() - 6)),
-      end: new Date(new Date(today).setDate(today.getDate() + 6))
+      start: new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() - 6),
+      end: new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay())
     },
     THIS_MONTH: {
       start: new Date(today.getFullYear(), today.getMonth(), 1),
@@ -75,16 +67,49 @@ const isValidTimeFormat = (time: string) => {
   return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
 };
 
-export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
-  const [date, setDate] = useState<DateRange>();
+export default function SalesFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [date, setDate] = useState<DateRange | undefined>();
   const [timeRange, setTimeRange] = useState<TimeRange>({ startTime: "", endTime: "" });
   const [quickSelect, setQuickSelect] = useState("CUSTOM");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const updateFilters = useCallback((dateRange: SalesDateRange, timeRange: TimeRange) => {
-    onFilterChange(dateRange, timeRange);
-  }, [onFilterChange]);
+  useEffect(() => {
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const startTime = searchParams.get('startTime');
+    const endTime = searchParams.get('endTime');
+
+    if (from) {
+        setDate({ 
+            from: parse(from, DATE_FORMAT.API, new Date()), 
+            to: to ? parse(to, DATE_FORMAT.API, new Date()) : undefined 
+        });
+    }
+    if (startTime || endTime) {
+        setTimeRange({
+            startTime: startTime || '',
+            endTime: endTime || ''
+        });
+    }
+    setIsFilterOpen(!!(from || to || startTime || endTime));
+  }, [searchParams]);
+  
+  const updateUrlParams = useCallback((newParams: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    router.push(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams]);
 
   const handleQuickSelectChange = useCallback((value: string) => {
     const range = getDateRangeForQuickSelect(value);
@@ -95,26 +120,18 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
       startTime: "00:00",
       endTime: value === "TODAY" ? format(new Date(), "HH:mm") : "23:59"
     };
-
+    
     setDate({ from: start, to: end });
     setTimeRange(newTimeRange);
     setQuickSelect(value);
-    setCalendarOpen(false);
-
-    updateFilters(
-      {
-        startDate: format(start, DATE_FORMAT.API),
-        endDate: format(end, DATE_FORMAT.API)
-      },
-      newTimeRange
-    );
-  }, [updateFilters]);
-
-  useEffect(() => {
-    if (!date) {
-      handleQuickSelectChange("THIS_MONTH");
-    }
-  }, [date, handleQuickSelectChange]);
+    
+    updateUrlParams({
+        from: format(start, DATE_FORMAT.API),
+        to: format(end, DATE_FORMAT.API),
+        startTime: newTimeRange.startTime,
+        endTime: newTimeRange.endTime
+    });
+  }, [updateUrlParams]);
 
   const handleDateChange = (range: DateRange | undefined) => {
     if (!range?.from) return;
@@ -122,13 +139,12 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
     setDate(range);
     setQuickSelect("CUSTOM");
 
-    updateFilters(
-      {
-        startDate: format(range.from, DATE_FORMAT.API),
-        endDate: format(range.to || range.from, DATE_FORMAT.API)
-      },
-      timeRange
-    );
+    updateUrlParams({
+        from: format(range.from, DATE_FORMAT.API),
+        to: range.to ? format(range.to, DATE_FORMAT.API) : format(range.from, DATE_FORMAT.API),
+        startTime: timeRange.startTime,
+        endTime: timeRange.endTime,
+    });
   };
 
   const handleTimeChange = (field: keyof TimeRange, value: string) => {
@@ -139,17 +155,13 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
     setQuickSelect("CUSTOM");
 
     if (!isValidTimeFormat(value)) return;
-
-    updateFilters(
-      {
-        startDate: date?.from ? format(date.from, DATE_FORMAT.API) : "",
-        endDate: date?.to ? format(date.to, DATE_FORMAT.API) : date?.from ? format(date.from, DATE_FORMAT.API) : ""
-      },
-      {
-        startTime: newTimeRange.startTime || "00:00",
-        endTime: newTimeRange.endTime || "23:59"
-      }
-    );
+    
+    updateUrlParams({
+        from: date?.from ? format(date.from, DATE_FORMAT.API) : '',
+        to: date?.to ? format(date.to, DATE_FORMAT.API) : (date?.from ? format(date.from, DATE_FORMAT.API) : ''),
+        startTime: newTimeRange.startTime,
+        endTime: newTimeRange.endTime
+    });
   };
 
   const handleClearFilter = () => {
@@ -157,10 +169,7 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
     setTimeRange({ startTime: "", endTime: "" });
     setQuickSelect("CUSTOM");
     setCalendarOpen(false);
-    updateFilters(
-      { startDate: "", endDate: "" },
-      { startTime: "", endTime: "" }
-    );
+    router.push(pathname);
   };
 
   const FilterContent = () => (

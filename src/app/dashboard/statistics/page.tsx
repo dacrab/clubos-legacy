@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { Sale } from '@/types/sales';
+import type { SaleWithDetails } from '@/types/sales';
 import type { Database } from '@/types/supabase';
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { ALLOWED_USER_ROLES } from "@/lib/constants";
@@ -43,23 +43,11 @@ export default async function StatisticsPage() {
     .from('sales')
     .select(`
       *,
-      code:codes (
-        name,
-        price,
-        image_url,
-        category:categories (
-          id,
-          name
-        )
+      product:codes (
+        *,
+        category:categories (*)
       ),
-      order:orders (
-        id,
-        total_amount,
-        final_amount,
-        card_discount_count,
-        created_at,
-        created_by
-      )
+      order:orders (*)
     `)
     .order('created_at', { ascending: false });
 
@@ -77,7 +65,7 @@ export default async function StatisticsPage() {
 
   return (
     <PageWrapper>
-      <StatisticsWrapper initialSales={salesData as Sale[]} />
+      <StatisticsWrapper initialSales={salesData} />
     </PageWrapper>
   );
 }

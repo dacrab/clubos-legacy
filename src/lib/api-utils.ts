@@ -1,25 +1,8 @@
 import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import { API_ERROR_MESSAGES } from './constants';
 import { Database } from '@/types/supabase';
-
-/**
- * Creates a Supabase admin client with service role key
- */
-export function createAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-}
 
 /**
  * Creates a Supabase client for API routes with cookies

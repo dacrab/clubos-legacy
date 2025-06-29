@@ -1,12 +1,15 @@
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Sale } from "@/types/sales";
+import { SaleWithDetails } from "@/types/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
-import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
+import { aggregateSalesByDate, CHART_STYLES, calculateNetSales } from "@/lib/utils/chart-utils";
 import { useMemo } from "react";
-import { CARD_DISCOUNT } from "@/lib/constants";
+
+interface RevenueChartProps {
+  sales: SaleWithDetails[];
+}
 
 // Simplified chart configuration
 const CHART_CONFIG = {
@@ -17,52 +20,9 @@ const CHART_CONFIG = {
   }
 };
 
-export default function RevenueChart({ sales }: { sales: Sale[] }) {
-  // Calculate net revenue after applying coupon discounts
-  const netSales = useMemo(() => {
-    // Group sales by order to properly apply discounts
-    const salesByOrder = sales.reduce((acc, sale) => {
-      if (sale.is_treat || sale.is_deleted) return acc; // Skip treats and deleted items
-      
-      const orderId = sale.order?.id || 'unknown';
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          sales: [],
-          order: sale.order,
-          totalPrice: 0
-        };
-      }
-      acc[orderId].sales.push(sale);
-      acc[orderId].totalPrice += sale.total_price;
-      return acc;
-    }, {} as Record<string, { sales: Sale[], order: Sale['order'], totalPrice: number }>);
-
-    // Apply discounts per order and distribute proportionally with exact precision
-    return Object.values(salesByOrder).flatMap(({ sales, order, totalPrice }) => {
-      // If no order or no discount, return sales unchanged
-      if (!order || !order.card_discount_count) return sales;
-      
-      // Calculate discount with exact precision
-      const orderDiscount = +(order.card_discount_count * CARD_DISCOUNT).toFixed(2);
-      
-      // Apply discount proportionally to each sale
-      return sales.map(sale => {
-        // Calculate sale's portion of the total order with exact precision
-        const saleRatio = +(sale.total_price / totalPrice).toFixed(6);
-        // Calculate sale's portion of discount with exact precision
-        const saleDiscount = +(orderDiscount * saleRatio).toFixed(2);
-        
-        // Create a new sale object with adjusted total_price
-        return {
-          ...sale,
-          // Store original price in a new field
-          original_total_price: sale.total_price,
-          // Adjust the total_price to reflect the discount with exact precision
-          total_price: Math.max(0, +(sale.total_price - saleDiscount).toFixed(2))
-        };
-      });
-    });
-  }, [sales]);
+export default function RevenueChart({ sales }: RevenueChartProps) {
+  // Use the new utility function to calculate net sales
+  const netSales = useMemo(() => calculateNetSales(sales), [sales]);
 
   // Use the adjusted sales for the chart
   const data = aggregateSalesByDate(netSales, 'total_price');

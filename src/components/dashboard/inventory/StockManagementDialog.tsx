@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Database } from "@/types/supabase";
-import { STOCK_MESSAGES, DIALOG_MESSAGES, CODE_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
+import { DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { useStockManagement } from "@/hooks/features/inventory/useStockManagement";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type StockManagementDialogProps = {
@@ -25,13 +22,7 @@ type StockManagementDialogProps = {
 
 export default function StockManagementDialog({ code, open, onOpenChange }: StockManagementDialogProps) {
   const [stock, setStock] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const router = useRouter();
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const { loading, updateStock } = useStockManagement();
 
   useEffect(() => {
     if (code) setStock(code.stock.toString());
@@ -43,25 +34,8 @@ export default function StockManagementDialog({ code, open, onOpenChange }: Stoc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('codes')
-        .update({ stock: parseInt(stock) })
-        .eq('id', code.id);
-
-      if (error) throw error;
-
-      toast.success(STOCK_MESSAGES.UPDATE_SUCCESS);
-      onOpenChange(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error(CODE_MESSAGES.GENERIC_ERROR);
-    } finally {
-      setLoading(false);
-    }
+    await updateStock(code.id, parseInt(stock));
+    onOpenChange(false);
   };
 
   return (
@@ -96,9 +70,9 @@ export default function StockManagementDialog({ code, open, onOpenChange }: Stoc
                   disabled={loading}
                 />
                 {loading && (
-                  <LoadingSpinner 
-                    size="sm" 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                  <LoadingSpinner
+                    size="sm"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                   />
                 )}
               </div>

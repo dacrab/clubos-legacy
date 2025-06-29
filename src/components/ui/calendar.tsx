@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns-tz'
 import { el } from 'date-fns/locale/el'
 import { cn } from "@/lib/utils"
+import { eachDayOfInterval } from "@/lib/utils/date"
 import type { DateRange } from "react-day-picker"
 
 // Types
@@ -58,12 +59,7 @@ export function Calendar({
   const firstDayOfMonth = startOfMonth(currentMonth)
   const lastDayOfMonth = endOfMonth(currentMonth)
   
-  const daysInMonth: Date[] = []
-  let currentDate = new Date(firstDayOfMonth)
-  while (currentDate <= lastDayOfMonth) {
-    daysInMonth.push(new Date(currentDate))
-    currentDate.setDate(currentDate.getDate() + 1)
-  }
+  const daysInMonth: Date[] = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth })
 
   const monday = setDay(new Date(2024, 0, 1), 1)
   const weekDays = Array.from({ length: 7 }, (_, i: number) => {

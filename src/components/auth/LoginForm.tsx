@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Eye, EyeOff, User } from "lucide-react";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/constants";
 import { Database } from "@/types/supabase";
 import { cn } from "@/lib/utils";
+import { signInWithUsernameAndPassword, checkAndVerifySession } from "@/lib/auth-actions";
 
 interface FormState {
   username: string;
@@ -67,17 +68,6 @@ export default function LoginForm() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const verifyUserProfile = useCallback(async (userId: string) => {
-    const { data: profile, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (error || !profile) throw new Error('Profile verification failed');
-    return profile;
-  }, [supabase]);
-
   const validateForm = () => {
     const isValid = formState.username.length >= VALIDATION.USERNAME_MIN_LENGTH &&
                    formState.password.length >= PASSWORD_MIN_LENGTH;
@@ -91,64 +81,24 @@ export default function LoginForm() {
 
     setFormState(prev => ({ ...prev, loading: true }));
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: `${formState.username.trim().toLowerCase()}@example.com`,
-        password: formState.password,
-      });
+    const result = await signInWithUsernameAndPassword(supabase, formState.username, formState.password);
 
-      if (error || !data?.session) throw error || new Error('No session');
-
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', data.session.user.id)
-        .single();
-
-      if (userError) {
-        console.error('User error:', userError);
-        throw userError;
-      }
-
-      if (!userData) {
-        throw new Error('User not found');
-      }
-
-      try {
-        await verifyUserProfile(data.session.user.id);
-      } catch (verifyError) {
-        console.error('Verification error:', verifyError);
-        // Sign out the user if verification fails
-        await supabase.auth.signOut();
-        throw new Error('Profile verification failed');
-      }
-      
+    if (result.success) {
       toast.success("Επιτυχής σύνδεση");
-      
-      // Add a small delay before redirecting to ensure session is established
       await new Promise(resolve => setTimeout(resolve, 500));
       router.replace("/dashboard");
-    } catch (error) {
-      console.error('Login error:', error);
-      const message = error instanceof Error && error.message.includes('Invalid login credentials')
-        ? 'Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης'
-        : API_ERROR_MESSAGES.SERVER_ERROR;
-      toast.error(message);
-    } finally {
+    } else {
+      toast.error(result.message);
       setFormState(prev => ({ ...prev, loading: false }));
     }
   };
 
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) return;
-        await verifyUserProfile(user.id);
+      const profile = await checkAndVerifySession(supabase);
+      if (profile) {
         router.replace('/dashboard');
-      } catch (error) {
-        console.error('Session check error:', error);
-      } finally {
+      } else {
         setIsInitializing(false);
       }
     };
@@ -163,7 +113,7 @@ export default function LoginForm() {
     );
 
     return () => subscription.unsubscribe();
-  }, [router, supabase, verifyUserProfile]);
+  }, [router, supabase]);
 
   if (isInitializing) {
     return (

@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingProvider } from "@/components/providers/loading-provider";
 import { Toaster } from 'sonner';
 import { PageWrapper } from "@/components/ui/page-wrapper";
+import { Footer } from "@/components/layout/Footer";
+import { DashboardProvider } from "@/components/dashboard/DashboardProvider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -51,10 +53,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LoadingProvider>
-            <PageWrapper variant="root">
-              {children}
-            </PageWrapper>
-            <Toaster position="top-right" />
+            <DashboardProvider>
+              <PageWrapper variant="root">
+                {children}
+              </PageWrapper>
+              <Footer />
+              <Toaster position="top-right" />
+            </DashboardProvider>
           </LoadingProvider>
         </ThemeProvider>
       </body>

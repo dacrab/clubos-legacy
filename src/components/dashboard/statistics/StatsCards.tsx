@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, BarChart2, Gift } from "lucide-react";
-import type { Sale } from "@/types/sales";
+import type { SaleWithDetails } from "@/types/sales";
 import { calculateSalesStats } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils/number";
 
 interface StatsCardsProps {
-  sales: Sale[];
+  sales: SaleWithDetails[];
 }
 
 export default function StatsCards({ sales }: StatsCardsProps) {

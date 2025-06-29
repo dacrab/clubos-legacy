@@ -2,13 +2,14 @@
 
 import { History, Calendar, Plus, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { toast } from "sonner";
 import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
+import { deleteSale } from "@/app/actions/deleteSale";
 
 import { UNLIMITED_STOCK, LOW_STOCK_THRESHOLD } from "@/lib/constants";
-import type { Code, Sale } from "@/types/sales";
+import type { Product, SaleWithDetails } from "@/types/sales";
 import type { Database } from "@/types/supabase";
 
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,8 @@ import RecentSales from "./sales/RecentSales";
 
 // Types
 interface AdminDashboardProps {
-  recentSales: Sale[];
-  lowStock: Code[];
+  recentSales: SaleWithDetails[];
+  lowStock: Product[];
 }
 
 interface SectionHeaderProps {
@@ -56,80 +57,35 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   ), []);
-
+  const [isPending, startTransition] = useTransition();
+  
   // State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [localRecentSales, setLocalRecentSales] = useState<Sale[]>(recentSales);
-  const [localLowStock, setLocalLowStock] = useState<Code[]>(lowStock);
-
-  // Effects
-  useEffect(() => {
-    setLocalRecentSales(recentSales);
-    setLocalLowStock(lowStock);
-  }, [recentSales, lowStock]);
 
   // Handlers
-  const handleDeleteSale = useCallback((id: string) => {
+  const handleDeleteSale = (id: string) => {
     setSelectedSaleId(id);
     setDeleteDialogOpen(true);
-  }, []);
+  };
 
-  const handleDeleteConfirm = useCallback(async () => {
+  const handleDeleteConfirm = async () => {
     if (!selectedSaleId) return;
     
-    setIsDeleting(true);
-    try {
-      const { data: sale, error: saleError } = await supabase
-        .from("sales")
-        .select("*, order:orders(*)")
-        .eq("id", selectedSaleId)
-        .single();
-
-      if (saleError || !sale) throw new Error("Sale not found");
-
-      const { data: codeData, error: codeError } = await supabase
-        .from("codes")
-        .select("stock")
-        .eq("id", sale.code_id)
-        .single();
-
-      if (codeError || !codeData) throw new Error("Code not found");
-
-      await supabase.from("sales").delete().eq("id", selectedSaleId);
-
-      if (codeData.stock !== UNLIMITED_STOCK) {
-        await supabase
-          .from("codes")
-          .update({ stock: codeData.stock + sale.quantity })
-          .eq("id", sale.code_id);
+    startTransition(async () => {
+      const { success, message } = await deleteSale(selectedSaleId);
+      if (success) {
+        toast.success("Η πώληση διαγράφηκε με επιτυχία");
+      } else {
+        toast.error(message || "Σφάλμα κατά τη διαγραφή της πώλησης");
       }
-
-      const { data: remainingSales } = await supabase
-        .from("sales")
-        .select("id")
-        .eq("order_id", sale.order_id);
-
-      if (!remainingSales?.length) {
-        await supabase.from("orders").delete().eq("id", sale.order_id);
-      }
-
-      setLocalRecentSales(prev => prev.filter(s => s.id !== selectedSaleId));
-      toast.success("Η πώληση διαγράφηκε με επιτυχία");
-      router.refresh();
-    } catch (error) {
-      console.error("Error deleting sale:", error);
-      toast.error("Σφάλμα κατά τη διαγραφή της πώλησης");
-    } finally {
-      setIsDeleting(false);
       setDeleteDialogOpen(false);
-    }
-  }, [router, selectedSaleId, supabase]);
+    });
+  };
 
-  const handleFormClose = useCallback(() => setFormDialogOpen(false), []);
+  const handleFormClose = () => setFormDialogOpen(false);
 
   // UI Components
   const SectionHeader = ({ icon: Icon, title }: SectionHeaderProps) => (
@@ -161,7 +117,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
               <p className="text-sm text-muted-foreground">Όριο: {LOW_STOCK_THRESHOLD} τεμάχια</p>
             </div>
           </div>
-          {localLowStock.length > 0 && (
+          {lowStock.length > 0 && (
             <Link href="/dashboard/codes" className="text-sm text-primary hover:text-primary/80 transition-colors">
               Διαχείριση →
             </Link>
@@ -170,8 +126,8 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
       </div>
       <div className="flex-1 overflow-y-auto max-h-[400px] sm:max-h-[500px] p-4 sm:p-6">
         <div className="space-y-3 sm:space-y-4">
-          {localLowStock.length > 0 ? (
-            localLowStock.map(code => <LowStockCard key={code.id} code={code} />)
+          {lowStock.length > 0 ? (
+            lowStock.map(code => <LowStockCard key={code.id} code={code} />)
           ) : (
             <div className="text-center py-6 sm:py-10">
               <AlertTriangle className="h-10 w-10 sm:h-14 sm:w-14 text-muted-foreground/30 mx-auto mb-3 sm:mb-4" />
@@ -228,7 +184,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
           <div className="mt-4 sm:mt-6 flex flex-col flex-1">
             <TabsContent value="dashboard" className="space-y-4 sm:space-y-8 flex-1">
               <div className="grid gap-4 sm:gap-8 lg:grid-cols-2 h-full">
-                <RecentSales initialSales={localRecentSales} onDeleteClick={handleDeleteSale} />
+                <RecentSales initialSales={recentSales} onDeleteClick={handleDeleteSale} />
                 <LowStockSection />
               </div>
             </TabsContent>
@@ -260,7 +216,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
         title="Διαγραφή Πώλησης"
         description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την πώληση; Η ενέργεια αυτή δεν μπορεί να ανατρεθεί."
         onConfirm={handleDeleteConfirm}
-        loading={isDeleting}
+        loading={isPending}
       />
 
       <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>

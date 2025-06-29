@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { transitions } from "@/lib/animations";
 import { Button } from "@/components/ui/button";
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
 import {
   Dialog,
   DialogContent,
@@ -17,53 +14,37 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { USER_MESSAGES } from "@/lib/constants";
 
 interface ResetPasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userId: string | null;
+  onSubmit: (password: string) => Promise<void>;
+  loading: boolean;
 }
 
 export default function ResetPasswordDialog({
   open,
   onOpenChange,
-  userId,
+  onSubmit,
+  loading,
 }: ResetPasswordDialogProps) {
   const [newPassword, setNewPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+
+  useEffect(() => {
+    if (!open) {
+      setNewPassword("");
+    }
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!userId) return;
-
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      toast.success(USER_MESSAGES.PASSWORD_RESET_SUCCESS);
-      onOpenChange(false);
-      setNewPassword("");
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error(USER_MESSAGES.UNEXPECTED_ERROR);
-    }
-
-    setLoading(false);
+    if (!newPassword || loading) return;
+    await onSubmit(newPassword);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent onInteractOutside={(e) => loading && e.preventDefault()}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -87,6 +68,7 @@ export default function ResetPasswordDialog({
                 placeholder="Εισάγετε τον νέο κωδικό"
                 required
                 minLength={6}
+                disabled={loading}
               />
             </div>
 
@@ -99,7 +81,7 @@ export default function ResetPasswordDialog({
               >
                 Ακύρωση
               </Button>
-              <Button type="submit" disabled={loading || !userId}>
+              <Button type="submit" disabled={loading || !newPassword}>
                 {loading ? "Επαναφορά..." : "Επαναφορά"}
               </Button>
             </DialogFooter>

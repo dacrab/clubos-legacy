@@ -1,11 +1,15 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
-import type { RegisterSession, RegisterClosing, Order, Sale } from "@/types/register";
-import { CARD_DISCOUNT } from "@/lib/constants";
+import { useMemo } from 'react';
 import { Pencil, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CARD_DISCOUNT } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils/number";
+import { calculateProductSummary, calculateTransactionTotals } from "@/lib/utils/registerUtils";
+import type { RegisterSession, RegisterClosing, Order, Sale, TransactionTotals, ProductSummary } from "@/types/register";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 
 // Types
 interface ClosingDetailsProps {
@@ -13,131 +17,6 @@ interface ClosingDetailsProps {
   closing: RegisterClosing | null;
   orders?: Order[];
 }
-
-interface ProductSummary {
-  id: string;
-  name: string;
-  originalId: string; // Original product ID
-  quantity: number;
-  totalAmount: number;
-  treatCount: number;
-  isEdited: boolean;
-  isDeleted: boolean;
-  originalCode?: string;
-  originalQuantity?: number;
-}
-
-interface TransactionTotals {
-  totalBeforeDiscounts: number;
-  discount: number;
-  cardDiscounts: number;
-  treats: number;
-  treatsAmount: number;
-}
-
-// Extend the Sale type from register.ts to include optional is_deleted property
-interface ExtendedSale extends Sale {
-  is_edited?: boolean;
-  is_deleted?: boolean;
-  original_code?: string;
-  original_quantity?: number;
-}
-
-// Utility functions
-const calculateProductSummary = (orders?: Order[]): Record<string, ProductSummary> => {
-  if (!orders?.length) return {};
-
-  const summary = {} as Record<string, ProductSummary>;
-  const deletedItems = {} as Record<string, ProductSummary>;
-
-  orders.forEach(({ sales = [] }) => {
-    sales.forEach((sale) => {
-      // Use type assertion to get access to potential is_deleted property
-      const extendedSale = sale as ExtendedSale;
-      const { code: { id, name }, quantity, total_price, is_treat } = sale;
-      
-      // Handle deleted sales separately
-      if (extendedSale.is_deleted) {
-        // Create unique ID for deleted items to avoid collisions
-        const deletedId = `deleted-${id}-${extendedSale.id}`;
-        
-        deletedItems[deletedId] = { 
-          id: deletedId,
-          name,
-          originalId: id,
-          quantity,
-          totalAmount: total_price,
-          treatCount: is_treat ? quantity : 0,
-          isEdited: extendedSale.is_edited || false,
-          isDeleted: true,
-          originalCode: extendedSale.original_code,
-          originalQuantity: extendedSale.original_quantity
-        };
-        return;
-      }
-      
-      // Process active sales as before
-      if (!summary[id]) {
-        summary[id] = { 
-          id, 
-          name, 
-          originalId: id,
-          quantity: 0, 
-          totalAmount: 0, 
-          treatCount: 0,
-          isEdited: false,
-          isDeleted: false,
-          originalCode: undefined,
-          originalQuantity: undefined
-        };
-      }
-      
-      summary[id].quantity += quantity;
-      summary[id].totalAmount += total_price;
-      if (is_treat) summary[id].treatCount += quantity;
-      
-      // Handle edited sales
-      if (extendedSale.is_edited) {
-        summary[id].isEdited = true;
-        summary[id].originalCode = extendedSale.original_code;
-        summary[id].originalQuantity = extendedSale.original_quantity;
-      }
-    });
-  });
-  
-  // Combine active and deleted items, deleted items will appear after active ones
-  return { ...summary, ...deletedItems };
-};
-
-export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals => {
-  const defaultTotals: TransactionTotals = {
-    totalBeforeDiscounts: 0,
-    discount: 0,
-    cardDiscounts: 0,
-    treats: 0,
-    treatsAmount: 0
-  };
-
-  if (!orders?.length) return defaultTotals;
-
-  return orders.reduce((acc, { sales = [], card_discount_count = 0 }) => {
-    sales.forEach(sale => {
-      if ((sale as ExtendedSale)?.is_deleted) return;
-      
-      if (!sale.is_treat) {
-        acc.totalBeforeDiscounts += sale.total_price;
-      } else {
-        acc.treats += sale.quantity;
-        acc.treatsAmount += +(sale.unit_price * sale.quantity).toFixed(2);
-      }
-    });
-    
-    acc.cardDiscounts += card_discount_count;
-    acc.discount = +(acc.cardDiscounts * CARD_DISCOUNT).toFixed(2);
-    
-    return acc;
-  }, defaultTotals);
-};
 
 // Component parts
 const TransactionSummaryCard = ({ totals, closing }: { totals: TransactionTotals, closing: RegisterClosing | null }) => {

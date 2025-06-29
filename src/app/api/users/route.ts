@@ -5,9 +5,8 @@ import {
   DEFAULT_USER_ROLE, 
   ALLOWED_USER_ROLES 
 } from '@/lib/constants';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { 
-  createAdminClient, 
-  createApiClient, 
   checkAdminAccess, 
   errorResponse, 
   successResponse, 
@@ -16,9 +15,11 @@ import {
 
 export async function POST(request: Request) {
   try {
-    const { email, password, username, role = DEFAULT_USER_ROLE } = await request.json();
+    await checkAdminAccess();
+    const { username, password, role = DEFAULT_USER_ROLE } = await request.json();
+    const email = `${username.toLowerCase()}@example.com`; // Create a dummy email
 
-    if (!email || !password || !username) {
+    if (!password || !username) {
       return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, 400);
     }
 
@@ -26,65 +27,27 @@ export async function POST(request: Request) {
       return errorResponse(API_ERROR_MESSAGES.INVALID_ROLE, 400);
     }
 
-    // Use admin client for user creation
     const adminClient = createAdminClient();
-
-    // Create user with admin client
-    const { data, error: createUserError } = await adminClient.auth.admin.createUser({
+    const { data, error } = await adminClient.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: true, // Auto-confirm the dummy email
       user_metadata: { username, role }
     });
 
-    if (createUserError || !data.user) {
-      console.error('User creation error:', createUserError);
-      return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
-    }
-
-    // Check if user already exists in public.users (created by trigger)
-    const { data: existingUser } = await adminClient
-      .from('users')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
-    if (existingUser) {
-      // Update the existing user with the correct role instead of inserting
-      const { error: updateError } = await adminClient
-        .from('users')
-        .update({
-          username,
-          role,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', data.user.id);
-
-      if (updateError) {
-        console.error('Profile update error:', updateError);
-        await adminClient.auth.admin.deleteUser(data.user.id);
-        return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
+    if (error) {
+      // Check for a more specific error, like user already exists
+      if (error.message.includes('already exists')) {
+        return errorResponse(USER_MESSAGES.USER_ALREADY_EXISTS, 409);
       }
-    } else {
-      // Create profile if it doesn't exist
-      const { error: profileError } = await adminClient
-        .from('users')
-        .insert({
-          id: data.user.id,
-          username,
-          role,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        await adminClient.auth.admin.deleteUser(data.user.id);
-        return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
-      }
+      console.error('User creation error:', error);
+      return errorResponse('Failed to create user.', 500, error);
     }
+    
+    // The database trigger (`create_public_user_on_signup`) will handle creating the user profile.
+    // No need for additional logic here to insert/update the `public.users` table.
 
-    return successResponse(null, USER_MESSAGES.CREATE_SUCCESS);
+    return successResponse(data.user, USER_MESSAGES.CREATE_SUCCESS);
   } catch (error) {
     return handleApiError(error);
   }
@@ -92,25 +55,20 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    const adminAccess = await checkAdminAccess();
+    await checkAdminAccess();
+    const supabase = createAdminClient();
     
-    if (!adminAccess) {
-      return errorResponse('Unauthorized', 403);
-    }
-    
-    const supabase = await createApiClient();
-    
-    // Get all users
-    const { data: users, error: usersError } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, username, role, created_at, updated_at')
       .order('created_at', { ascending: false });
 
-    if (usersError) {
-      return errorResponse('Error fetching users', 500, usersError);
+    if (error) {
+      return errorResponse('Error fetching users', 500, error);
     }
 
-    return successResponse(users);
+    // Return data in the format expected by the useUsers hook
+    return successResponse({ users });
   } catch (error) {
     return handleApiError(error);
   }

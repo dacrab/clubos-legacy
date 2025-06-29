@@ -5,10 +5,9 @@ import { toast } from 'sonner';
 import { format } from "date-fns";
 import { el } from 'date-fns/locale';
 import { CalendarIcon } from "lucide-react";
-import { createBrowserClient } from "@supabase/ssr";
-
-// Types
-import { Database } from '@/types/supabase';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
 
 // Constants
 import { 
@@ -39,7 +38,6 @@ type FootballFieldBookingFormData = {
   field_number: number;
   num_players: number;
   notes: string | null;
-  user_id: string;
 };
 
 interface FootballFieldBookingFormProps {
@@ -59,11 +57,7 @@ const initialFormData = {
 export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBookingFormProps) {
     const [formData, setFormData] = useState(initialFormData);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const supabase = createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const { addBooking } = useFootballFieldBookings();
 
     const validateForm = () => {
       if (!formData.who_booked || !formData.date || !formData.time || !formData.contact_details || !formData.field_number) {
@@ -94,7 +88,6 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
         field_number: parseInt(formData.field_number),
         num_players: parseInt(formData.num_players),
         notes: formData.notes.trim() || null,
-        user_id: ''
       };
     };
 
@@ -106,18 +99,13 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
         try {
             validateForm();
             const bookingData = prepareBookingData();
+            const { success } = await addBooking(bookingData);
 
-            const { error } = await supabase
-              .from('football_field_bookings')
-              .insert([bookingData]);
-
-            if (error) throw error;
-
-            toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
-            setFormData(initialFormData);
-            onSuccess?.();
+            if (success) {
+              setFormData(initialFormData);
+              onSuccess?.();
+            }
         } catch (error) {
-            console.error('Error:', error);
             toast.error(error instanceof Error ? error.message : FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
         } finally {
             setIsSubmitting(false);

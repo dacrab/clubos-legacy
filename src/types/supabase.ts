@@ -1,4 +1,3 @@
-// ======= Common Types =======
 export type Json =
   | string
   | number
@@ -7,362 +6,558 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type DateRange = {
-  startDate: string | null;
-  endDate: string | null;
-};
-
-export type TimeRange = {
-  startTime: string;
-  endTime: string;
-};
-
-export type PaymentMethodType = 'cash' | 'card' | 'treat';
-
-// ======= Database Row Types =======
-export type Code = Database['public']['Tables']['codes']['Row'] & {
-  category?: Database['public']['Tables']['categories']['Row'];
-};
-
-export type Category = Database['public']['Tables']['categories']['Row']
-
-export type Sale = Database['public']['Tables']['sales']['Row'] & {
-  code: {
-    name: string;
-    price: number;
-    image_url?: string | null;
-    category?: {
-      id: string;
-      name: string;
+export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
     }
-  };
-};
-
-export type User = Database['public']['Tables']['users']['Row']
-export type Appointment = Database['public']['Tables']['appointments']['Row']
-export type FootballFieldBooking = Database['public']['Tables']['football_field_bookings']['Row']
-export type RegisterSession = Database['public']['Tables']['register_sessions']['Row']
-
-export type RegisterClosing = Database['public']['Tables']['register_closings']['Row'] & {
-  closer?: {
-    username: string;
-  };
-};
-
-// ======= Database Schema =======
-export interface Database {
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      users: {
+      appointments: {
         Row: {
-          id: string
-          username: string
-          role: 'admin' | 'staff'
+          contact_details: string
           created_at: string
-          updated_at: string
+          date_time: string
+          id: string
+          notes: string | null
+          num_adults: number
+          num_children: number
+          user_id: string | null
+          who_booked: string
         }
         Insert: {
-          id: string
-          username: string
-          role?: 'admin' | 'staff'
+          contact_details: string
           created_at?: string
-          updated_at?: string
+          date_time: string
+          id?: string
+          notes?: string | null
+          num_adults?: number
+          num_children: number
+          user_id?: string | null
+          who_booked: string
         }
         Update: {
-          id?: string
-          username?: string
-          role?: 'admin' | 'staff'
+          contact_details?: string
           created_at?: string
-          updated_at?: string
+          date_time?: string
+          id?: string
+          notes?: string | null
+          num_adults?: number
+          num_children?: number
+          user_id?: string | null
+          who_booked?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
-          id: string
-          name: string
-          description: string | null
-          parent_id: string | null
           created_at: string
           created_by: string
+          description: string | null
+          id: string
+          name: string
+          parent_id: string | null
         }
         Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          parent_id?: string | null
           created_at?: string
           created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
         }
         Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          parent_id?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       codes: {
         Row: {
+          category_id: string | null
+          created_at: string
+          created_by: string
           id: string
+          image_url: string | null
           name: string
           price: number
           stock: number
-          category_id: string | null
-          image_url: string | null
-          created_at: string
-          created_by: string
           updated_at: string | null
         }
         Insert: {
+          category_id?: string | null
+          created_at?: string
+          created_by: string
           id?: string
+          image_url?: string | null
           name: string
           price: number
           stock?: number
-          category_id?: string | null
-          image_url?: string | null
-          created_at?: string
-          created_by: string
           updated_at?: string | null
         }
         Update: {
+          category_id?: string | null
+          created_at?: string
+          created_by?: string
           id?: string
+          image_url?: string | null
           name?: string
           price?: number
           stock?: number
-          category_id?: string | null
-          image_url?: string | null
-          created_at?: string
-          created_by?: string
           updated_at?: string | null
         }
-      }
-      sales: {
-        Row: {
-          id: string
-          register_session_id: string
-          code_id: string
-          quantity: number
-          unit_price: number
-          total_price: number
-          discount_amount: number
-          final_price: number
-          payment_method: PaymentMethodType
-          is_treat: boolean
-          coffee_options: Json | null
-          sold_by: string
-          created_at: string
-          is_edited: boolean
-          is_deleted: boolean
-          original_quantity: number | null
-          original_code: string | null
-          edited_at: string | null
-          edited_by: string | null
-        }
-        Insert: {
-          id?: string
-          register_session_id: string
-          code_id: string
-          quantity: number
-          unit_price: number
-          total_price: number
-          discount_amount?: number
-          final_price: number
-          payment_method: PaymentMethodType
-          is_treat?: boolean
-          coffee_options?: Json | null
-          sold_by: string
-          created_at?: string
-          is_edited?: boolean
-          is_deleted?: boolean
-          original_quantity?: number | null
-          original_code?: string | null
-          edited_at?: string | null
-          edited_by?: string | null
-        }
-        Update: {
-          id?: string
-          register_session_id?: string
-          code_id?: string
-          quantity?: number
-          unit_price?: number
-          total_price?: number
-          discount_amount?: number
-          final_price?: number
-          payment_method?: PaymentMethodType
-          is_treat?: boolean
-          coffee_options?: Json | null
-          sold_by?: string
-          created_at?: string
-          is_edited?: boolean
-          is_deleted?: boolean
-          original_quantity?: number | null
-          original_code?: string | null
-          edited_at?: string | null
-          edited_by?: string | null
-        }
-      }
-      register_sessions: {
-        Row: {
-          id: string
-          opened_at: string
-          opened_by: string
-          closed_at: string | null
-          closed_by: string | null
-          initial_cash: number
-          final_cash: number
-          cash_payments_total: number
-          card_payments_total: number
-          treats_total: number
-          notes: Json | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          opened_at?: string
-          opened_by: string
-          closed_at?: string | null
-          closed_by?: string | null
-          initial_cash: number
-          final_cash?: number
-          cash_payments_total?: number
-          card_payments_total?: number
-          treats_total?: number
-          notes?: Json | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          opened_at?: string
-          opened_by?: string
-          closed_at?: string | null
-          closed_by?: string | null
-          initial_cash?: number
-          final_cash?: number
-          cash_payments_total?: number
-          card_payments_total?: number
-          treats_total?: number
-          notes?: Json | null
-          created_at?: string
-        }
-      }
-      register_closings: {
-        Row: {
-          id: string
-          register_session_id: string
-          closed_by: string
-          cash_amount: number
-          card_amount: number
-          treats_total: number
-          treats_count: number
-          card_count: number
-          notes: Json | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          register_session_id: string
-          closed_by: string
-          cash_amount: number
-          card_amount: number
-          treats_total: number
-          treats_count: number
-          card_count: number
-          notes?: Json | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          register_session_id?: string
-          closed_by?: string
-          cash_amount?: number
-          card_amount?: number
-          treats_total?: number
-          treats_count?: number
-          card_count?: number
-          notes?: Json | null
-          created_at?: string
-        }
+        Relationships: [
+          {
+            foreignKeyName: "codes_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       football_field_bookings: {
         Row: {
-          id: string
-          who_booked: string
           booking_datetime: string
           contact_details: string
-          field_number: number
-          num_players: number
-          notes: string | null
-          user_id: string
           created_at: string
+          field_number: number
+          id: string
+          notes: string | null
+          num_players: number
+          user_id: string | null
+          who_booked: string
         }
         Insert: {
-          id?: string
-          who_booked: string
           booking_datetime: string
           contact_details: string
-          field_number: number
-          num_players: number
-          notes?: string | null
-          user_id: string
           created_at?: string
+          field_number: number
+          id?: string
+          notes?: string | null
+          num_players: number
+          user_id?: string | null
+          who_booked: string
         }
         Update: {
-          id?: string
-          who_booked?: string
           booking_datetime?: string
           contact_details?: string
-          field_number?: number
-          num_players?: number
-          notes?: string | null
-          user_id?: string
           created_at?: string
+          field_number?: number
+          id?: string
+          notes?: string | null
+          num_players?: number
+          user_id?: string | null
+          who_booked?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "football_field_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      appointments: {
+      orders: {
         Row: {
-          id: string
-          who_booked: string
-          date_time: string
-          contact_details: string
-          num_children: number
-          num_adults: number
-          notes: string | null
+          card_discount_count: number
           created_at: string
+          created_by: string
+          final_amount: number
+          id: string
+          register_session_id: string
+          total_amount: number
         }
         Insert: {
-          id?: string
-          who_booked: string
-          date_time: string
-          contact_details: string
-          num_children: number
-          num_adults: number
-          notes?: string | null
+          card_discount_count?: number
           created_at?: string
+          created_by: string
+          final_amount: number
+          id?: string
+          register_session_id: string
+          total_amount: number
         }
         Update: {
-          id?: string
-          who_booked?: string
-          date_time?: string
-          contact_details?: string
-          num_children?: number
-          num_adults?: number
-          notes?: string | null
+          card_discount_count?: number
           created_at?: string
+          created_by?: string
+          final_amount?: number
+          id?: string
+          register_session_id?: string
+          total_amount?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_register_session_id_fkey"
+            columns: ["register_session_id"]
+            isOneToOne: false
+            referencedRelation: "register_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
+      register_closings: {
+        Row: {
+          card_count: number
+          closed_by_name: string | null
+          created_at: string
+          id: string
+          notes: Json | null
+          register_session_id: string
+          treats_count: number
+          treats_total: number
+        }
+        Insert: {
+          card_count: number
+          closed_by_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: Json | null
+          register_session_id: string
+          treats_count: number
+          treats_total?: number
+        }
+        Update: {
+          card_count?: number
+          closed_by_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: Json | null
+          register_session_id?: string
+          treats_count?: number
+          treats_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "register_closings_register_session_id_fkey"
+            columns: ["register_session_id"]
+            isOneToOne: true
+            referencedRelation: "register_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      register_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by_name: string | null
+          id: string
+          notes: Json | null
+          opened_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by_name?: string | null
+          id?: string
+          notes?: Json | null
+          opened_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by_name?: string | null
+          id?: string
+          notes?: Json | null
+          opened_at?: string
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          code_id: string
+          created_at: string
+          edited_at: string | null
+          edited_by: string | null
+          id: string
+          is_deleted: boolean
+          is_edited: boolean
+          is_treat: boolean
+          order_id: string
+          original_code: string | null
+          original_quantity: number | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          code_id: string
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_edited?: boolean
+          is_treat?: boolean
+          order_id: string
+          original_code?: string | null
+          original_quantity?: number | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          code_id?: string
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_edited?: boolean
+          is_treat?: boolean
+          order_id?: string
+          original_code?: string | null
+          original_quantity?: number | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          role?: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       close_register: {
         Args: {
-          p_register_session_id: string;
-          p_notes?: Json;
-        };
-        Returns: string;
+          p_register_session_id: string
+          p_closed_by_name: string
+          p_notes?: Json
+        }
+        Returns: string
       }
     }
     Enums: {
-      payment_method_type: 'cash' | 'card' | 'treat'
+      payment_method_type: "cash" | "card" | "treat"
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
+
+type DefaultSchema = Database[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      payment_method_type: ["cash", "card", "treat"],
+    },
+  },
+} as const
+

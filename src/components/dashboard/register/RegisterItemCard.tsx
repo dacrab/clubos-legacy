@@ -3,14 +3,16 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Euro, CreditCard, Gift, ChevronDown, ChevronUp } from "lucide-react";
 import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import { cn, formatPrice } from "@/lib/utils";
-import { ClosingDetails, calculateTransactionTotals } from "./ClosingDetails";
+import { formatPrice } from '@/lib/utils/number';
+import { cn } from "@/lib/utils";
+import { ClosingDetails } from "./ClosingDetails";
 import { 
   ListItem,
   ActiveSessionTotals,
-  calculateActiveSessionTotals, 
 } from '@/types/register';
 import { CARD_DISCOUNT } from "@/lib/constants";
+import { calculateActiveSessionTotals, calculateTransactionTotals } from "@/lib/utils/registerUtils";
+import { Button } from "@/components/ui/button";
 
 // Type Definitions
 interface TransactionSummaryProps {

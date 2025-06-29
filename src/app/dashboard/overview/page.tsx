@@ -1,90 +1,76 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { DEFAULT_USER_ROLE, UNLIMITED_CATEGORY_ID, LOW_STOCK_THRESHOLD } from "@/lib/constants";
+import { DEFAULT_USER_ROLE, LOW_STOCK_THRESHOLD } from "@/lib/constants";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import type { Database } from "@/types/supabase";
+import type { Product } from "@/types/products";
+import { hasUnlimitedStock } from "@/lib/utils/product";
+import RecentSales from "@/components/dashboard/sales/RecentSales";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, Users, CreditCard, ShoppingBag } from "lucide-react";
+import LowStockCard from "@/components/dashboard/LowStockCard";
+import { formatPrice } from "@/lib/utils/number";
 
-type Code = Database['public']['Tables']['codes']['Row'] & {
-  name: string;
-  code: string;
-  price: number;
-  stock: number;
-  category_id: string;
-  category?: {
-    id: string;
-    name: string;
-    description: string | null;
-  } | null;
-};
+export default async function OverviewPage() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
 
-const hasUnlimitedStock = (categoryId: string | null) => {
-  return categoryId === UNLIMITED_CATEGORY_ID;
-};
-
-export default function OverviewPage() {
-  const [codes, setCodes] = useState<Code[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const supabase = createClientSupabase();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          router.push('/');
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError || !profile) {
-          router.push('/');
-          return;
-        }
-
-        if (profile.role !== DEFAULT_USER_ROLE) {
-          router.push('/dashboard');
-          return;
-        }
-
-        const { data: codesData, error: codesError } = await supabase
-          .from('codes')
-          .select(`
-            *,
-            category:category_id (
-              name,
-              description
-            )
-          `)
-          .order('category(name)', { ascending: true })
-          .order('code', { ascending: true })
-          .returns<Code[]>();
-
-        if (codesError) throw codesError;
-        setCodes(codesData || []);
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [router, supabase]);
-
-  if (isLoading) {
-    return <LoadingAnimation />;
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect("/");
   }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    redirect("/");
+  }
+
+  if (profile.role !== DEFAULT_USER_ROLE) {
+    redirect("/dashboard");
+  }
+
+  const { data: codesData, error: codesError } = await supabase
+    .from("codes")
+    .select(
+      `
+      *,
+      category:categories (
+        id,
+        name,
+        description
+      )
+    `
+    )
+    .order("name", { ascending: true })
+    .returns<Product[]>();
+
+  if (codesError) {
+    console.error("Error fetching codes:", codesError);
+    // Optionally return an error message component
+  }
+  
+  const codes = codesData || [];
 
   return (
     <PageWrapper>
@@ -95,29 +81,35 @@ export default function OverviewPage() {
             <div key={code.id} className="p-4 bg-card rounded-lg border">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-semibold">{code.code}</h3>
-                  <p className="text-sm text-muted-foreground">{code.category?.name}</p>
-                  <p className="text-2xl font-bold mt-2">{code.price}€</p>
+                  <h3 className="font-semibold">{code.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {code.category?.name}
+                  </p>
+                  <p className="text-2xl font-bold mt-2">{formatPrice(code.price)}</p>
                 </div>
-                <div className={cn(
-                  "px-2 py-1 rounded text-sm",
-                  hasUnlimitedStock(code.category_id)
-                    ? "bg-green-100 text-green-700"
-                    : code.stock > LOW_STOCK_THRESHOLD 
-                      ? "bg-green-100 text-green-700" 
-                      : code.stock > 0 
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                )}>
-                  {hasUnlimitedStock(code.category_id) ? "Απεριόριστο" : `${code.stock} τεμ.`}
+                <div
+                  className={cn(
+                    "px-2 py-1 rounded text-sm",
+                    hasUnlimitedStock(code.category_id)
+                      ? "bg-green-100 text-green-700"
+                      : code.stock > LOW_STOCK_THRESHOLD
+                      ? "bg-green-100 text-green-700"
+                      : code.stock > 0
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
+                  )}
+                >
+                  {hasUnlimitedStock(code.category_id)
+                    ? "Απεριόριστο"
+                    : `${code.stock} τεμ.`}
                 </div>
               </div>
-              {code.stock <= LOW_STOCK_THRESHOLD && code.stock > 0 && (
+              {code.stock <= LOW_STOCK_THRESHOLD && code.stock > 0 && !hasUnlimitedStock(code.category_id) && (
                 <p className="text-sm text-yellow-600 mt-2">
                   Χαμηλό απόθεμα
                 </p>
               )}
-              {code.stock === 0 && (
+              {code.stock === 0 && !hasUnlimitedStock(code.category_id) && (
                 <p className="text-sm text-red-600 mt-2">
                   Εκτός αποθέματος
                 </p>

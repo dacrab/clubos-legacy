@@ -1,23 +1,22 @@
-
-import { Code } from "@/types/sales";
+import { Product } from "@/types/sales";
 import { SALES_ICONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import Image from "next/image";
 
 interface ProductCardProps {
-  code: Code;
-  onClick: (code: Code) => void;
+  product: Product;
+  onClick: (product: Product) => void;
   className?: string;
 }
 
-export function ProductCard({ code, onClick, className }: ProductCardProps) {
-  const { image_url, name, price, category } = code;
+export function ProductCard({ product, onClick, className }: ProductCardProps) {
+  const { image_url, name, price, category } = product;
   const hasImage = !!image_url;
 
   return (
     <button
-      onClick={() => onClick(code)}
+      onClick={() => onClick(product)}
       className={cn(
         "relative flex flex-col overflow-hidden rounded-md border bg-card p-3 h-full",
         "hover:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",

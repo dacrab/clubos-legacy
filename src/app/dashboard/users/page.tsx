@@ -1,75 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { transitions } from "@/lib/animations";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { ALLOWED_USER_ROLES, UserRole } from "@/lib/constants";
 import AddUserButton from "@/components/dashboard/users/AddUserButton";
 import UsersTable from "@/components/dashboard/users/UsersTable";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-type User = {
-  id: string;
-  username: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-};
+import { useAuthorization } from "@/hooks/auth/useAuthorization";
+import { useUsers } from "@/hooks/data/useUsers";
+import { EmptyState } from "@/components/ui/empty-state";
+import { UserX } from "lucide-react";
+import ResetPasswordDialog from "@/components/dashboard/users/ResetPasswordDialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const authorizationStatus = useAuthorization();
+  const { 
+    users, 
+    isLoading: usersLoading, 
+    isError, 
+    deleteUser, 
+    updateUserRole, 
+    resetPassword,
+    addUser,
+    loading: mutationLoading
+  } = useUsers();
+  
   const [isMobile, setIsMobile] = useState(false);
-  const router = useRouter();
-  const supabase = createClientSupabase();
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // Check for mobile view
-  useEffect(() => {
+  useState(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-    
-    const handleResize = () => {
-      checkMobile();
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) return router.push('/');
+  if (authorizationStatus === 'loading' || usersLoading) return <LoadingAnimation />;
+  if (authorizationStatus === 'unauthorized' || isError) {
+    return (
+      <EmptyState
+        icon={UserX}
+        title="Σφάλμα"
+        description="Δεν ήταν δυνατή η φόρτωση των χρηστών."
+      />
+    );
+  }
 
-      const { data: userData, error: userDataError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+  const handleDelete = () => {
+    if (deleteUserId) {
+      deleteUser(deleteUserId);
+      setDeleteUserId(null);
+    }
+  };
 
-      if (userDataError || !userData?.role) return router.push('/');
-      if (userData.role !== ALLOWED_USER_ROLES[0]) return router.push('/dashboard');
-
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, username, role, created_at, updated_at')
-        .order('created_at', { ascending: false });
-
-      if (usersError) throw usersError;
-
-      setUsers(usersData || []);
-    };
-
-    fetchData()
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [router, supabase]);
-
-  if (isLoading) return <LoadingAnimation />;
+  const handleResetPassword = async (password: string) => {
+    if (resetPasswordUserId) {
+      await resetPassword(resetPasswordUserId, password);
+      setResetPasswordUserId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -85,10 +79,9 @@ export default function UsersPage() {
               Διαχείριση χρηστών και δικαιωμάτων πρόσβασης
             </p>
           </div>
-          <AddUserButton />
+          <AddUserButton onAddUser={addUser} loading={mutationLoading} />
         </div>
       </motion.div>
-
 
       <motion.div
         initial={{ opacity: 0 }}
@@ -96,12 +89,33 @@ export default function UsersPage() {
         transition={{ delay: 0.2, ...transitions.smooth }}
         className="w-full"
       >
-        <Card className={cn(
-          isMobile ? "border-0 p-0 shadow-none bg-transparent" : "p-0"
-        )}>
-          <UsersTable users={users} />
+        <Card className={cn(isMobile ? "border-0 p-0 shadow-none bg-transparent" : "p-0")}>
+          <UsersTable 
+            users={users} 
+            isMobile={isMobile}
+            loading={mutationLoading}
+            onDeleteUser={setDeleteUserId}
+            onResetPassword={setResetPasswordUserId}
+            onUpdateRole={updateUserRole}
+          />
         </Card>
       </motion.div>
+
+      <ResetPasswordDialog
+        open={!!resetPasswordUserId}
+        onOpenChange={() => setResetPasswordUserId(null)}
+        onSubmit={handleResetPassword}
+        loading={mutationLoading}
+      />
+
+      <ConfirmationDialog
+        open={!!deleteUserId}
+        onOpenChange={() => setDeleteUserId(null)}
+        title="Διαγραφή Χρήστη"
+        description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+        onConfirm={handleDelete}
+        loading={mutationLoading}
+      />
     </div>
   );
 }

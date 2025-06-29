@@ -1,4 +1,4 @@
-import { Database } from "@/types/supabase";
+import { Product } from "@/types/products";
 import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 import Image from "next/image";
@@ -7,15 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 interface LowStockCardProps {
-  code: Database['public']['Tables']['codes']['Row'] & {
-    category?: {
-      id: string;
-      name: string;
-      description: string | null;
-      created_at?: string;
-      parent_id?: string | null;
-    };
-  };
+  code: Product;
 }
 
 export default function LowStockCard({ code }: LowStockCardProps) {

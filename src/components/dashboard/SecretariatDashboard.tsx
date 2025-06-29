@@ -20,11 +20,9 @@ interface EmptyStateProps {
   message: string;
 }
 
-interface CardHeaderProps {
+interface ListSectionProps {
+  icon: React.ElementType;
   title: string;
-}
-
-interface CardProps {
   children: React.ReactNode;
 }
 
@@ -36,17 +34,14 @@ const EmptyState = ({ icon: Icon, message }: EmptyStateProps) => (
   </div>
 );
 
-const CardHeader = ({ title }: CardHeaderProps) => (
-  <div className="flex items-center gap-2 mb-3 sm:mb-4">
-    <div className="rounded-full bg-primary/10 p-1.5 sm:p-2">
-      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+const ListSection = ({ icon: Icon, title, children }: ListSectionProps) => (
+  <div className="rounded-xl border bg-card p-4 sm:p-6">
+    <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="rounded-full bg-primary/10 p-2.5 sm:p-3">
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+      </div>
+      <h2 className="text-lg sm:text-xl font-semibold">{title}</h2>
     </div>
-    <h2 className="text-base sm:text-lg font-semibold">{title}</h2>
-  </div>
-);
-
-const Card = ({ children }: CardProps) => (
-  <div className="rounded-lg border bg-card p-3 sm:p-4">
     {children}
   </div>
 );
@@ -77,37 +72,27 @@ export default function SecretariatDashboard({ user }: { user: User }) {
             </TabsList>
 
             <TabsContent value="appointments" className="space-y-4 sm:space-y-6">
-              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-                <Card>
-                  <CardHeader title="Νέο Παιδικό Πάρτυ" />
-                  <AppointmentForm />
-                </Card>
-                <Card>
-                  <CardHeader title="Προσεχή Παιδικά Πάρτυ" />
-                  <AppointmentsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_UPCOMING} />} />
-                </Card>
-              </div>
-              <Card>
-                <CardHeader title="Όλα τα Παιδικά Πάρτυ" />
+              <ListSection icon={Calendar} title="Νέο Παιδικό Πάρτυ">
+                <AppointmentForm />
+              </ListSection>
+              <ListSection icon={Calendar} title="Προσεχή Παιδικά Πάρτυ">
+                <AppointmentsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_UPCOMING} />} />
+              </ListSection>
+              <ListSection icon={Calendar} title="Όλα τα Παιδικά Πάρτυ">
                 <AppointmentsList emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_APPOINTMENTS} />} />
-              </Card>
+              </ListSection>
             </TabsContent>
 
             <TabsContent value="football" className="space-y-4 sm:space-y-6">
-              <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-                <Card>
-                  <CardHeader title="Κράτηση Γηπέδου 5x5" />
-                  <FootballFieldBookingForm />
-                </Card>
-                <Card>
-                  <CardHeader title="Προσεχείς Κρατήσεις" />
-                  <FootballFieldBookingsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_UPCOMING} />} />
-                </Card>
-              </div>
-              <Card>
-                <CardHeader title="Όλες οι Κρατήσεις" />
+              <ListSection icon={Calendar} title="Κράτηση Γηπέδου 5x5">
+                <FootballFieldBookingForm />
+              </ListSection>
+              <ListSection icon={Calendar} title="Προσεχείς Κρατήσεις">
+                <FootballFieldBookingsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_UPCOMING} />} />
+              </ListSection>
+              <ListSection icon={Calendar} title="Όλες οι Κρατήσεις">
                 <FootballFieldBookingsList emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_BOOKINGS} />} />
-              </Card>
+              </ListSection>
             </TabsContent>
           </Tabs>
         </div>

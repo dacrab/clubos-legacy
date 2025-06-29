@@ -1,4 +1,4 @@
-import { Sale, Order } from "@/types/sales";
+import { SaleWithDetails, GroupedSale } from "@/types/sales";
 import { STATISTICS, CARD_DISCOUNT } from "@/lib/constants";
 
 // Types
@@ -8,17 +8,6 @@ export type ChartDataItem = {
   total: number;
   percentage?: string;
 };
-
-export interface GroupedSale {
-  id: string;
-  created_at: string;
-  total: number;
-  items: Sale[];
-  treats_count: number;
-  card_discount_count: number;
-  final_amount: number;
-  is_card_payment: boolean;
-}
 
 // Constants
 export const CHART_STYLES = {
@@ -56,9 +45,9 @@ export const MEDAL_COLORS = {
  * Filters sales by date range
  */
 export function filterSalesByDateRange(
-  sales: Sale[], 
+  sales: SaleWithDetails[], 
   dateRange: { startDate: string | null; endDate: string | null } | null
-): Sale[] {
+): SaleWithDetails[] {
   // First filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
   
@@ -78,7 +67,7 @@ export function filterSalesByDateRange(
  * Groups sales by date and aggregates quantities
  */
 export function aggregateSalesByDate(
-  sales: Sale[], 
+  sales: SaleWithDetails[], 
   valueKey: 'quantity' | 'total_price'
 ): Array<{ date: string; revenue?: number; quantity?: number }> {
   // Filter out deleted sales
@@ -111,7 +100,7 @@ export function aggregateSalesByDate(
  * Groups sales by code and aggregates quantities
  */
 export function aggregateSalesByCode(
-  sales: Sale[],
+  sales: SaleWithDetails[],
   topCount: number = STATISTICS.DEFAULT_TOP_CODES_COUNT,
   showAll: boolean = false
 ): ChartDataItem[] {
@@ -120,9 +109,9 @@ export function aggregateSalesByCode(
   
   // Group sales by code, excluding treats
   const codesSales = activeSales.reduce((acc, sale) => {
-    if (!sale.code?.name || sale.is_treat) return acc;
+    if (!sale.product?.name || sale.is_treat) return acc;
     
-    const codeName = sale.code.name;
+    const codeName = sale.product.name;
     if (!acc[codeName]) {
       acc[codeName] = { name: codeName, value: 0, total: 0 };
     }
@@ -148,7 +137,7 @@ export function aggregateSalesByCode(
  * Aggregates sales by category and aggregates quantities
  */
 export function aggregateSalesByCategory(
-  sales: Sale[],
+  sales: SaleWithDetails[],
   categoryName: string
 ): ChartDataItem[] {
   if (!categoryName) return [];
@@ -157,8 +146,8 @@ export function aggregateSalesByCategory(
   const activeSales = sales.filter(sale => !sale.is_deleted);
 
   const salesByItem = activeSales.reduce((acc, sale) => {
-    if (sale.code?.category?.name === categoryName && !sale.is_treat) {
-      const itemName = sale.code.name;
+    if (sale.product?.category?.name === categoryName && !sale.is_treat) {
+      const itemName = sale.product.name;
       if (!acc[itemName]) {
         acc[itemName] = { name: itemName, value: 0, total: 0 };
       }
@@ -176,7 +165,7 @@ export function aggregateSalesByCategory(
 /**
  * Calculates various sales statistics consistent with RegisterClosingsList and ClosingDetails
  */
-export function calculateSalesStats(sales: Sale[]) {
+export function calculateSalesStats(sales: SaleWithDetails[]) {
   // Filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
   
@@ -217,7 +206,7 @@ export function calculateSalesStats(sales: Sale[]) {
     if (!acc[orderId]) acc[orderId] = [];
     acc[orderId].push(sale);
     return acc;
-  }, {} as Record<string, Sale[]>);
+  }, {} as Record<string, SaleWithDetails[]>);
   
   // Then calculate the revenue for each order with proper discount distribution and exact precision
   const cardRevenue = +(Object.values(salesByOrder).reduce((totalRevenue, orderSales) => {
@@ -254,9 +243,25 @@ export function calculateSalesStats(sales: Sale[]) {
     cashRevenue,
     cardRevenue,
     
-    // Analytics
-    averageOrderValue: nonTreatSales.length ? 
-      +(totalBeforeDiscounts / nonTreatSales.length).toFixed(2) : 0,
-    uniqueCodes: new Set(activeSales.map(sale => sale.code_id)).size
+    // Order-level stats
+    uniqueCodes: new Set(activeSales.map(sale => sale.code_id)).size,
+    totalOrders: uniqueOrders.length,
+    averageOrderValue: uniqueOrders.length ? finalTotalAmount / uniqueOrders.length : 0
   };
+}
+
+/**
+ * Calculates the "net" sales by removing treats before chart aggregation
+ * This ensures that charts for revenue and quantity reflect actual sales, not giveaways
+ */
+export function calculateNetSales(sales: SaleWithDetails[]): SaleWithDetails[] {
+  return sales.filter(sale => !sale.is_treat);
+}
+
+/**
+ * Get total items from sales, excluding treats
+ */
+export function getTotalItems(sales: SaleWithDetails[]): number {
+  return sales.filter(sale => !sale.is_treat)
+    .reduce((sum, sale) => sum + sale.quantity, 0);
 }

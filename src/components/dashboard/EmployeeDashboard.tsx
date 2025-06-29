@@ -13,7 +13,7 @@ import RecentSales from "./sales/RecentSales";
 
 // Types and Constants
 import { Database } from "@/types/supabase";
-import { Sale } from "@/types/sales";
+import { SaleWithDetails } from "@/types/sales";
 import { UserRole } from "@/lib/constants";
 import { REGISTER_DIALOG } from "@/lib/constants";
 
@@ -27,7 +27,7 @@ interface Profile {
 }
 
 interface EmployeeDashboardProps {
-  recentSales: Sale[];
+  recentSales: SaleWithDetails[];
 }
 
 export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboardProps) {
@@ -35,7 +35,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [localRecentSales, setLocalRecentSales] = useState<Sale[]>(recentSales);
+  const [localRecentSales, setLocalRecentSales] = useState<SaleWithDetails[]>(recentSales);
 
   // Supabase Client
   const supabase = createBrowserClient<Database>(
@@ -133,12 +133,12 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
 
       {/* Recent Sales Section */}
       <div className="flex-1">
-        <RecentSales 
-          initialSales={localRecentSales} 
-          onDeleteClick={(saleId) => {
-            setLocalRecentSales(prevSales => prevSales.filter(sale => sale.id !== saleId));
-          }}
-        />
+      <RecentSales 
+        initialSales={localRecentSales} 
+        onDeleteClick={(saleId) => {
+          setLocalRecentSales(prevSales => prevSales.filter(sale => sale.id !== saleId));
+        }}
+      />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import type { Sale } from "@/types/sales";
+import type { SaleWithDetails } from "@/types/sales";
 import { STATISTICS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart as PieChartIcon, Medal } from "lucide-react";
 import { aggregateSalesByCode, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils/number";
 
 interface TopCodesChartProps {
-  sales: Sale[];
+  sales: SaleWithDetails[];
 }
 
 // Using colors from chart-utils for consistency

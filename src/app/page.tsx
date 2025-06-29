@@ -1,17 +1,13 @@
 import { redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { LockKeyhole } from "lucide-react";
-import LoginForm from "@/components/auth/LoginForm";
+import { PageWrapper } from "@/components/ui/page-wrapper";
 import { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+import { LoadingFallback } from "@/components/loading-fallback";
+import { ErrorFallback } from "@/components/error-fallback";
+import LoginForm from "@/components/auth/LoginForm";
 import { DIALOG_MESSAGES } from "@/lib/constants";
-
-function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center min-h-[200px]">
-      <div className="text-muted-foreground">{DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}</div>
-    </div>
-  );
-}
 
 function Header() {
   return (
@@ -29,21 +25,6 @@ function Header() {
   );
 }
 
-function Footer() {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="text-center text-xs text-muted-foreground">
-        <p>Σε περίπτωση προβλήματος, επικοινωνήστε με τον διαχειριστή</p>
-      </div>
-      <div className="text-center text-xs text-muted-foreground/60">
-        <p>
-          &copy; {new Date().getFullYear()} Designed & Developed by <a href="https://dacrab.github.io" target="_blank" rel="noopener noreferrer" className="text-primary">DaCrab</a>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default async function Home() {
   const supabase = await createServerSupabase(false);
   const { data: { user } } = await supabase.auth.getUser();
@@ -53,16 +34,18 @@ export default async function Home() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
-      <div className="w-full max-w-sm mx-auto px-3">
-        <div className="p-3 sm:p-4 bg-card rounded-xl border shadow-soft hover:shadow-soft-hover flex flex-col gap-3 sm:gap-4 transition-all duration-300">
-          <Header />
-          <Suspense fallback={<LoadingFallback />}>
-            <LoginForm />
-          </Suspense>
-          <Footer />
+    <PageWrapper>
+      <div className="container mx-auto">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-full max-w-md">
+            <ErrorBoundary fallback={<ErrorFallback />}>
+              <Suspense fallback={<LoadingFallback />}>
+                <LoginForm />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

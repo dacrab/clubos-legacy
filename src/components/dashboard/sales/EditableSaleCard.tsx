@@ -13,48 +13,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-
-import { cn, formatPrice } from "@/lib/utils";
-import { SALES_MESSAGES } from "@/lib/constants";
-import { Sale } from "@/types/sales";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils/number";
 import { formatDateWithGreekAmPm } from "@/lib/utils/date";
-import { createClientSupabase } from "@/lib/supabase";
-import { useSaleActions } from "@/hooks/useSaleActions";
+import { SALES_MESSAGES } from "@/lib/constants";
+import { SaleWithDetails, Product } from "@/types/sales";
+import { createClientSupabase } from "@/lib/supabase/client";
+import { useSaleActions } from '@/hooks/features/sales/useSaleActions';
+import { OrderItem } from "./components/OrderItem";
+import { calculateGroupTotals } from "@/lib/utils/salesUtils";
 
 // Constants
 const EDIT_WINDOW_MINUTES = 5;
 
 // Types
-interface Category {
-  id: string;
-  name: string;
-  description: string | null;
-  parent_id: string | null;
-  created_at: string;
-  created_by: string;
-}
-
-interface SimpleCode {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  image_url: string | null;
-  category_id: string;
-  created_at: string;
-  created_by: string;
-  updated_at: string | null;
-  category?: Category;
-}
-
 interface EditSaleFormProps {
-  sale: Sale;
-  onSave: (updatedSale: Partial<Sale>) => Promise<void>;
+  sale: SaleWithDetails;
+  onSave: (updatedSale: Partial<SaleWithDetails>) => Promise<void>;
   onCancel: () => void;
 }
 
 export interface EditableSaleCardProps {
-  sale: Sale;
+  sale: SaleWithDetails;
   onDeleteClick?: (id: string) => void;
 }
 
@@ -74,13 +56,13 @@ function SaleStatusBadge({
   isDeleted, 
   isTreat, 
   isEdited, 
-  originalCode, 
+  originalProductCode, 
   originalQuantity 
 }: { 
   isDeleted: boolean; 
   isTreat: boolean; 
   isEdited: boolean; 
-  originalCode?: string; 
+  originalProductCode?: string; 
   originalQuantity?: number;
 }) {
   if (isDeleted) {
@@ -124,7 +106,7 @@ function SaleStatusBadge({
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-xs space-y-1">
-              <p>Αρχικό προϊόν: {originalCode}</p>
+              <p>Αρχικό προϊόν: {originalProductCode || 'N/A'}</p>
               <p>Αρχική ποσότητα: {originalQuantity} τεμ.</p>
             </div>
           </TooltipContent>
@@ -141,16 +123,16 @@ function SaleStatusBadge({
  */
 function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
   const [quantity, setQuantity] = useState(sale.quantity);
-  const [selectedCodeId, setSelectedCodeId] = useState(sale.code_id);
-  const [availableCodes, setAvailableCodes] = useState<SimpleCode[]>([]);
-  const [selectedCode, setSelectedCode] = useState<SimpleCode | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState(sale.code_id);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isTreat, setIsTreat] = useState(sale.is_treat);
 
   const supabase = createClientSupabase();
 
   useEffect(() => {
-    async function fetchCodes() {
+    async function fetchProducts() {
       setIsLoading(true);
       try {
         const { data: rawData, error } = await supabase
@@ -165,47 +147,41 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
         
         if (rawData) {
           // Use type assertion to handle the complex structure
-          const transformedData: SimpleCode[] = rawData.map((code: any) => ({
-            id: code.id,
-            name: code.name,
-            price: code.price,
-            stock: code.stock, 
-            image_url: code.image_url,
-            category_id: code.category_id,
-            created_at: code.created_at,
-            created_by: code.created_by,
-            updated_at: code.updated_at,
+          const transformedData: Product[] = rawData.map((product: any) => ({
+            ...product,
             // Handle category field which might be an array or an object
-            category: Array.isArray(code.category) && code.category.length > 0 
-              ? code.category[0] 
-              : code.category || undefined
+            category: Array.isArray(product.category) && product.category.length > 0 
+              ? product.category[0] 
+              : product.category || undefined
           }));
 
-          setAvailableCodes(transformedData);
-          setSelectedCode(transformedData.find(code => code.id === selectedCodeId) || null);
+          setAvailableProducts(transformedData);
+          setSelectedProduct(transformedData.find(p => p.id === selectedProductId) || null);
         }
       } catch (error) {
-        console.error('Error fetching codes:', error);
+        console.error('Error fetching products:', error);
         toast.error('Failed to load products');
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchCodes();
-  }, [selectedCodeId, supabase]);
+    fetchProducts();
+  }, [selectedProductId, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCode) return;
+    if (!selectedProduct) return;
 
     try {
       await onSave({
+        ...sale,
         quantity,
-        code_id: selectedCode.id,
-        total_price: selectedCode.price * quantity,
-        unit_price: selectedCode.price,
-        is_treat: isTreat
+        code_id: selectedProduct.id,
+        total_price: selectedProduct.price * quantity,
+        unit_price: selectedProduct.price,
+        is_treat: isTreat,
+        product: selectedProduct
       });
     } catch (error) {
       console.error('Error saving:', error);
@@ -242,16 +218,16 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
             <div className="space-y-2">
               <Label>Προϊόν</Label>
               <Select
-                value={selectedCodeId}
-                onValueChange={(value) => setSelectedCodeId(value)}
+                value={selectedProductId}
+                onValueChange={(value) => setSelectedProductId(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a product" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCodes.map((code) => (
-                    <SelectItem key={code.id} value={code.id}>
-                      {code.name} - {code.price}€
+                  {availableProducts.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} - {product.price}€
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -284,13 +260,13 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            {selectedCode && (
+            {selectedProduct && (
               <p className="text-sm font-medium">
                 Σύνολο: <span className={cn(
                   "text-primary", 
                   isTreat && "line-through text-muted-foreground"
                 )}>
-                  {(selectedCode.price * quantity).toFixed(2)}€
+                  {(selectedProduct.price * quantity).toFixed(2)}€
                 </span>
                 {isTreat && <span className="text-amber-500 ml-2">Δωρεάν</span>}
               </p>
@@ -298,7 +274,7 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
             <div className="flex gap-2">
               <Button
                 type="submit"
-                disabled={!selectedCode || isLoading}
+                disabled={!selectedProduct || isLoading}
                 className="gap-1"
               >
                 <Save className="h-4 w-4" />
@@ -375,53 +351,47 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
   };
 
   // Handle edit using the shared hook
-  const handleEdit = async (updatedSale: Partial<Sale>) => {
+  const handleEdit = async (updatedSale: Partial<SaleWithDetails>) => {
     if (!canEdit) {
       toast.error(SALES_MESSAGES.EDIT_WINDOW_EXPIRED);
       return;
     }
 
+    if (!updatedSale.code_id) {
+      toast.error(SALES_MESSAGES.PRODUCT_NOT_FOUND);
+      return;
+    }
+
     try {
-      // Check if new code exists in database
-      const { data: newCodeData, error: codeError } = await supabase
+      // Check if new product exists in database
+      const { data: newProductData, error: productError } = await supabase
         .from('codes')
         .select('*, category:categories(*)')
         .eq('id', updatedSale.code_id)
         .single();
 
-      if (codeError || !newCodeData) {
+      if (productError || !newProductData) {
         throw new Error(SALES_MESSAGES.PRODUCT_NOT_FOUND);
       }
 
-      // Get old code for stock management
-      const { data: oldCodeData } = await supabase
+      // Get old product for stock management
+      const { data: oldProductData } = await supabase
         .from('codes')
         .select('stock')
         .eq('id', currentSale.code_id)
         .single();
 
-      const newCode = {
-        id: newCodeData.id,
-        name: newCodeData.name,
-        price: newCodeData.price,
-        stock: newCodeData.stock,
-        image_url: newCodeData.image_url,
-        category_id: newCodeData.category_id,
-        created_at: newCodeData.created_at,
-        created_by: newCodeData.created_by,
-        updated_at: newCodeData.updated_at,
-        category: newCodeData.category
-      };
+      const newProduct = { ...newProductData, category: newProductData.category };
 
-      const oldCode = {
-        stock: oldCodeData?.stock || -1
+      const oldProduct = {
+        stock: oldProductData?.stock || -1
       };
 
       // Treat status changed?
       const treatStatusChanged = currentSale.is_treat !== updatedSale.is_treat;
 
       // Calculate prices
-      const unitPrice = newCode.price;
+      const unitPrice = newProduct.price;
       const totalPrice = unitPrice * updatedSale.quantity!;
       
       // Use the editSale function from the hook
@@ -442,16 +412,16 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
         
         if (needToUpdateStock) {
           // Return stock to old product if not upgrading a treat to regular sale
-          if (oldCode.stock !== -1 && !(sale.is_treat && !updatedSale.is_treat)) {
+          if (oldProduct.stock !== -1 && !(sale.is_treat && !updatedSale.is_treat)) {
             await supabase.from('codes')
-              .update({ stock: oldCode.stock + sale.quantity })
+              .update({ stock: oldProduct.stock + sale.quantity })
               .eq('id', sale.code_id);
           }
 
           // Take stock from new product if not creating a treat
-          if (newCode.stock !== -1 && !updatedSale.is_treat) {
+          if (newProduct.stock !== -1 && !updatedSale.is_treat && updatedSale.code_id) {
             await supabase.from('codes')
-              .update({ stock: newCode.stock - updatedSale.quantity! })
+              .update({ stock: newProduct.stock - updatedSale.quantity! })
               .eq('id', updatedSale.code_id);
           }
         }
@@ -459,25 +429,16 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
         // Update local state
         setCurrentSale({
           ...currentSale,
-          code_id: newCode.id,
+          code_id: newProduct.id,
           quantity: updatedSale.quantity!,
           unit_price: unitPrice,
           total_price: totalPrice,
           is_edited: true,
           is_treat: !!updatedSale.is_treat,
           original_quantity: sale.quantity,
-          original_code: sale.code?.name,
-          code: {
-            id: newCode.id,
-            name: newCode.name,
-            price: newCode.price,
-            stock: newCode.stock,
-            image_url: newCode.image_url,
-            created_at: newCode.created_at,
-            created_by: newCode.created_by,
-            updated_at: newCode.updated_at,
-            category: newCode.category || undefined,
-            category_id: newCode.category?.id || ''
+          original_code: sale.product?.name || null,
+          product: {
+            ...newProduct
           }
         });
         
@@ -492,7 +453,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
     }
   };
 
-  if (!currentSale?.code?.name) {
+  if (!currentSale?.product?.name) {
     return (
       <Card className="bg-destructive/10">
         <CardContent className="p-3">
@@ -505,9 +466,9 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
   if (isEditing) {
     return (
       <EditSaleForm 
-        sale={currentSale} 
-        onSave={handleEdit} 
-        onCancel={() => setIsEditing(false)} 
+        sale={currentSale}
+        onSave={handleEdit}
+        onCancel={() => setIsEditing(false)}
       />
     );
   }
@@ -522,14 +483,14 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
           {/* Left side: Product info */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              {currentSale.code?.image_url && (
+              {currentSale.product?.image_url && (
                 <div className={cn(
                   "relative h-8 w-8",
                   isDeleted && "opacity-50"
                 )}>
                   <Image
-                    src={currentSale.code.image_url}
-                    alt={currentSale.code.name}
+                    src={currentSale.product.image_url}
+                    alt={currentSale.product.name}
                     fill
                     className="object-contain"
                     sizes="32px"
@@ -541,7 +502,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
                 "font-medium",
                 isDeleted && "line-through text-muted-foreground"
               )}>
-                {currentSale.code?.name}
+                {currentSale.product?.name}
               </p>
               
               {timeLeft && canEdit && (
@@ -554,13 +515,13 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
                 isDeleted={isDeleted} 
                 isTreat={currentSale.is_treat} 
                 isEdited={isEdited}
-                originalCode={currentSale.original_code}
-                originalQuantity={currentSale.original_quantity}
+                originalProductCode={currentSale.original_code ?? undefined}
+                originalQuantity={currentSale.original_quantity ?? undefined}
               />
             </div>
             
             <p className="text-sm text-muted-foreground">
-              {formatDateWithGreekAmPm(new Date(currentSale.created_at))}
+              {currentSale.created_at ? formatDateWithGreekAmPm(new Date(currentSale.created_at)) : ''}
             </p>
             
             {error && (

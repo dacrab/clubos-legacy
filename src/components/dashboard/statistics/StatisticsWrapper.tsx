@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import type { Sale } from '@/types/sales';
 import StatsCards from "./StatsCards";
 import SalesChart from "./SalesChart";
 import TopCodesChart from "./TopCodesChart";
@@ -9,18 +7,26 @@ import CategorySalesChart from "./CategorySalesChart";
 import RevenueChart from "./RevenueChart";
 import StatisticsFilter from "./StatisticsFilter";
 import { ChartPie } from "lucide-react";
-import { filterSalesByDateRange } from "@/lib/utils/chart-utils";
+import { useStatisticsData } from "@/hooks/features/statistics/useStatisticsData";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import type { SaleWithDetails } from '@/types/sales';
 
 interface StatisticsWrapperProps {
-  initialSales: Sale[];
+  initialSales: SaleWithDetails[];
 }
 
 export default function StatisticsWrapper({ initialSales }: StatisticsWrapperProps) {
-  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string } | null>(null);
+  const {
+    setDateRange,
+    filteredSales,
+    categories,
+    subCategories,
+    loading
+  } = useStatisticsData(initialSales);
 
-  const filteredSales = useMemo(() => {
-    return filterSalesByDateRange(initialSales, dateRange);
-  }, [initialSales, dateRange]);
+  if (loading) {
+    return <LoadingAnimation />;
+  }
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -37,11 +43,7 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
             </p>
           </div>
         </div>
-        <StatisticsFilter 
-          onFilterChange={(range) => {
-            setDateRange(range);
-          }} 
-        />
+        <StatisticsFilter onFilterChange={setDateRange} />
       </div>
 
       {/* Charts Grid */}
@@ -58,7 +60,11 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
         {/* Analysis Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TopCodesChart sales={filteredSales} />
-          <CategorySalesChart sales={filteredSales} />
+          <CategorySalesChart 
+            sales={filteredSales} 
+            categories={categories} 
+            subCategories={subCategories} 
+          />
         </div>
       </div>
     </div>

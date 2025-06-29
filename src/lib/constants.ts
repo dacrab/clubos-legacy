@@ -95,6 +95,7 @@ export const API_ERROR_MESSAGES = {
   CREATE_CODE_ERROR: "Σφάλμα κατά την δημιουργία του κωδικού",
   CODE_CREATED: "Ο κωδικός δημιουργήθηκε επιτυχώς",
   GENERIC_ERROR: "Κάτι πήγε στραβά",
+  DELETE_ERROR: "Σφάλμα κατά τη διαγραφή",
   INVALID_IMAGE_TYPE: "Παρακαλώ επιλέξτε μια εικόνα",
   IMAGE_TOO_LARGE: "Η εικόνα δεν πρέπει να ξεπερνά τα 5MB",
   MISSING_REQUIRED_FIELDS: "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία"
@@ -114,7 +115,7 @@ export const DIALOG_MESSAGES = {
   OFFLINE_BUTTON: 'Επαναλήψη',
   NOT_FOUND_BUTTON: 'Επιστροφή στην αρχική',
   DELETE_BOOKING_TITLE: 'Διαγραφή Κράτησης',
-  DELETE_BOOKING_DESCRIPTION: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.'
+  DELETE_BOOKING_DESCRIPTION: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.',
 } as const;
 
 // UI Messages - User Management
@@ -122,7 +123,8 @@ export const USER_MESSAGES = {
   CREATE_SUCCESS: 'Ο χρήστης δημιουργήθηκε επιτυχώς',
   DELETE_SUCCESS: 'Ο χρήστης διαγράφηκε επιτυχώς',
   PASSWORD_RESET_SUCCESS: 'Ο κωδικός άλλαξε επιτυχώς',
-  UNEXPECTED_ERROR: 'Απρόσμενο σφάλμα'
+  UNEXPECTED_ERROR: 'Απρόσμενο σφάλμα',
+  USER_ALREADY_EXISTS: "Αυτό το όνομα χρήστη υπάρχει ήδη"
 } as const;
 
 // UI Messages - Code Management

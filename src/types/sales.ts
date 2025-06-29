@@ -1,15 +1,11 @@
-import { Database } from "./supabase";
-import { Json } from "./database";
+import { Tables } from "./supabase";
+import { Product, Category } from "./products";
 
-// Base types from Database
-type Tables = Database['public']['Tables'];
+export type { Product, Category };
 
-// Core Types
-export type Category = Tables['categories']['Row'];
-export type Code = Omit<Tables['codes']['Row'], 'category_id'> & {
-  category?: Category;
-  category_id: string;
-};
+// Base types from Database, re-exported for convenience
+export type Sale = Tables<'sales'>;
+export type Order = Tables<'orders'>;
 
 // Organization Types
 export type CategoriesMap = {
@@ -17,47 +13,42 @@ export type CategoriesMap = {
 };
 
 /**
- * Order related types
+ * UI-specific type for items in the new sale/cart interface.
  */
-export type Order = {
-  id: string;
-  register_session_id: string;
-  total_amount: number;
-  final_amount: number;
-  card_discount_count: number;
-  created_by: string;
-  created_at: string;
-  sales?: Sale[];
-};
-
 export type OrderItem = {
-  id: string;
-  code: Code;
-  codeId: string;
+  id: string; // A temporary client-side ID
+  product: Product;
   quantity: number;
   isTreat: boolean;
   dosageCount?: number;
 };
 
 /**
- * Sale type - The core sale entity
- * Note: order is optional to prevent circular references
+ * A "rich" Order type for use in the application, with nested sales.
  */
-export type Sale = {
-  id: string;
-  order_id: string;
-  code_id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  is_treat: boolean;
-  created_at: string;
-  code: Code;
-  order?: Order;
-  // Additional fields for editing functionality
-  is_edited?: boolean;
-  is_deleted?: boolean;
-  original_code?: string;
-  original_quantity?: number;
-  payment_method?: string; // Added for consistency with transformSession
+export type OrderWithSales = Order & {
+  sales: SaleWithDetails[];
 };
+
+/**
+ * A "rich" Sale type for use in the application, with nested product and order details.
+ * This is the shape returned by most sales queries.
+ */
+export type SaleWithDetails = Sale & {
+  product: Product;
+  order: Order;
+};
+
+/**
+ * Represents a group of sales, usually aggregated by order.
+ */
+export interface GroupedSale {
+  id: string;
+  created_at: string;
+  total: number;
+  items: SaleWithDetails[];
+  treats_count: number;
+  card_discount_count: number;
+  final_amount: number;
+  is_card_payment?: boolean;
+}

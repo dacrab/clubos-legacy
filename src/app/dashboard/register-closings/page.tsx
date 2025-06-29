@@ -6,8 +6,14 @@ import { PageWrapper } from "@/components/ui/page-wrapper";
 import { RegisterClosingsList } from "@/components/dashboard/register/RegisterClosingsList";
 import RegisterClosingsFilter from "@/components/dashboard/register/RegisterClosingsFilter";
 import type { DateRange } from "@/types/register";
+import { useAuthorization } from "@/hooks/auth/useAuthorization";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { EmptyState } from "@/components/ui/empty-state";
+import { AlertCircle } from "lucide-react";
+import { REGISTER_MESSAGES } from "@/lib/constants";
 
 export default function RegisterClosingsPage() {
+  const authorizationStatus = useAuthorization();
   // Use a more stable initial state with explicit types
   const [dateRange, setDateRange] = useState<DateRange>({
     startDate: '',
@@ -53,6 +59,18 @@ export default function RegisterClosingsPage() {
   const listComponent = useMemo(() => (
     <RegisterClosingsList dateRange={dateRange} />
   ), [dateRange]);
+  
+  if (authorizationStatus === 'loading') {
+    return <LoadingAnimation />;
+  }
+
+  if (authorizationStatus === 'unauthorized') {
+    return <EmptyState
+      icon={AlertCircle}
+      title="Σφάλμα"
+      description={REGISTER_MESSAGES.NOT_LOGGED_IN}
+    />;
+  }
 
   return (
     <PageWrapper>

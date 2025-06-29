@@ -1,9 +1,7 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef, memo } from "react";
-import { toast } from "sonner";
+import { useState, useRef, memo } from "react";
 import { motion } from "framer-motion";
 import { 
   MoreHorizontal, 
@@ -11,7 +9,7 @@ import {
   UserX, 
   ChevronDown, 
   Shield, 
-  User, 
+  User as UserIcon, 
   UserCog,
   type LucideIcon,
   UserCircle 
@@ -29,8 +27,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import ResetPasswordDialog from './ResetPasswordDialog';
 import {
   Table,
   TableBody,
@@ -43,26 +39,23 @@ import { Badge } from "@/components/ui/badge";
 import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
 import { EmptyState } from "@/components/ui/empty-state";
 
-import { Database } from "@/types/supabase";
 import { transitions } from "@/lib/animations";
-import { cn } from "@/lib/utils";
 import { 
   USER_MESSAGES,
   ALLOWED_USER_ROLES,
   ROLE_TRANSLATIONS,
   UserRole,
 } from "@/lib/constants";
-
-type User = {
-  id: string;
-  username: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-};
+import { User } from "@/hooks/data/useUsers";
+import { cn } from "@/lib/utils";
 
 interface UsersTableProps {
   users: User[];
+  isMobile: boolean;
+  loading: boolean;
+  onDeleteUser: (userId: string) => void;
+  onUpdateRole: (userId: string, role: UserRole) => void;
+  onResetPassword: (userId: string) => void;
 }
 
 const roleColors: Record<UserRole, string> = {
@@ -73,7 +66,7 @@ const roleColors: Record<UserRole, string> = {
 
 const roleIcons: Record<UserRole, LucideIcon> = {
   admin: Shield,
-  employee: User,
+  employee: UserIcon,
   secretary: UserCog,
 } as const;
 
@@ -98,7 +91,10 @@ const DesktopTableRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRol
     >
       <TableCell className="font-medium">{user.username}</TableCell>
       <TableCell>
-        <Badge variant="secondary" className={roleColors[user.role]}>
+        <Badge variant="secondary" className={cn(
+          "whitespace-nowrap",
+          roleColors[user.role]
+        )}>
           {Icon && <Icon className="mr-1 h-4 w-4" />}
           {ROLE_TRANSLATIONS[user.role]}
         </Badge>
@@ -127,15 +123,18 @@ const DesktopTableRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRol
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 {ALLOWED_USER_ROLES.map((role) => {
-                  const Icon = roleIcons[role];
+                  const RoleIcon = roleIcons[role];
                   return (
                     <DropdownMenuItem
                       key={role}
                       onClick={() => onChangeRole(user.id, role)}
                       disabled={user.role === role || loading}
                     >
-                      <div className={`flex items-center ${roleColors[role]} rounded-md px-2 py-1`}>
-                        <Icon className="mr-2 h-4 w-4" />
+                      <div className={cn(
+                        "flex items-center rounded-md px-2 py-1",
+                        roleColors[role]
+                      )}>
+                        <RoleIcon className="mr-2 h-4 w-4" />
                         <span>{ROLE_TRANSLATIONS[role]}</span>
                       </div>
                     </DropdownMenuItem>
@@ -148,7 +147,7 @@ const DesktopTableRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRol
             
             <DropdownMenuItem 
               onClick={() => onDelete(user.id)}
-              className="text-red-600 dark:text-red-400"
+              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-100 dark:focus:bg-red-900/40"
             >
               <UserX className="mr-2 h-4 w-4" />
               <span>Διαγραφή</span>
@@ -201,15 +200,18 @@ const MobileRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRole, onD
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   {ALLOWED_USER_ROLES.map((role) => {
-                    const Icon = roleIcons[role];
+                    const RoleIcon = roleIcons[role];
                     return (
                       <DropdownMenuItem
                         key={role}
                         onClick={() => onChangeRole(user.id, role)}
                         disabled={user.role === role || loading}
                       >
-                        <div className={`flex items-center ${roleColors[role]} rounded-md px-2 py-1`}>
-                          <Icon className="mr-2 h-4 w-4" />
+                        <div className={cn(
+                          "flex items-center rounded-md px-2 py-1",
+                          roleColors[role]
+                        )}>
+                          <RoleIcon className="mr-2 h-4 w-4" />
                           <span>{ROLE_TRANSLATIONS[role]}</span>
                         </div>
                       </DropdownMenuItem>
@@ -222,7 +224,7 @@ const MobileRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRole, onD
               
               <DropdownMenuItem 
                 onClick={() => onDelete(user.id)}
-                className="text-red-600 dark:text-red-400"
+                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-100 dark:focus:bg-red-900/40"
               >
                 <UserX className="mr-2 h-4 w-4" />
                 <span>Διαγραφή</span>
@@ -232,7 +234,10 @@ const MobileRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRole, onD
         </div>
       </div>
       <div className="pt-1">
-        <Badge variant="secondary" className={roleColors[user.role]}>
+        <Badge variant="secondary" className={cn(
+          "whitespace-nowrap",
+          roleColors[user.role]
+        )}>
           {Icon && <Icon className="mr-1 h-4 w-4" />}
           {ROLE_TRANSLATIONS[user.role]}
         </Badge>
@@ -243,87 +248,20 @@ const MobileRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRole, onD
 
 MobileRow.displayName = 'MobileRow';
 
-export default function UsersTable({ users: initialUsers }: UsersTableProps) {
-  const router = useRouter();
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  
-  const [users] = useState(initialUsers);
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
+export default function UsersTable({ 
+  users, 
+  isMobile, 
+  loading,
+  onDeleteUser, 
+  onUpdateRole, 
+  onResetPassword 
+}: UsersTableProps) {
   const [sortConfig, setSortConfig] = useState<{
     key: keyof User;
     direction: 'asc' | 'desc';
   }>({ key: 'created_at', direction: 'desc' });
   
-  // Mobile responsiveness
-  const [isMobile, setIsMobile] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
-
-  // Check for mobile view
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    
-    // Set initial value
-    checkMobile();
-    
-    // Add throttled resize listener
-    let resizeTimeout: NodeJS.Timeout | null = null;
-    const handleResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(checkMobile, 250);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-    };
-  }, []);
-
-  async function updateUserRole(userId: string, role: UserRole) {
-    const { error } = await supabase
-      .from('users')
-      .update({ role, updated_at: new Date().toISOString() })
-      .eq('id', userId);
-
-    if (error) throw error;
-  }
-
-  async function handleChangeRole(userId: string, newRole: UserRole) {
-    if (!userId || !newRole) return;
-    setLoading(true);
-
-    try {
-      await updateUserRole(userId, newRole);
-      toast.success('Ο ρόλος του χρήστη ενημερώθηκε επιτυχώς');
-      router.refresh();
-    } catch (error) {
-      toast.error('Σφάλμα κατά την ενημέρωση του ρόλου');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeleteUser() {
-    if (!deleteUserId) return;
-    setLoading(true);
-
-    try {
-      await supabase.auth.admin.deleteUser(deleteUserId);
-      await supabase.from('users').delete().eq('id', deleteUserId);
-      toast.success(USER_MESSAGES.DELETE_SUCCESS);
-      router.refresh();
-    } catch (error) {
-      toast.error(USER_MESSAGES.UNEXPECTED_ERROR);
-    } finally {
-      setLoading(false);
-      setDeleteUserId(null);
-    }
-  }
 
   function handleSort(key: keyof User) {
     setSortConfig(config => ({
@@ -335,14 +273,15 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
   const sortedUsers = [...users].sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
-    return sortConfig.direction === 'asc' ? (aValue < bValue ? -1 : 1) : (aValue < bValue ? 1 : -1);
+    if (aValue === null || aValue === undefined) return sortConfig.direction === 'asc' ? 1 : -1;
+    if (bValue === null || bValue === undefined) return sortConfig.direction === 'asc' ? -1 : 1;
+    return sortConfig.direction === 'asc' ? (aValue < bValue ? -1 : 1) : (aValue > bValue ? -1 : 1);
   });
 
-  // For desktop virtualization
   const rowVirtualizer = useVirtualizer({
     count: sortedUsers.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 56, // Typical row height
+    estimateSize: () => isMobile ? 90 : 56,
     overscan: 5,
   });
 
@@ -364,97 +303,60 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
     );
   }
 
-  // Empty state
   if (users.length === 0) {
     return (
       <EmptyState
         icon={UserX}
         title="Δεν υπάρχουν χρήστες"
-        description="Δεν υπάρχουν χρήστες καταχωρημένοι στο σύστημα."
+        description="Δεν έχουν δημιουργηθεί χρήστες ακόμα."
       />
     );
   }
 
-  // Mobile view
   if (isMobile) {
     return (
-      <>
-        <VirtualizedMobileList<User>
-          items={sortedUsers}
-          className="h-[calc(100vh-200px)] bg-background rounded-md border"
-          estimateSize={() => 90}
-          renderItem={(user) => (
-            <MobileRow
-              key={user.id}
-              user={user}
-              onResetPassword={setResetPasswordUserId}
-              onChangeRole={handleChangeRole}
-              onDelete={setDeleteUserId}
-              loading={loading}
-            />
-          )}
-        />
-        
-        <ConfirmationDialog
-          open={!!deleteUserId}
-          onOpenChange={() => setDeleteUserId(null)}
-          title="Διαγραφή Χρήστη"
-          description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
-          onConfirm={handleDeleteUser}
-          loading={loading}
-        />
-
-        <ResetPasswordDialog
-          open={!!resetPasswordUserId}
-          onOpenChange={() => setResetPasswordUserId(null)}
-          userId={resetPasswordUserId}
-        />
-      </>
+      <VirtualizedMobileList<User>
+        items={sortedUsers}
+        className="h-[calc(100vh-200px)] bg-background rounded-md border"
+        estimateSize={() => 90}
+        renderItem={(user) => (
+          <MobileRow
+            key={user.id}
+            user={user}
+            onResetPassword={onResetPassword}
+            onChangeRole={onUpdateRole}
+            onDelete={onDeleteUser}
+            loading={loading}
+          />
+        )}
+      />
     );
   }
 
-  // Desktop view
   return (
-    <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{renderSortButton('Όνομα Χρήστη', 'username')}</TableHead>
-              <TableHead>{renderSortButton('Ρόλος', 'role')}</TableHead>
-              <TableHead>{renderSortButton('Ημερομηνία Δημιουργίας', 'created_at')}</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedUsers.map((user) => (
-              <DesktopTableRow 
-                key={user.id}
-                user={user}
-                onResetPassword={setResetPasswordUserId}
-                onChangeRole={handleChangeRole}
-                onDelete={setDeleteUserId}
-                loading={loading}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <ConfirmationDialog
-        open={!!deleteUserId}
-        onOpenChange={() => setDeleteUserId(null)}
-        title="Διαγραφή Χρήστη"
-        description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
-        onConfirm={handleDeleteUser}
-        loading={loading}
-      />
-
-      <ResetPasswordDialog
-        open={!!resetPasswordUserId}
-        onOpenChange={() => setResetPasswordUserId(null)}
-        userId={resetPasswordUserId}
-      />
-    </>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{renderSortButton('Όνομα Χρήστη', 'username')}</TableHead>
+            <TableHead>{renderSortButton('Ρόλος', 'role')}</TableHead>
+            <TableHead>{renderSortButton('Ημερομηνία Δημιουργίας', 'created_at')}</TableHead>
+            <TableHead className="w-[80px]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedUsers.map((user) => (
+            <DesktopTableRow 
+              key={user.id}
+              user={user}
+              onResetPassword={onResetPassword}
+              onChangeRole={onUpdateRole}
+              onDelete={onDeleteUser}
+              loading={loading}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

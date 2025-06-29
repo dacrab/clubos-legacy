@@ -2,7 +2,7 @@
  * Utility functions for server actions
  */
 
-import { createServerSupabase } from './supabase-server';
+import { createServerSupabase } from './supabase/server';
 
 /**
  * Type for server action responses

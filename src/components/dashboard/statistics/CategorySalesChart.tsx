@@ -1,26 +1,19 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { createBrowserClient } from "@supabase/ssr";
+import { useState, useMemo } from 'react';
 import { Medal, BarChart3 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATISTICS, CATEGORY_SALES_CHART, API_ERROR_MESSAGES } from '@/lib/constants';
-import { Sale } from "@/types/sales";
-import { Database } from "@/types/supabase";
+import { CATEGORY_SALES_CHART } from '@/lib/constants';
+import type { SaleWithDetails, Category } from "@/types/sales";
 import { cn } from "@/lib/utils";
 import { aggregateSalesByCategory, MEDAL_COLORS } from "@/lib/utils/chart-utils";
 
-interface Category {
-  id: string;
-  name: string;
-  parent_id: string | null;
-}
-
 interface CategorySalesChartProps {
-  sales: Sale[];
+  sales: SaleWithDetails[];
+  categories: Category[];
+  subCategories: Record<string, Category[]>;
 }
 
 interface CategorySalesItem {
@@ -29,55 +22,24 @@ interface CategorySalesItem {
   revenue: number;
 }
 
-export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
+export default function CategorySalesChart({ sales, categories, subCategories }: CategorySalesChartProps) {
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Record<string, Category[]>>({});
-
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
-        return;
-      }
-
-      const mainCategories = data.filter(cat => !cat.parent_id);
-      const subCategoriesMap = data.reduce((acc, cat) => {
-        if (cat.parent_id) {
-          if (!acc[cat.parent_id]) acc[cat.parent_id] = [];
-          acc[cat.parent_id].push(cat);
-        }
-        return acc;
-      }, {} as Record<string, Category[]>);
-
-      setCategories(mainCategories);
-      setSubCategories(subCategoriesMap);
-    }
-
-    fetchCategories();
-  }, [supabase]);
 
   const categoryData = useMemo((): CategorySalesItem[] => {
     if (!selectedCategory) return [];
     
-    const data = aggregateSalesByCategory(sales, selectedCategory);
+    // Find the category object to pass its name, not the ID
+    const category = [...categories, ...Object.values(subCategories).flat()].find(c => c.id === selectedCategory);
+    if (!category) return [];
+    
+    const data = aggregateSalesByCategory(sales, category.name);
     
     return data.map(item => ({
       name: item.name,
       quantity: item.value,
       revenue: item.total
     }));
-  }, [sales, selectedCategory]);
+  }, [sales, selectedCategory, categories, subCategories]);
 
   const maxQuantity = categoryData.length > 0 ? categoryData[0].quantity : 0;
 
@@ -97,9 +59,9 @@ export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
           <SelectContent>
             {categories.map(category => (
               <SelectGroup key={category.id}>
-                <SelectItem value={category.name}>{category.name}</SelectItem>
+                <SelectItem value={category.id}>{category.name}</SelectItem>
                 {subCategories[category.id]?.map(sub => (
-                  <SelectItem key={sub.id} value={sub.name} className="pl-6 text-sm text-muted-foreground">
+                  <SelectItem key={sub.id} value={sub.id} className="pl-6 text-sm text-muted-foreground">
                     ↳ {sub.name}
                   </SelectItem>
                 ))}

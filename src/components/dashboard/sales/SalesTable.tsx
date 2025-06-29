@@ -1,99 +1,30 @@
 "use client";
 
 import { useState, useMemo, useCallback, memo } from "react";
-import { Gift, ChevronDown, CreditCard, Search, History } from "lucide-react";
+import { Search, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, formatPrice } from "@/lib/utils";
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import type { Sale } from "@/types/sales";
+import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils/number";
+import { SaleWithDetails } from "@/types/sales";
 import { 
   GroupedSale,
   calculateGroupTotals,
+  groupSalesIntoOrders,
 } from "@/lib/utils/salesUtils";
-import { useSalesData, SalesFilters } from "@/hooks/useSalesData";
+import { useSalesData, SalesFilters } from "@/hooks/features/sales/useSalesData";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
 import EditableSaleCard from "./EditableSaleCard";
+import { SaleOrderHeader } from "./components/SaleOrderHeader";
+import { SaleOrderDetails } from "./components/SaleOrderDetails";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface SalesTableProps {
-  initialSales?: Sale[];
+  initialSales?: SaleWithDetails[];
   dateRange?: { startDate: string; endDate: string };
   timeRange?: { startTime: string; endTime: string };
 }
-
-// Memoized Sale Header Component
-const SaleHeader = memo(({ group, isExpanded, onToggle }: { 
-  group: GroupedSale;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) => {
-  const { calculatedFinalAmount } = calculateGroupTotals(group);
-
-  return (
-    <button 
-      onClick={onToggle} 
-      className="w-full flex items-start justify-between group/item py-2 px-1 rounded-md hover:bg-muted/50 transition-colors"
-    >
-      <div className="space-y-1.5">
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          {formatDateWithGreekAmPm(new Date(group.created_at))}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {group.treats_count > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs sm:text-sm bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full">
-              <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              {group.treats_count}x
-            </span>
-          )}
-          {group.card_discount_count > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs sm:text-sm bg-primary/10 text-primary px-2 py-1 rounded-full">
-              <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              {group.card_discount_count}x
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <span className="text-xs sm:text-sm font-medium tabular-nums">
-          {formatPrice(calculatedFinalAmount)}
-        </span>
-        <ChevronDown className={cn("h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
-      </div>
-    </button>
-  );
-});
-SaleHeader.displayName = 'SaleHeader';
-
-// Memoized Sale Details Component
-const SaleDetails = memo(({ group }: { group: GroupedSale }) => {
-  const { nonTreatSubtotal, treatsValue, discountAmount, calculatedFinalAmount } = calculateGroupTotals(group);
-  
-  return (
-    <div className="pt-3 sm:pt-4 mt-3 sm:mt-4 border-t space-y-2 sm:space-y-3">
-      <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
-        <span>Υποσύνολο:</span>
-        <span>{formatPrice(nonTreatSubtotal)}</span>
-      </div>
-      {group.treats_count > 0 && (
-        <div className="flex justify-between text-xs sm:text-sm text-amber-500">
-          <span>Κεράσματα ({group.treats_count}x):</span>
-          <span>Δωρεάν ({formatPrice(treatsValue)})</span>
-        </div>
-      )}
-      {group.card_discount_count > 0 && (
-        <div className="flex justify-between text-xs sm:text-sm text-primary">
-          <span>Έκπτωση κάρτας ({group.card_discount_count}x):</span>
-          <span>-{formatPrice(discountAmount)}</span>
-        </div>
-      )}
-      <div className="flex justify-between text-xs sm:text-sm font-medium pt-1.5">
-        <span>Σύνολο:</span>
-        <span>{formatPrice(calculatedFinalAmount)}</span>
-      </div>
-    </div>
-  );
-});
-SaleDetails.displayName = 'SaleDetails';
 
 // Memoized Empty State Component
 const EmptyState = memo(() => (
@@ -105,49 +36,6 @@ const EmptyState = memo(() => (
   </div>
 ));
 EmptyState.displayName = 'EmptyState';
-
-// Group sales by order_id
-const useGroupedSales = (sales: Sale[] | undefined) => {
-  return useMemo(() => {
-    if (!sales?.length) return [];
-    
-    const groups = sales.reduce((map, sale) => {
-      if (!sale.order) {
-        console.warn(`Sale ${sale.id} has no order property. Skipping this sale.`);
-        return map;
-      }
-
-      const group = map.get(sale.order_id) || {
-        id: sale.order_id,
-        created_at: sale.created_at,
-        total: 0,
-        items: [],
-        treats_count: 0,
-        final_amount: sale.order?.final_amount || 0,
-        card_discount_count: sale.order?.card_discount_count || 0
-      };
-
-      group.items.push(sale);
-      
-      // Only add non-treats and non-deleted items to total
-      if (!sale.is_treat && !sale.is_deleted) {
-        group.total += sale.total_price;
-      }
-      
-      // Count the number of non-deleted treat items
-      if (sale.is_treat && !sale.is_deleted) {
-        group.treats_count += sale.quantity;
-      }
-
-      map.set(sale.order_id, group);
-      return map;
-    }, new Map<string, GroupedSale>());
-
-    return Array.from(groups.values()).sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  }, [sales]);
-};
 
 export default function SalesTable({ 
   initialSales = [], 
@@ -173,7 +61,7 @@ export default function SalesTable({
   [sales, initialSales, isLoading]);
   
   // Group the sales for display
-  const groupedSales = useGroupedSales(displaySales);
+  const groupedSales = useMemo(() => groupSalesIntoOrders(displaySales || []), [displaySales]);
   
   // Calculate total amount
   const totalAmount = useMemo(() => 
@@ -240,7 +128,7 @@ export default function SalesTable({
                 const isExpanded = expandedGroups.has(group.id);
                 return (
                   <div key={group.id} className="border rounded-lg p-3 sm:p-4 hover:bg-accent/5 transition-colors">
-                    <SaleHeader
+                    <SaleOrderHeader
                       group={group}
                       isExpanded={isExpanded}
                       onToggle={() => toggleGroup(group.id)}
@@ -254,7 +142,7 @@ export default function SalesTable({
                             onDeleteClick={handleDeleteClick}
                           />
                         ))}
-                        <SaleDetails group={group} />
+                        <SaleOrderDetails group={group} />
                       </div>
                     )}
                   </div>

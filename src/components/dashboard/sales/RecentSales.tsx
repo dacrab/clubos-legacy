@@ -1,102 +1,26 @@
 "use client";
 
 import { useState, useCallback, memo, useMemo } from 'react';
-import { History, ChevronDown, CreditCard, Gift } from "lucide-react";
+import { History } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { cn, formatPrice } from "@/lib/utils";
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import type { Sale } from "@/types/sales";
+import { cn } from "@/lib/utils";
+import type { SaleWithDetails } from "@/types/sales";
 import EditableSaleCard from "./EditableSaleCard";
 import { 
-  GroupedSale, 
-  calculateGroupTotals,
   groupSalesIntoOrders,
 } from "@/lib/utils/salesUtils";
-import { useSalesData } from "@/hooks/useSalesData";
+import { useSalesData } from "@/hooks/features/sales/useSalesData";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { SaleOrderHeader } from './components/SaleOrderHeader';
+import { SaleOrderDetails } from './components/SaleOrderDetails';
 
 // Types
 interface RecentSalesProps {
-  initialSales?: Sale[];
+  initialSales?: SaleWithDetails[];
   onDeleteClick: (id: string) => void;
   limit?: number;
 }
-
-// Memoized Components
-const SaleHeader = memo(({ group, isExpanded, onToggle }: { 
-  group: GroupedSale;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) => {
-  const { calculatedFinalAmount } = calculateGroupTotals(group);
-
-  return (
-    <button onClick={onToggle} className="w-full flex items-start justify-between group/item">
-      <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">
-          {formatDateWithGreekAmPm(new Date(group.created_at))}
-        </p>
-        <div className="flex items-center gap-2">
-          {group.treats_count > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">
-              <Gift className="h-3 w-3" />
-              {group.treats_count}x
-            </span>
-          )}
-          {group.card_discount_count > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs bg-violet-500/10 text-violet-500 px-2 py-0.5 rounded-full">
-              <CreditCard className="h-3 w-3" />
-              {group.card_discount_count}x
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="font-medium tabular-nums">
-          {formatPrice(calculatedFinalAmount)}
-        </span>
-        <div className={cn(
-          "transition-transform duration-200",
-          isExpanded ? "rotate-180" : ""
-        )}>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
-    </button>
-  );
-});
-SaleHeader.displayName = 'SaleHeader';
-
-const SaleDetails = memo(({ group }: { group: GroupedSale }) => {
-  const { nonTreatSubtotal, treatsValue, discountAmount, calculatedFinalAmount } = calculateGroupTotals(group);
-  
-  return (
-    <div className="pt-3 mt-3 border-t space-y-2">
-      <div className="flex justify-between text-sm text-muted-foreground">
-        <span>Υποσύνολο:</span>
-        <span>{formatPrice(nonTreatSubtotal)}</span>
-      </div>
-      {group.treats_count > 0 && (
-        <div className="flex justify-between text-sm text-amber-500">
-          <span>Κεράσματα ({group.treats_count}x):</span>
-          <span>Δωρεάν ({formatPrice(treatsValue)})</span>
-        </div>
-      )}
-      {group.card_discount_count > 0 && (
-        <div className="flex justify-between text-sm text-primary">
-          <span>Έκπτωση κάρτας ({group.card_discount_count}x):</span>
-          <span>-{formatPrice(discountAmount)}</span>
-        </div>
-      )}
-      <div className="flex justify-between text-base font-medium pt-1">
-        <span>Σύνολο:</span>
-        <span>{formatPrice(calculatedFinalAmount)}</span>
-      </div>
-    </div>
-  );
-});
-SaleDetails.displayName = 'SaleDetails';
 
 const EmptyState = memo(() => (
   <div className="flex flex-col items-center justify-center py-6 sm:py-8">
@@ -167,7 +91,7 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
           <div className="space-y-4">
             {groupedOrders.map(group => (
               <div key={group.id} className="border rounded-md p-3">
-                <SaleHeader
+                <SaleOrderHeader
                   group={group}
                   isExpanded={expandedGroups.has(group.id)}
                   onToggle={() => toggleGroup(group.id)}
@@ -181,7 +105,7 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
                         onDeleteClick={() => onDeleteClick(sale.id)}
                       />
                     ))}
-                    <SaleDetails group={group} />
+                    <SaleOrderDetails group={group} />
                   </div>
                 )}
               </div>

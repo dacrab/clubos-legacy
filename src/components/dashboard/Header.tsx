@@ -8,7 +8,8 @@ import { LogOut, Loader2, UserIcon} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import type { Database } from "@/types/supabase";
-import { PUBLIC_ROUTES, API_ERROR_MESSAGES } from "@/lib/constants";
+import { PUBLIC_ROUTES } from "@/lib/constants";
+import { signOut } from "@/lib/auth-actions";
 import { toast } from "sonner";
 
 // Minimal HeaderProps
@@ -31,15 +32,12 @@ export default function Header({ user, profile }: HeaderProps) {
 
   const handleSignOut = async () => {
     setIsLoading(true);
-    try {
-      await supabase.auth.signOut();
+    const { success } = await signOut(supabase);
+    if (success) {
       router.push(PUBLIC_ROUTES[0]);
       router.refresh();
-    } catch {
-      toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   return (

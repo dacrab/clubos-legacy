@@ -2,14 +2,14 @@
 
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Sale } from "@/types/sales";
+import type { SaleWithDetails } from "@/types/sales";
 import { STATISTICS } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart as LineChartIcon } from "lucide-react";
 import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
 
 interface SalesChartProps {
-  sales: Sale[];
+  sales: SaleWithDetails[];
 }
 
 const CHART_CONFIG = {

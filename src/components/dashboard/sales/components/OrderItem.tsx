@@ -63,10 +63,10 @@ export function OrderItem({
   onTreatToggle,
   onDosageIncrease
 }: OrderItemProps) {
-  if (!item.code) return null;
+  if (!item.product) return null;
 
-  const { code, id, isTreat, dosageCount = 1 } = item;
-  const { category, image_url, price } = code;
+  const { product, id, isTreat, dosageCount = 1 } = item;
+  const { category, image_url, price } = product;
 
   const dosageExtra = dosageCount > 1 ? (dosageCount - 1) * EXTRA_SHOT_PRICE : 0;
   const itemTotal = ((price || 0) + dosageExtra) * item.quantity;
@@ -86,19 +86,19 @@ export function OrderItem({
             {image_url ? (
               <ProductImage
                 src={image_url}
-                alt={code.name}
+                alt={product.name}
                 size="sm"
                 className="h-10 w-10 portrait:h-12 portrait:w-12 rounded-md flex-shrink-0"
               />
             ) : (
               <div className="h-10 w-10 portrait:h-12 portrait:w-12 flex items-center justify-center rounded-md bg-primary/5 flex-shrink-0">
-                <span className="text-sm font-bold text-primary">{code.name.substring(0, 2).toUpperCase()}</span>
+                <span className="text-sm font-bold text-primary">{product.name.substring(0, 2).toUpperCase()}</span>
               </div>
             )}
             
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold line-clamp-2 break-words">
-                {code.name}
+                {product.name}
                 {dosageCount > 1 && (
                   <span className="ml-1 text-xs text-primary font-bold">
                     (x{dosageCount})

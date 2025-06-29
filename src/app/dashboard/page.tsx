@@ -4,93 +4,8 @@ import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 import EmployeeDashboard from '@/components/dashboard/EmployeeDashboard';
-import type { Sale, Code as SaleCode } from '@/types/sales';
-import type { PaymentMethodType } from '@/types/supabase';
-
-interface OrderSale {
-  id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  is_treat: boolean;
-  coffee_options: any;
-  code?: {
-    id: string;
-    name: string;
-    price: number;
-    image_url: string | null;
-    category?: {
-      id: string;
-      name: string;
-      description: string | null;
-    } | null;
-  };
-}
-
-interface OrderData {
-  id: string;
-  created_at: string;
-  total_amount: number;
-  discount_amount: number;
-  final_amount: number;
-  card_discount_count: number;
-  payment_method: PaymentMethodType;
-  created_by: string;
-  sales?: OrderSale[];
-}
-
-// Helper function to transform order data to Sale type
-function transformOrderToSales(order: OrderData): Sale[] {
-  return (order.sales || []).map((sale: OrderSale) => {
-    if (!sale.code) {
-      throw new Error('Sale must have a code');
-    }
-
-    const saleCode: SaleCode = {
-      id: sale.code.id,
-      name: sale.code.name,
-      price: sale.code.price,
-      stock: 0, // Default value since it's not in the query
-      image_url: sale.code.image_url,
-      created_at: order.created_at,
-      created_by: order.created_by,
-      updated_at: null,
-      category_id: sale.code.category?.id || '', // Required by type
-      category: sale.code.category ? {
-        id: sale.code.category.id,
-        name: sale.code.category.name,
-        description: sale.code.category.description,
-        parent_id: null, // These fields aren't in the query but required by type
-        created_at: order.created_at,
-        created_by: order.created_by
-      } : undefined
-    };
-
-    return {
-      id: sale.id,
-      order_id: order.id,
-      code_id: sale.code.id,
-      quantity: sale.quantity,
-      unit_price: sale.unit_price,
-      total_price: sale.total_price,
-      is_treat: sale.is_treat,
-      coffee_options: sale.coffee_options,
-      created_at: order.created_at,
-      code: saleCode,
-      order: {
-        id: order.id,
-        register_session_id: '', // Not needed for display
-        total_amount: order.total_amount,
-        discount_amount: order.discount_amount,
-        final_amount: order.final_amount,
-        card_discount_count: order.card_discount_count,
-        payment_method: order.payment_method,
-        created_by: order.created_by,
-        created_at: order.created_at
-      }
-    };
-  });
-}
+import type { Product as SaleCode } from '@/types/products';
+import { transformOrderToSales, OrderData } from '@/lib/utils/salesUtils';
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -133,10 +48,8 @@ export default async function DashboardPage() {
       id,
       created_at,
       total_amount,
-      discount_amount,
       final_amount,
       card_discount_count,
-      payment_method,
       created_by,
       sales (
         id,

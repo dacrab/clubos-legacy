@@ -1,18 +1,43 @@
-import { Sale, Order } from "@/types/sales";
+import { Sale, Order, Product, SaleWithDetails, GroupedSale } from "@/types/sales";
 import { CARD_DISCOUNT } from "@/lib/constants";
+import type { Enums } from "@/types/supabase";
+
+export type { GroupedSale };
 
 /**
- * Interface for grouped sales by order
+ * Interface for a sale item within a larger order query
  */
-export interface GroupedSale {
+export interface OrderSale {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  is_treat: boolean;
+  coffee_options: any;
+  code?: {
+    id: string;
+    name: string;
+    price: number;
+    image_url: string | null;
+    category?: {
+      id: string;
+      name: string;
+      description: string | null;
+    } | null;
+  };
+}
+
+/**
+ * Interface for the overall order data structure from a query
+ */
+export interface OrderData {
   id: string;
   created_at: string;
-  total: number;
-  items: Sale[];
-  treats_count: number;
-  card_discount_count: number;
+  total_amount: number;
   final_amount: number;
-  is_card_payment?: boolean;
+  card_discount_count: number;
+  created_by: string;
+  sales?: OrderSale[];
 }
 
 /**
@@ -50,7 +75,7 @@ export function calculateFinalAmount(nonTreatSubtotal: number, discountAmount: n
 /**
  * Group sales into orders for display purposes
  */
-export function groupSalesIntoOrders(sales: Sale[] | null | undefined): GroupedSale[] {
+export function groupSalesIntoOrders(sales: SaleWithDetails[] | null | undefined): GroupedSale[] {
   if (!sales?.length) return [];
   
   const orderMap = new Map<string, GroupedSale>();
@@ -116,13 +141,13 @@ export function getActiveItemsCount(sales: Sale[]): number {
 /**
  * Filter sales by search query
  */
-export function filterSalesBySearchQuery(sales: Sale[], searchQuery: string): Sale[] {
+export function filterSalesBySearchQuery(sales: SaleWithDetails[], searchQuery: string): SaleWithDetails[] {
   if (!searchQuery) return sales;
   
   const query = searchQuery.toLowerCase();
   return sales.filter(sale => 
-    sale.code.name.toLowerCase().includes(query) ||
-    (sale.code.category?.name || "").toLowerCase().includes(query)
+    sale.product.name.toLowerCase().includes(query) ||
+    (sale.product.category?.name || "").toLowerCase().includes(query)
   );
 }
 
@@ -132,7 +157,70 @@ export function filterSalesBySearchQuery(sales: Sale[], searchQuery: string): Sa
 export function getSalesQuery() {
   return `
     *,
-    code:codes (id, name, price, image_url, category:categories (id, name)),
+    product:codes (id, name, price, image_url, category:categories (id, name)),
     order:orders (id, created_by, created_at, final_amount, card_discount_count)
   `;
+}
+
+/**
+ * Transforms raw order data from a query into a structured array of Sales.
+ * This is useful when fetching recent orders and needing to display them in a format
+ * consistent with the standard `Sale` type used throughout the application.
+ *
+ * @param order The raw order data, including nested sale items.
+ * @returns An array of `Sale` objects.
+ */
+export function transformOrderToSales(order: OrderData): SaleWithDetails[] {
+  return (order.sales || []).map((sale: OrderSale) => {
+    if (!sale.code) {
+      throw new Error('Sale must have a code');
+    }
+
+    const saleProduct: Product = {
+      id: sale.code.id,
+      name: sale.code.name,
+      price: sale.code.price,
+      stock: 0, // Default value since it's not in the query
+      image_url: sale.code.image_url,
+      created_at: order.created_at,
+      created_by: order.created_by,
+      updated_at: null,
+      category_id: sale.code.category?.id || '', // Required by type
+      category: sale.code.category ? {
+        id: sale.code.category.id,
+        name: sale.code.category.name,
+        description: sale.code.category.description,
+        parent_id: null, // These fields aren't in the query but required by type
+        created_at: order.created_at,
+        created_by: order.created_by,
+      } : undefined
+    };
+
+    return {
+      id: sale.id,
+      order_id: order.id,
+      code_id: sale.code.id,
+      quantity: sale.quantity,
+      unit_price: sale.unit_price,
+      total_price: sale.total_price,
+      is_treat: sale.is_treat,
+      created_at: order.created_at,
+      is_deleted: false,
+      is_edited: false,
+      edited_at: null,
+      edited_by: null,
+      original_code: null,
+      original_quantity: null,
+      product: saleProduct,
+      order: {
+        id: order.id,
+        register_session_id: '', // Not needed for display
+        total_amount: order.total_amount,
+        final_amount: order.final_amount,
+        card_discount_count: order.card_discount_count,
+        created_by: order.created_by,
+        created_at: order.created_at,
+      }
+    };
+  });
 } 

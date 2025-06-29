@@ -4,12 +4,18 @@ import React, { useState, useMemo } from 'react';
 import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
-import useSWR from 'swr';
 import { toast } from 'sonner';
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
-
-// UI Components
+import { useAppointments } from '@/hooks/features/appointments/useAppointments';
+import AppointmentForm from './AppointmentForm';
+import { formatDateWithGreekAmPm } from "@/lib/utils/date";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+  TableHeader,
+  TableHead,
+} from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,74 +23,43 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent } from "@/components/ui/card";
-
-// Constants
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 import { 
   APPOINTMENT_MESSAGES,
   FORM_LABELS,
   BUTTON_LABELS, 
   PLACEHOLDERS,
-  DIALOG_MESSAGES,
-  DATE_FORMAT
+  DIALOG_MESSAGES
 } from '@/lib/constants';
+import type { Appointment } from '@/types/appointments';
 
-// Types
+const InfoRow = ({ label, value }: { label: string; value: string }) => (
+  <p className="text-xs text-muted-foreground">
+    <span className="font-medium">{label}:</span> {value}
+  </p>
+);
+
 interface AppointmentsListProps {
   showUpcomingOnly?: boolean;
   emptyState?: React.ReactNode;
 }
 
-type Appointment = {
-  id: number;
-  who_booked: string;
-  date_time: string;
-  contact_details: string;
-  num_children: number;
-  num_adults: number;
-  notes?: string;
-  created_at: string;
-};
-
-// Utility functions
-const formatDateWithGreekAmPm = (dateString: string): string => {
-  try {
-    return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, { locale: el });
-  } catch (error) {
-    return dateString;
-  }
-};
-
 export default function AppointmentsList({ showUpcomingOnly = false, emptyState }: AppointmentsListProps) {
   // State
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Appointment>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isMutating, setIsMutating] = useState(false);
   
-  // Initialize Supabase client
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // Data fetching
-  const { data: appointments = [], error, isLoading, mutate } = useSWR<Appointment[]>(
-    'appointments',
-    async () => {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('date_time', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    }
-  );
+  // Data fetching and mutations from hook
+  const { appointments = [], error, isLoading, updateAppointment, deleteAppointment, addAppointment } = useAppointments();
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   // Filter appointments based on props
   const filteredAppointments = useMemo(() => {
+    if (!appointments) return [];
     if (!showUpcomingOnly) return appointments;
 
     const now = new Date();
@@ -100,6 +75,19 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
     });
   }, [appointments, showUpcomingOnly]);
 
+  const upcomingAppointments = useMemo(() => {
+    const now = new Date();
+    const threeDaysFromNow = addDays(now, 3);
+    return appointments.filter(appointment => {
+      try {
+        const appointmentDate = parseISO(appointment.date_time);
+        return isWithinInterval(appointmentDate, { start: now, end: threeDaysFromNow });
+      } catch {
+        return false;
+      }
+    });
+  }, [appointments]);
+
   // Event handlers
   const handleEdit = (appointment: Appointment) => {
     setEditingId(appointment.id);
@@ -112,46 +100,22 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
       toast.error(APPOINTMENT_MESSAGES.REQUIRED_FIELDS);
       return;
     }
-
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update(editForm)
-        .eq('id', editingId);
-
-      if (error) throw error;
-
-      toast.success(APPOINTMENT_MESSAGES.UPDATE_SUCCESS);
+    
+    setIsMutating(true);
+    const { success } = await updateAppointment(editingId, editForm);
+    if (success) {
       setEditingId(null);
       setEditForm({});
-      mutate();
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      toast.error(APPOINTMENT_MESSAGES.GENERIC_ERROR);
     }
+    setIsMutating(false);
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedAppointmentId) return;
-    setIsDeleting(true);
-
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', selectedAppointmentId);
-
-      if (error) throw error;
-
-      toast.success(APPOINTMENT_MESSAGES.DELETE_SUCCESS);
-      mutate();
-    } catch (error) {
-      console.error('Error deleting appointment:', error);
-      toast.error(APPOINTMENT_MESSAGES.GENERIC_ERROR);
-    } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
-    }
+    setIsMutating(true);
+    await deleteAppointment(selectedAppointmentId);
+    setIsMutating(false);
+    setDeleteDialogOpen(false);
   };
 
   const handleCancelEdit = () => {
@@ -159,7 +123,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
     setEditForm({});
   };
 
-  const handleOpenDeleteDialog = (appointmentId: number) => {
+  const handleOpenDeleteDialog = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setDeleteDialogOpen(true);
   };
@@ -186,7 +150,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
 
   // Render appointment edit form
   const renderEditForm = (appointment: Appointment) => (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="space-y-3 sm:space-y-4" key={appointment.id}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-1.5 sm:space-y-2">
           <Label htmlFor="who_booked" className="text-sm sm:text-base">{FORM_LABELS.WHO_BOOKED}</Label>
@@ -275,7 +239,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
           size="sm"
           onClick={handleSaveEdit}
           className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
-          loading={isDeleting}
+          loading={isMutating}
           loadingText={DIALOG_MESSAGES.SAVE_LOADING}
         >
           <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -291,13 +255,13 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
         <div>
           <h3 className="font-medium text-foreground text-sm sm:text-base">{appointment.who_booked}</h3>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            {formatDateWithGreekAmPm(appointment.date_time)}
+          <p className="text-sm text-muted-foreground">
+            {formatDateWithGreekAmPm(new Date(appointment.date_time))}
           </p>
-          <p className="text-[10px] xs:text-xs text-muted-foreground mt-1">
-            {FORM_LABELS.CREATED_AT}: {formatDateWithGreekAmPm(appointment.created_at)}
-            {' '}({formatDistanceToNow(new Date(appointment.created_at), { addSuffix: true, locale: el })})
-          </p>
+          <InfoRow 
+            label={FORM_LABELS.CREATED_AT} 
+            value={appointment.created_at ? formatDateWithGreekAmPm(new Date(appointment.created_at)) : ''}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-xs sm:text-sm font-medium bg-primary/10 text-primary px-1.5 py-0.5 sm:px-2 sm:py-1 rounded">
@@ -359,7 +323,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
         title={DIALOG_MESSAGES.DELETE_BOOKING_TITLE}
         description={DIALOG_MESSAGES.DELETE_BOOKING_DESCRIPTION}
         onConfirm={handleDeleteConfirm}
-        loading={isDeleting}
+        loading={isMutating}
       />
     </>
   );

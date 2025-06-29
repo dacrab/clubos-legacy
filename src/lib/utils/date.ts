@@ -1,3 +1,20 @@
+interface DateInterval {
+  start: Date
+  end: Date
+}
+
+export function eachDayOfInterval({ start, end }: DateInterval): Date[] {
+  const days: Date[] = []
+  let currentDate = new Date(start)
+
+  while (currentDate <= end) {
+    days.push(new Date(currentDate))
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  return days
+} 
+
 const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'numeric',
@@ -48,5 +65,21 @@ export function formatTimeToHHMM(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
+  });
+}
+
+/**
+ * Formats a generic date string
+ * @param dateString
+ * @returns Formatted date string
+ */
+export function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
 } 
