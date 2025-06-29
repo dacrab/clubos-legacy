@@ -2,9 +2,7 @@
 
 import { memo } from "react";
 import { Gift, ChevronDown, ChevronUp, CreditCard } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatPrice } from "@/lib/utils/number";
-import { formatDateWithGreekAmPm } from "@/lib/utils/date";
+import { cn, formatPrice, formatDateWithGreekAmPm } from "@/lib/utils";
 import type { GroupedSale } from "@/types/sales";
 import { calculateGroupTotals } from "@/lib/utils/salesUtils";
 import { Badge } from "@/components/ui/badge";

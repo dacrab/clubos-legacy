@@ -1,18 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { DEFAULT_USER_ROLE, LOW_STOCK_THRESHOLD } from "@/lib/constants";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import type { Database } from "@/types/supabase";
 import type { Product } from "@/types/products";
 import { hasUnlimitedStock } from "@/lib/utils/product";
-import RecentSales from "@/components/dashboard/sales/RecentSales";
-import { createServerSupabase } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, CreditCard, ShoppingBag } from "lucide-react";
-import LowStockCard from "@/components/dashboard/LowStockCard";
-import { formatPrice } from "@/lib/utils/number";
 
 export default async function OverviewPage() {
   const cookieStore = await cookies();

@@ -7,7 +7,7 @@ import { Pencil, Trash2, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppointments } from '@/hooks/features/appointments/useAppointments';
 import AppointmentForm from './AppointmentForm';
-import { formatDateWithGreekAmPm } from "@/lib/utils/date";
+import { formatDate, formatDateWithGreekAmPm } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -253,7 +253,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
   const renderAppointmentDetails = (appointment: Appointment) => (
     <>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
-        <div>
+        <div className="flex-1 space-y-1">
           <h3 className="font-medium text-foreground text-sm sm:text-base">{appointment.who_booked}</h3>
           <p className="text-sm text-muted-foreground">
             {formatDateWithGreekAmPm(new Date(appointment.date_time))}

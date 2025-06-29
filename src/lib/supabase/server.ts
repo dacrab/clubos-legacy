@@ -18,7 +18,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES): Promis
   }
 }
 
-// For server components
+// For server components and API routes
 export async function createServerSupabase(requireAuth: boolean = false) {
   const cookieStore = await cookies();
 
@@ -51,53 +51,20 @@ export async function createServerSupabase(requireAuth: boolean = false) {
     }
   );
 
-  return supabase;
-}
-
-// For API routes
-export async function createAPISupabase() {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set(name, value, {
-              path: '/',
-              ...options,
-            });
-          } catch (error) {
-            // Cookie cannot be set - this will be handled by Supabase
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.delete(name);
-          } catch (error) {
-            // Cookie cannot be deleted - this will be handled by Supabase
-          }
-        },
-      },
-    }
-  );
-
-  try {
-    const { data: { user }, error } = await withRetry(() => supabase.auth.getUser());
-    if (error) {
+  if (requireAuth) {
+    try {
+      const { data: { user }, error } = await withRetry(() => supabase.auth.getUser());
+      if (error) {
+        throw error;
+      }
+      if (!user) {
+        throw new Error(API_ERROR_MESSAGES.UNAUTHORIZED);
+      }
+    } catch (error) {
+      console.error('API Supabase error:', error);
       throw error;
     }
-    if (!user) {
-      throw new Error(API_ERROR_MESSAGES.UNAUTHORIZED);
-    }
-    return supabase;
-  } catch (error) {
-    console.error('API Supabase error:', error);
-    throw error;
   }
+
+  return supabase;
 } 

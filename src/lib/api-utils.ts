@@ -3,30 +3,14 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import { API_ERROR_MESSAGES } from './constants';
 import { Database } from '@/types/supabase';
-
-/**
- * Creates a Supabase client for API routes with cookies
- */
-export async function createApiClient() {
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        async get(name: string) {
-          return (await cookies()).get(name)?.value ?? '';
-        },
-      },
-    }
-  );
-}
+import { createServerSupabase } from './supabase/server';
 
 /**
  * Checks if current user is admin and returns user info
  * @returns Object containing currentUser and user if admin, or null if not
  */
 export async function checkAdminAccess() {
-  const supabase = await createApiClient();
+  const supabase = await createServerSupabase();
   
   // Check if user is authenticated
   const { data: { user }, error: userError } = await supabase.auth.getUser();

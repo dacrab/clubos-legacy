@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart as PieChartIcon, Medal } from "lucide-react";
 import { aggregateSalesByCode, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils/number";
+import { formatPrice } from "@/lib/utils";
 
 interface TopCodesChartProps {
   sales: SaleWithDetails[];

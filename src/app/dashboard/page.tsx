@@ -2,10 +2,12 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Database } from '@/types/supabase';
-import AdminDashboard from '@/components/dashboard/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/EmployeeDashboard';
+import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
+import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
 import type { Product as SaleCode } from '@/types/products';
 import { transformOrderToSales, OrderData } from '@/lib/utils/salesUtils';
+import { UserRole } from "@/lib/constants";
+import { SaleWithDetails } from "@/types/sales";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();

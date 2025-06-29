@@ -2,9 +2,7 @@ import { memo, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Euro, CreditCard, Gift, ChevronDown, ChevronUp } from "lucide-react";
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import { formatPrice } from '@/lib/utils/number';
-import { cn } from "@/lib/utils";
+import { formatDateWithGreekAmPm, formatPrice, cn } from '@/lib/utils';
 import { ClosingDetails } from "./ClosingDetails";
 import { 
   ListItem,

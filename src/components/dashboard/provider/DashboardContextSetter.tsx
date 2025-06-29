@@ -1,5 +1,5 @@
 "use client";
-import { useDashboard } from '@/components/dashboard/DashboardProvider';
+import { useDashboard } from './DashboardProvider';
 import { useEffect } from 'react';
 
 export function DashboardContextSetter({ isSidebarVisible }: { isSidebarVisible: boolean }) {

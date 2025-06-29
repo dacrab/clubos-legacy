@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { CloseRegisterButton } from "./register/CloseRegisterButton";
+import { CloseRegisterButton } from "../register/CloseRegisterButton";
 import { getVisibleNavItems, NavigationItem } from "./navigation.config";
 
 // Types

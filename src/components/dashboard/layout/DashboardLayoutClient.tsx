@@ -1,7 +1,7 @@
 "use client";
 
-import DesktopSidebar from "@/components/dashboard/DesktopSidebar";
-import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
+import DesktopSidebar from "./DesktopSidebar";
+import MobileBottomNav from "./MobileBottomNav";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
@@ -11,16 +11,9 @@ import { LoadingFallback } from "@/components/loading-fallback";
 import { ErrorFallback } from "@/components/error-fallback";
 import { useState, useEffect } from "react";
 import type { User } from '@supabase/supabase-js';
-import SecretariatDashboard from "@/components/dashboard/SecretariatDashboard";
+import SecretariatDashboard from "../views/SecretariatDashboard";
 import { UserRole } from "@/lib/constants";
-
-interface UserProfile {
-  id: string;
-  username: string | null;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-}
+import { UserProfile } from "@/types/next-auth";
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;

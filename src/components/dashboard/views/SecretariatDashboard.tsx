@@ -6,10 +6,10 @@ import type { User } from '@supabase/supabase-js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Components
-import AppointmentForm from './AppointmentForm';
-import FootballFieldBookingForm from './FootballFieldBookingForm';
-import AppointmentsList from './AppointmentsList';
-import FootballFieldBookingsList from './FootballFieldBookingsList';
+import AppointmentForm from '../appointments/AppointmentForm';
+import FootballFieldBookingForm from '../bookings/FootballFieldBookingForm';
+import AppointmentsList from '../appointments/AppointmentsList';
+import FootballFieldBookingsList from '../bookings/FootballFieldBookingsList';
 
 // Constants
 import { APPOINTMENT_MESSAGES, FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';

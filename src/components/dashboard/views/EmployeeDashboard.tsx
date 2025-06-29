@@ -7,9 +7,9 @@ import { createBrowserClient } from "@supabase/ssr";
 import { useState, useEffect } from "react";
 
 // Internal Components
-import { CloseRegisterButton } from "./register/CloseRegisterButton";
-import AddSaleButton from "./sales/AddSaleButton";
-import RecentSales from "./sales/RecentSales";
+import { CloseRegisterButton } from "../register/CloseRegisterButton";
+import AddSaleButton from "../sales/AddSaleButton";
+import RecentSales from "../sales/RecentSales";
 
 // Types and Constants
 import { Database } from "@/types/supabase";

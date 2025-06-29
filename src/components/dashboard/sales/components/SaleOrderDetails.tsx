@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { formatPrice } from "@/lib/utils/number";
+import { formatPrice } from "@/lib/utils";
 import { calculateGroupTotals, getActiveItemsCount } from "@/lib/utils/salesUtils";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { GroupedSale } from "@/types/sales";

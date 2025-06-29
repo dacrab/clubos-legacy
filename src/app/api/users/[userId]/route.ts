@@ -4,10 +4,10 @@ import {
   checkAdminAccess, 
   errorResponse, 
   successResponse, 
-  handleApiError, 
-  createApiClient
+  handleApiError
 } from '@/lib/api-utils';
-import { RouteHandler } from '@/types/route';
+import { createServerSupabase } from '@/lib/supabase/server';
+import { RouteHandler } from '@/types/next-auth';
 import { ALLOWED_USER_ROLES, PASSWORD_MIN_LENGTH, USER_MESSAGES } from '@/lib/constants';
 
 type Params = {
@@ -43,7 +43,7 @@ export const PATCH: RouteHandler<Params> = async (req, { params }) => {
       return errorResponse('Invalid role specified', 400);
     }
 
-    const supabase = await createApiClient();
+    const supabase = await createServerSupabase();
     const { error } = await supabase.from('users').update({ role }).eq('id', userId);
 
     if (error) {

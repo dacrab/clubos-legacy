@@ -14,8 +14,7 @@ import {
 } from "date-fns"
 import { format } from 'date-fns-tz'
 import { el } from 'date-fns/locale/el'
-import { cn } from "@/lib/utils"
-import { eachDayOfInterval } from "@/lib/utils/date"
+import { cn, eachDayOfInterval } from "@/lib/utils"
 import type { DateRange } from "react-day-picker"
 
 // Types

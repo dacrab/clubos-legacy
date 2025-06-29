@@ -1,9 +1,9 @@
 import { 
-  createApiClient, 
   errorResponse, 
   successResponse, 
   handleApiError 
 } from '@/lib/api-utils';
+import { createServerSupabase } from '@/lib/supabase/server';
 
 export const runtime = 'edge';
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const fileName = `product-images/new-${uniqueId}.${fileExt}`;
 
     // Αποθήκευση στο Supabase
-    const supabase = await createApiClient();
+    const supabase = await createServerSupabase();
     const { error: uploadError } = await supabase.storage
       .from('products')
       .upload(fileName, fileBuffer, {

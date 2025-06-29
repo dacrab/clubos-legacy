@@ -6,7 +6,7 @@ import { el } from 'date-fns/locale';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
 import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
 import FootballFieldBookingForm from './FootballFieldBookingForm';
-import { formatDateStringWithGreekAmPm } from '@/lib/utils/date';
+import { formatDateStringWithGreekAmPm } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -6,6 +6,9 @@ import { format } from "date-fns";
 import { el } from 'date-fns/locale';
 import { CalendarIcon } from "lucide-react";
 import { useAppointments } from '@/hooks/features/appointments/useAppointments';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDateToYYYYMMDD, formatTimeToHHMM } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -13,7 +16,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 
 // Utils and Types

@@ -2,12 +2,19 @@
 
 import React from "react";
 import { Github, Copyright, Sparkles } from "lucide-react";
-import { useDashboard } from "@/components/dashboard/DashboardProvider";
+import { useDashboard } from "@/components/dashboard/provider/DashboardProvider";
 import { cn } from "@/lib/utils";
 
 export function Footer() {
   const year = new Date().getFullYear();
-  const { isSidebarVisible } = useDashboard();
+  
+  let isSidebarVisible = false;
+  try {
+    const dashboard = useDashboard();
+    isSidebarVisible = dashboard.isSidebarVisible;
+  } catch (e) {
+    // It's ok to fail, it means we are not in a dashboard page.
+  }
 
   return (
     <footer className={cn(

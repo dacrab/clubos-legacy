@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, BarChart2, Gift } from "lucide-react";
 import type { SaleWithDetails } from "@/types/sales";
 import { calculateSalesStats } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils/number";
+import { formatPrice } from "@/lib/utils";
 
 interface StatsCardsProps {
   sales: SaleWithDetails[];

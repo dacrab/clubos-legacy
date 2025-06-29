@@ -17,13 +17,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
-import LowStockCard from "./LowStockCard";
-import AppointmentsList from "./AppointmentsList";
-import FootballFieldBookingsList from "./FootballFieldBookingsList";
-import AppointmentForm from "./AppointmentForm";
-import FootballFieldBookingForm from "./FootballFieldBookingForm";
-import AddSaleButton from "./sales/AddSaleButton";
-import RecentSales from "./sales/RecentSales";
+import LowStockCard from "@/components/dashboard/overview/LowStockCard";
+import AppointmentsList from "@/components/dashboard/appointments/AppointmentsList";
+import FootballFieldBookingsList from "@/components/dashboard/bookings/FootballFieldBookingsList";
+import AppointmentForm from "@/components/dashboard/appointments/AppointmentForm";
+import FootballFieldBookingForm from "@/components/dashboard/bookings/FootballFieldBookingForm";
+import AddSaleButton from "@/components/dashboard/sales/AddSaleButton";
+import RecentSales from "@/components/dashboard/sales/RecentSales";
 
 // Types
 interface AdminDashboardProps {

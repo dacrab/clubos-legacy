@@ -1,6 +1,8 @@
 import type { Database } from './supabase';
 import type { Json } from './supabase';
 import { CARD_DISCOUNT } from "@/lib/constants";
+import { UserRole } from '@/lib/constants';
+import { User } from './users';
 
 // Import types from other modules
 import type { 
@@ -10,6 +12,7 @@ import type {
 } from './sales';
 
 // Re-export the Sale type for convenience, and extend it
+export type { User };
 export type Sale = SalesTypeSale;
 export interface ExtendedSale extends Omit<Sale, 'is_edited' | 'is_deleted' | 'original_code' | 'original_quantity'> {
   is_edited?: boolean;
@@ -20,20 +23,6 @@ export interface ExtendedSale extends Omit<Sale, 'is_edited' | 'is_deleted' | 'o
 
 // Base types from database
 type Tables = Database['public']['Tables'];
-
-/**
- * USER RELATED TYPES
- */
-export type UserRole = 'admin' | 'employee' | 'secretary';
-
-export interface User extends Omit<Tables['users']['Row'], 'role'> {
-  role: UserRole;
-  username: string;
-}
-
-export interface UserDisplay extends User {
-  display_name: string;  // Can be username or full name depending on context
-}
 
 /**
  * PRODUCT RELATED TYPES

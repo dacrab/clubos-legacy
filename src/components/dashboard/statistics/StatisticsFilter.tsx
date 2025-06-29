@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
-import { formatDateToYYYYMMDD } from "@/lib/utils/date";
+import { formatDateToYYYYMMDD } from "@/lib/utils";
 
 interface DateRangeType {
   startDate: string;

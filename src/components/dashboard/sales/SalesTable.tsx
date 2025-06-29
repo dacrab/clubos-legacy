@@ -4,8 +4,7 @@ import { useState, useMemo, useCallback, memo } from "react";
 import { Search, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { formatPrice } from "@/lib/utils/number";
+import { cn, formatPrice } from "@/lib/utils";
 import { SaleWithDetails } from "@/types/sales";
 import { 
   GroupedSale,
