@@ -1,111 +1,92 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { Database } from '@/types/supabase';
+import { createServerSupabase } from '@/lib/supabase/server';
+import { notFound } from 'next/navigation';
+import { PageWrapper } from "@/components/ui/page-wrapper";
+import AddSaleButton from "@/components/dashboard/sales/AddSaleButton";
+import NewSaleInterface from "@/components/dashboard/sales/NewSaleInterface";
 import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
 import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
-import type { Product as SaleCode } from '@/types/products';
-import { transformOrderToSales, OrderData } from '@/lib/utils/salesUtils';
-import { UserRole } from "@/lib/constants";
-import { SaleWithDetails } from "@/types/sales";
+import SecretariatDashboard from '@/components/dashboard/views/SecretariatDashboard';
+import { SaleWithDetails } from '@/types/sales';
+import { Product } from '@/types/products';
+
+// This function can be moved to a utils file if it's used elsewhere
+const transformOrderToSales = (order: any): SaleWithDetails[] => {
+  return order.sales.map((sale: any) => ({
+    ...sale,
+    order: {
+      id: order.id,
+      final_amount: order.final_amount,
+      card_discount_count: order.card_discount_count
+    },
+    user: order.user
+  }));
+};
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
-      },
-    }
-  );
+  const supabase = await createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    redirect('/');
+  if (!user) {
+    return notFound();
   }
-
-  const { data: userData, error: userDataError } = await supabase
+  
+  const { data: profile } = await supabase
     .from('users')
     .select('role')
     .eq('id', user.id)
     .single();
 
-  if (userDataError) {
-    console.error('User error:', userDataError);
-    throw userDataError;
+  if (!profile) {
+    return notFound();
   }
 
-  if (!userData) {
-    redirect('/');
-  }
-
-  // Fetch recent orders with full details
-  const { data: recentOrders = [] } = await supabase
+  // Common data for all roles
+  const { data: recentOrders, error: recentOrdersError } = await supabase
     .from('orders')
     .select(`
-      id,
-      created_at,
-      total_amount,
-      final_amount,
-      card_discount_count,
-      created_by,
-      sales (
-        id,
-        quantity,
-        unit_price,
-        total_price,
-        is_treat,
-        coffee_options,
-        code:codes (
-          id,
-          name,
-          price,
-          image_url,
-          category:categories (
-            id,
-            name,
-            description
-          )
-        )
-      )
+      *,
+      user:users(*),
+      sales:sales(*, product:products(*))
     `)
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(5);
 
-  // If admin, also fetch low stock items with category details
-  if (userData.role === 'admin') {
-    const { data: lowStock = [] } = await supabase
-      .from('codes')
-      .select(`
-        *,
-        category:categories (
-          id,
-          name,
-          description,
-          created_at,
-          parent_id
-        )
-      `)
-      .lt('stock', 10)
-      .neq('stock', -1)
-      .order('stock', { ascending: true })
-      .limit(10);
-
-    const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
-    
-    return <AdminDashboard 
-      recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
-      lowStock={lowStock as unknown as SaleCode[]}
-    />;
+  if (recentOrdersError) {
+    console.error("Error fetching recent orders", recentOrdersError);
   }
 
-  const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
+  const recentSales = recentOrders?.flatMap(transformOrderToSales) || [];
 
-  return <EmployeeDashboard 
-    recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
-  />;
+  // Role-specific data and component rendering
+  switch (profile.role) {
+    case 'admin':
+      const { data: lowStock } = await supabase
+        .from('products')
+        .select('*')
+        .neq('stock', -1)
+        .lte('stock', 10);
+
+      return (
+        <AdminDashboard 
+          recentSales={recentSales} 
+          lowStock={lowStock as Product[]} 
+        />
+      );
+    case 'employee':
+      return <EmployeeDashboard recentSales={recentSales} />;
+    case 'secretary':
+      return <SecretariatDashboard user={user} />;
+    default:
+      return (
+        <PageWrapper>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold tracking-tight">Πωλήσεις</h1>
+              <AddSaleButton />
+            </div>
+            <NewSaleInterface open={false} onOpenChange={() => {}} />
+          </div>
+        </PageWrapper>
+      );
+  }
 }

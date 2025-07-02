@@ -52,3 +52,13 @@ export interface GroupedSale {
   final_amount: number;
   is_card_payment?: boolean;
 }
+
+/**
+ * Represents a new sale to be created.
+ */
+export type NewSale = {
+  items: OrderItem[];
+  totalAmount: number;
+  finalAmount: number;
+  cardDiscountCount: number;
+};

@@ -1,57 +1,60 @@
 "use client";
 
-import { useEffect, useMemo, useCallback, memo, useState, useRef } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
-
-// UI Components
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-// Custom Components
 import { CategorySection } from "./components/CategorySection";
 import { ProductSection } from "./components/ProductSection";
 import { CartSection } from "./components/CartSection";
-
-// Hooks and Utilities
 import { useSales } from '@/hooks/features/sales/useSales';
 import { cn } from "@/lib/utils";
+import type { OrderItem as OrderItemType, Product, Category } from "@/types/sales";
 
-// Types
-import type { OrderItem as OrderItemType, Product } from "@/types/sales";
-
-// ------------------------------------------------------------
+// ----------------------
 // Type Definitions
-// ------------------------------------------------------------
-
+// ----------------------
 interface NewSaleInterfaceProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-// ------------------------------------------------------------
+// ----------------------
 // Main Component
-// ------------------------------------------------------------
+// ----------------------
 export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfaceProps) {
+  // Sales data and actions
   const {
     products,
-    categories,
     categoriesMap,
-    handlePayment: createSale, // Renaming for consistency in this component
-    loading: salesLoading,
+    isLoading: salesLoading,
+    createSale,
+    isCreating,
   } = useSales();
 
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
-  // Sale State
+  // State
   const [orderItems, setOrderItems] = useState<OrderItemType[]>([]);
   const [cardDiscountCount, setCardDiscountCount] = useState(0);
-
-  // UI State
   const [view, setView] = useState<'products' | 'categories' | 'cart'>('products');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const categories = useMemo(() => {
+    const mainCategories: (Product['category'])[] = [];
+    const seen = new Set<string>();
+    products.forEach(p => {
+      if (p.category && !p.category.parent_id && !seen.has(p.category.id)) {
+        mainCategories.push(p.category);
+        seen.add(p.category.id);
+      }
+    });
+    return mainCategories.filter(Boolean) as Category[];
+  }, [products]);
+
+  // Reset all state
   const handleReset = useCallback(() => {
     setOrderItems([]);
     setCardDiscountCount(0);
@@ -61,44 +64,43 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     setView('products');
   }, []);
 
+  // Reset on open
   useEffect(() => {
-    if (open) {
-      handleReset();
-    }
+    if (open) handleReset();
   }, [open, handleReset]);
 
-  // Derived State / Memoized Calculations
+  // Filtered products
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
     if (selectedCategory) {
       const categoryId = products.find(p => p.category?.name === selectedCategory)?.category?.id;
       if (categoryId) {
-          filtered = filtered.filter(p => p.category?.id === categoryId || p.category?.parent_id === categoryId);
+        filtered = filtered.filter(
+          p => p.category?.id === categoryId || p.category?.parent_id === categoryId
+        );
       }
     }
-    
     if (selectedSubcategory) {
-        filtered = filtered.filter(p => p.category?.name === selectedSubcategory);
+      filtered = filtered.filter(p => p.category?.name === selectedSubcategory);
     }
-
     if (searchQuery) {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(lowercasedQuery) ||
-        p.id.toString().includes(lowercasedQuery)
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        p => p.name.toLowerCase().includes(q) || p.id.toString().includes(q)
       );
     }
-
-    return filtered.sort((a,b) => a.name.localeCompare(b.name));
+    return filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [products, selectedCategory, selectedSubcategory, searchQuery]);
 
+  // Totals
   const { subtotal, finalTotal } = useMemo(() => {
     const subtotal = orderItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const finalTotal = subtotal - (cardDiscountCount * 2);
-    return { subtotal, finalTotal: Math.max(0, finalTotal) };
+    const finalTotal = Math.max(0, subtotal - cardDiscountCount * 2);
+    return { subtotal, finalTotal };
   }, [orderItems, cardDiscountCount]);
 
+  // Product section title
   const productSectionTitle = useMemo(() => {
     if (searchQuery) return "Αποτελέσματα Αναζήτησης";
     if (selectedSubcategory) return selectedSubcategory;
@@ -111,14 +113,14 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     setOrderItems(prev => {
       const existing = prev.find(item => item.product.id === product.id && !item.isTreat);
       if (existing) {
-        return prev.map(item => item.id === existing.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item =>
+          item.id === existing.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
       }
-      return [...prev, {
-        id: uuidv4(),
-        product: product,
-        quantity: 1,
-        isTreat: false,
-      }];
+      return [
+        ...prev,
+        { id: uuidv4(), product, quantity: 1, isTreat: false }
+      ];
     });
     if (!isDesktop) setView('cart');
   }, [isDesktop]);
@@ -127,29 +129,25 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     setOrderItems(prev => prev.filter(item => item.id !== id));
   }, []);
 
-  const handleToggleTreat = useCallback((id:string) => {
-     setOrderItems(prevItems =>
-      prevItems.map(item =>
+  const handleToggleTreat = useCallback((id: string) => {
+    setOrderItems(prev =>
+      prev.map(item =>
         item.id === id ? { ...item, isTreat: !item.isTreat } : item
       )
     );
-  },[]);
+  }, []);
 
   const handleIncreaseDosage = useCallback((id: string) => {
-    setOrderItems(prev => {
-        const item = prev.find(i => i.id === id);
-        if (!item) return prev;
-        
-        const product = products.find(p => p.id === item.product.id);
-        if (!product) return prev;
-
-        return prev.map(i => i.id === id ? { ...i, quantity: i.quantity + 1 } : i);
-    });
-  }, [products]);
+    setOrderItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      )
+    );
+  }, []);
 
   const handleCategorySelect = useCallback((category: string | null) => {
     setSelectedCategory(category);
-    setSelectedSubcategory(null); // Reset subcategory when main category changes
+    setSelectedSubcategory(null);
     if (!isDesktop) setView('products');
   }, [isDesktop]);
 
@@ -159,41 +157,37 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   }, [isDesktop]);
 
   const handleCardDiscount = useCallback(() => {
-    const nonTreatItemsCount = orderItems.filter(item => !item.isTreat).length;
-    if (cardDiscountCount < Math.floor(nonTreatItemsCount / 3)) {
+    const nonTreatCount = orderItems.filter(item => !item.isTreat).length;
+    if (cardDiscountCount < Math.floor(nonTreatCount / 3)) {
       setCardDiscountCount(prev => prev + 1);
     }
   }, [orderItems, cardDiscountCount]);
-  
+
   const handleCardDiscountReset = useCallback(() => setCardDiscountCount(0), []);
 
   const handlePayment = useCallback(async () => {
-    if (orderItems.length === 0) return;
-
-    // The useSales hook now manages the sale creation process.
-    // We can call it directly with the desired payment method.
-    // For now, let's assume a "cash" payment, but this could be extended.
-    await createSale('cash');
-    
-    // The hook handles success/error toasts, state reset, and navigation.
-    // But we still need to close the dialog.
+    if (!orderItems.length) return;
+    await createSale({
+      items: orderItems,
+      totalAmount: subtotal,
+      finalAmount: finalTotal,
+      cardDiscountCount,
+    });
     onOpenChange(false);
     handleReset();
-
-  }, [createSale, onOpenChange, handleReset, orderItems.length]);
+  }, [createSale, onOpenChange, handleReset, orderItems, subtotal, finalTotal, cardDiscountCount]);
 
   const handleCloseDialog = (isOpen: boolean) => {
-    if (!isOpen) {
-      handleReset();
-    }
+    if (!isOpen) handleReset();
     onOpenChange(isOpen);
   };
 
+  // Renderers
   const renderDesktopView = () => (
     <div className="grid grid-cols-[300px_1fr_380px] h-[calc(100vh-100px)]">
       <div className="border-r">
         <CategorySection
-          categories={categories}
+          categories={categories.map(c => c.name)}
           categoriesMap={categoriesMap}
           selectedCategory={selectedCategory}
           selectedSubcategory={selectedSubcategory}
@@ -237,7 +231,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
       return (
         <CategorySection
           isMobile
-          categories={categories}
+          categories={categories.map(c => c.name)}
           categoriesMap={categoriesMap}
           selectedCategory={selectedCategory}
           selectedSubcategory={selectedSubcategory}

@@ -1,14 +1,15 @@
-import { Database } from './supabase';
+import { Tables } from './supabase';
 
-export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
+export type Product = Tables<'products'> & {
+  category?: Tables<'categories'> | null;
+};
+
+export type ProductWithCategory = Tables<'products'> & {
+  category: Tables<'categories'> | null;
+};
 
 export type Category = Tables<'categories'> & {
   parent?: Pick<Tables<'categories'>, 'id' | 'name' | 'description'>;
-};
-
-export type Product = Tables<'codes'> & {
-  category?: Category | null;
 };
 
 export type GroupedCategory = {

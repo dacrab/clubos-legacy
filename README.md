@@ -146,10 +146,10 @@ src/
 │   ├── dashboard/         # Dashboard routes
 │   │   ├── codes/        # Product code management
 │   │   ├── history/      # Sales history tracking
+│   │   ├── products/     # Product management
 │   │   ├── overview/     # Dashboard overview
-│   │   ├── register-closings/ # Register closing records
-│   │   ├── statistics/   # Sales analytics and statistics
-│   │   └── users/        # User management
+│   │   ├── closings/     # Cash register closing history
+│   │   └── statistics/   # Sales statistics and charts
 │   ├── loading/          # Loading state components
 │   └── fonts/            # Custom fonts
 ├── components/            # React components
@@ -159,8 +159,9 @@ src/
 │   │   ├── inventory/   # Inventory management components
 │   │   ├── register/    # Register management components
 │   │   ├── sales/       # Sales-related components
-│   │   ├── statistics/  # Statistics visualization components
-│   │   └── users/       # User management components
+│   │   ├── products/    # Product management components
+│   │   ├── users/       # User management components
+│   │   └── statistics/  # Statistics-related components
 │   ├── layout/          # Layout components
 │   ├── providers/       # Context providers
 │   └── ui/              # UI components

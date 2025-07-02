@@ -125,7 +125,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
       <div className="flex-1 overflow-y-auto max-h-[400px] sm:max-h-[500px] p-4 sm:p-6">
         <div className="space-y-3 sm:space-y-4">
           {lowStock.length > 0 ? (
-            lowStock.map(code => <LowStockCard key={code.id} code={code} />)
+            lowStock.map(product => <LowStockCard key={product.id} product={product} />)
           ) : (
             <div className="text-center py-6 sm:py-10">
               <AlertTriangle className="h-10 w-10 sm:h-14 sm:w-14 text-muted-foreground/30 mx-auto mb-3 sm:mb-4" />

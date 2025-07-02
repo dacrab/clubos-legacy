@@ -1,42 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
+import { createClientSupabase } from "@/lib/supabase/client";
+import type { Product } from "@/types/products";
 import { toast } from "sonner";
-import { Database } from "@/types/supabase";
-import { STOCK_MESSAGES, CODE_MESSAGES } from "@/lib/constants";
 
-const supabase = createBrowserClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClientSupabase();
 
-export function useStockManagement() {
-  const [loading, setLoading] = useState(false);
+export function useStockManagement(product: Product) {
+  const [stock, setStock] = useState(product.stock);
+  const [isLoading, setIsLoading] = useState(false);
+  const { cache } = useSWRConfig();
   const router = useRouter();
 
-  const updateStock = async (codeId: string, newStock: number): Promise<boolean> => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('codes')
-        .update({ stock: newStock })
-        .eq('id', codeId);
+  const handleStockUpdate = async (newStock: number) => {
+    setIsLoading(true);
+    const { error } = await supabase
+      .from('products')
+      .update({ stock: newStock })
+      .eq('id', product.id);
 
-      if (error) throw error;
-
-      toast.success(STOCK_MESSAGES.UPDATE_SUCCESS);
+    if (error) {
+      toast.error('Αποτυχία ενημέρωσης αποθέματος.');
+      console.error(error);
+    } else {
+      toast.success('Το απόθεμα ενημερώθηκε με επιτυχία.');
+      cache.delete(`product:${product.id}`);
+      cache.delete('products');
       router.refresh();
-      return true;
-    } catch (error) {
-      console.error('Error updating stock:', error);
-      toast.error(CODE_MESSAGES.GENERIC_ERROR);
-      return false;
-    } finally {
-      setLoading(false);
     }
+    setIsLoading(false);
   };
 
-  return { loading, updateStock };
+  return { stock, setStock, isLoading, handleStockUpdate };
 } 

@@ -67,7 +67,7 @@ async function clearDatabase() {
     'orders',
     'appointments',
     'football_field_bookings',
-    'codes',
+    'products',
     'categories',
     'register_sessions',
   ];
@@ -224,7 +224,7 @@ async function createProducts(adminId: string) {
     }
   ];
 
-  const { error } = await supabase.from('codes').insert(products);
+  const { error } = await supabase.from('products').insert(products);
   
   if (error) {
     console.error('Error creating products:', error.message);
@@ -277,7 +277,7 @@ async function createSales(staffId: string, registerSessionId: string) {
     {
       id: 'f8e7d6c5-b4a3-4e2f-91b2-890123456abc',
       order_id: order.id,
-      code_id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a', // Espresso
+      product_id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a', // Espresso
       quantity: 1,
       unit_price: 2.00,
       total_price: 2.00,
@@ -286,7 +286,7 @@ async function createSales(staffId: string, registerSessionId: string) {
     {
       id: 'a7f6e5d4-c3b2-4a3f-82e1-901234567abc',
       order_id: order.id,
-      code_id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc', // Chocolate
+      product_id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc', // Chocolate
       quantity: 1,
       unit_price: 3.50,
       total_price: 3.50,
@@ -295,7 +295,7 @@ async function createSales(staffId: string, registerSessionId: string) {
     {
       id: 'b6a5f4e3-d2c1-4b3a-92f1-012345678abc',
       order_id: order.id,
-      code_id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Κρουασάν
+      product_id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Κρουασάν
       quantity: 1,
       unit_price: 2.00,
       total_price: 2.00,

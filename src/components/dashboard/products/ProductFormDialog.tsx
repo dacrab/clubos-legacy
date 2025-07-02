@@ -138,18 +138,18 @@ export default function ProductFormDialog({ product: productToEdit, open, onOpen
         updated_at: new Date().toISOString(),
       };
 
-      if (isEditMode) {
-        if (!productToEdit) throw new Error("Product not found for editing.");
-        const { error } = await supabase.from('codes').update(productData).eq('id', productToEdit.id);
+      if (productToEdit) {
+        const { error } = await supabase.from('products').update(productData).eq('id', productToEdit.id);
         if (error) throw error;
+        toast.success('Product updated successfully');
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Σφάλμα ταυτοποίησης');
-        const { error } = await supabase.from('codes').insert({ ...productData, created_by: user.id });
+        const { error } = await supabase.from('products').insert({ ...productData, created_by: user.id });
         if (error) throw error;
+        toast.success('Product created successfully');
       }
 
-      toast.success(`Το προϊόν ${isEditMode ? 'ενημερώθηκε' : 'προστέθηκε'} επιτυχώς`);
       router.refresh();
       onOpenChange(false);
     } catch (error) {

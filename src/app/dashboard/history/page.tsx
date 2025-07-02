@@ -65,23 +65,9 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
     .from('sales')
     .select(`
       *,
-      product:codes (
-        id,
-        name,
-        price,
-        image_url,
-        category:categories (
-          id,
-          name
-        )
-      ),
-      order:orders (
-        id,
-        created_by,
-        created_at,
-        final_amount,
-        card_discount_count
-      )
+      order:orders(*),
+      user:users(*),
+      product:products(*, category:categories(*))
     `)
     .order('created_at', { ascending: false })
     .gte('created_at', startDateTime)
@@ -90,6 +76,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const { data: sales, error: salesError } = await query;
 
   if (salesError) {
+    console.error('Error fetching sales:', salesError);
     // A more sophisticated error UI could be rendered here
     return <PageWrapper>Error loading sales data.</PageWrapper>;
   }

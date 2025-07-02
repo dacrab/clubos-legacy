@@ -97,31 +97,31 @@ export function aggregateSalesByDate(
 }
 
 /**
- * Groups sales by code and aggregates quantities
+ * Groups sales by product and aggregates quantities
  */
-export function aggregateSalesByCode(
+export function aggregateSalesByProduct(
   sales: SaleWithDetails[],
-  topCount: number = STATISTICS.DEFAULT_TOP_CODES_COUNT,
+  topCount: number = STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT,
   showAll: boolean = false
 ): ChartDataItem[] {
   // Filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
   
-  // Group sales by code, excluding treats
-  const codesSales = activeSales.reduce((acc, sale) => {
+  // Group sales by product, excluding treats
+  const productSales = activeSales.reduce((acc, sale) => {
     if (!sale.product?.name || sale.is_treat) return acc;
     
-    const codeName = sale.product.name;
-    if (!acc[codeName]) {
-      acc[codeName] = { name: codeName, value: 0, total: 0 };
+    const productName = sale.product.name;
+    if (!acc[productName]) {
+      acc[productName] = { name: productName, value: 0, total: 0 };
     }
-    acc[codeName].value += sale.quantity;
-    acc[codeName].total += sale.total_price;
+    acc[productName].value += sale.quantity;
+    acc[productName].total += sale.total_price;
     return acc;
   }, {} as Record<string, ChartDataItem>);
 
   // Sort and slice data
-  const sortedData = Object.values(codesSales)
+  const sortedData = Object.values(productSales)
     .sort((a, b) => b.value - a.value)
     .slice(0, showAll ? undefined : topCount);
 
@@ -159,7 +159,7 @@ export function aggregateSalesByCategory(
 
   return Object.values(salesByItem)
     .sort((a, b) => b.value - a.value)
-    .slice(0, STATISTICS.DEFAULT_TOP_CODES_COUNT);
+    .slice(0, STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT);
 }
 
 /**
@@ -244,7 +244,7 @@ export function calculateSalesStats(sales: SaleWithDetails[]) {
     cardRevenue,
     
     // Order-level stats
-    uniqueCodes: new Set(activeSales.map(sale => sale.code_id)).size,
+    uniqueProducts: new Set(activeSales.map(sale => sale.product_id)).size,
     totalOrders: uniqueOrders.length,
     averageOrderValue: uniqueOrders.length ? finalTotalAmount / uniqueOrders.length : 0
   };

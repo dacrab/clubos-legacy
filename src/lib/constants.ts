@@ -49,9 +49,9 @@ export const PAYMENT_METHOD_LABELS = {
 
 // Business Logic - Statistics
 export const STATISTICS = {
-  DEFAULT_TOP_CODES_COUNT: 5,
-  MIN_TOP_CODES_COUNT: 3,
-  MAX_TOP_CODES_COUNT: 10,
+  DEFAULT_TOP_PRODUCTS_COUNT: 5,
+  MIN_TOP_PRODUCTS_COUNT: 3,
+  MAX_TOP_PRODUCTS_COUNT: 10,
   DEFAULT_DAYS_TO_SHOW: 7,
   MIN_DAYS_TO_SHOW: 3,
   MAX_DAYS_TO_SHOW: 30,
@@ -127,13 +127,16 @@ export const USER_MESSAGES = {
   USER_ALREADY_EXISTS: "Αυτό το όνομα χρήστη υπάρχει ήδη"
 } as const;
 
-// UI Messages - Code Management
-export const CODE_MESSAGES = {
-  CREATE_SUCCESS: 'Ο κωδικός προστέθηκε επιτυχώς',
-  UPDATE_SUCCESS: 'Ο κωδικός ενημερώθηκε επιτυχώς',
-  DELETE_SUCCESS: 'Ο κωδικός διαγράφηκε επιτυχώς',
-  DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον κωδικό;',
-  GENERIC_ERROR: 'Κάτι πήγε στραβά'
+// UI Messages - Product Management
+export const PRODUCT_MESSAGES = {
+  CREATE_SUCCESS: 'Το προϊόν προστέθηκε επιτυχώς',
+  UPDATE_SUCCESS: 'Το προϊόν ενημερώθηκε επιτυχώς',
+  DELETE_SUCCESS: 'Το προϊόν διαγράφηκε επιτυχώς',
+  DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν;',
+  GENERIC_ERROR: 'Κάτι πήγε στραβά',
+  PRODUCT_IN_USE_ERROR: 'Το προϊόν χρησιμοποιείται σε πωλήσεις και δεν μπορεί να διαγραφεί',
+  ERROR_CHECKING_SALES: 'Σφάλμα κατά τον έλεγχο των πωλήσεων',
+  ERROR_DELETING_PRODUCT: 'Σφάλμα κατά τη διαγραφή του προϊόντος',
 } as const;
 
 // UI Messages - Stock Management

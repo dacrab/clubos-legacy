@@ -120,7 +120,7 @@ export type Database = {
           },
         ]
       }
-      codes: {
+      products: {
         Row: {
           category_id: string | null
           created_at: string
@@ -156,14 +156,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "codes_category_id_fkey"
+            foreignKeyName: "products_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "codes_created_by_fkey"
+            foreignKeyName: "products_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
@@ -327,7 +327,6 @@ export type Database = {
       }
       sales: {
         Row: {
-          code_id: string
           created_at: string
           edited_at: string | null
           edited_by: string | null
@@ -336,14 +335,14 @@ export type Database = {
           is_edited: boolean
           is_treat: boolean
           order_id: string
-          original_code: string | null
+          original_product_name: string | null
           original_quantity: number | null
+          product_id: string
           quantity: number
           total_price: number
           unit_price: number
         }
         Insert: {
-          code_id: string
           created_at?: string
           edited_at?: string | null
           edited_by?: string | null
@@ -352,14 +351,14 @@ export type Database = {
           is_edited?: boolean
           is_treat?: boolean
           order_id: string
-          original_code?: string | null
+          original_product_name?: string | null
           original_quantity?: number | null
+          product_id: string
           quantity: number
           total_price: number
           unit_price: number
         }
         Update: {
-          code_id?: string
           created_at?: string
           edited_at?: string | null
           edited_by?: string | null
@@ -368,20 +367,14 @@ export type Database = {
           is_edited?: boolean
           is_treat?: boolean
           order_id?: string
-          original_code?: string | null
+          original_product_name?: string | null
           original_quantity?: number | null
+          product_id?: string
           quantity?: number
           total_price?: number
           unit_price?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "sales_code_id_fkey"
-            columns: ["code_id"]
-            isOneToOne: false
-            referencedRelation: "codes"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sales_edited_by_fkey"
             columns: ["edited_by"]
@@ -394,6 +387,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -431,9 +431,23 @@ export type Database = {
         Args: {
           p_register_session_id: string
           p_closed_by_name: string
-          p_notes?: Json
+          p_notes?: Json | null
         }
         Returns: string
+      }
+      handle_new_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_user_id: string
+        }
+      }
+      update_modified_column: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      update_stock_after_sale: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
       }
     }
     Enums: {

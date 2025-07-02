@@ -38,7 +38,7 @@ CREATE TABLE public.categories (
 );
 
 -- Create codes (products) table
-CREATE TABLE public.codes (
+CREATE TABLE public.products (
     id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     name text NOT NULL,
     price numeric(10,2) NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE public.codes (
     updated_at timestamptz DEFAULT now(),
     CONSTRAINT valid_price CHECK (price >= 0),
     CONSTRAINT valid_stock CHECK (stock >= -1), -- -1 for unlimited stock
-    CONSTRAINT unique_code_name UNIQUE (name)
+    CONSTRAINT unique_product_name UNIQUE (name)
 );
 
 -- Create register sessions table
@@ -100,7 +100,7 @@ CREATE TABLE public.register_closings (
 CREATE TABLE public.sales (
     id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
-    code_id uuid REFERENCES public.codes(id) ON DELETE RESTRICT NOT NULL,
+    product_id uuid REFERENCES public.products(id) ON DELETE RESTRICT NOT NULL,
     quantity integer NOT NULL,
     unit_price numeric(10,2) NOT NULL,
     total_price numeric(10,2) NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE public.sales (
     is_deleted boolean DEFAULT false NOT NULL,
     is_edited boolean DEFAULT false NOT NULL,
     original_quantity integer,
-    original_code text,
+    original_product_name text,
     edited_at timestamptz,
     edited_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -161,18 +161,18 @@ CREATE TABLE public.football_field_bookings (
 CREATE INDEX idx_users_role ON public.users(role);
 CREATE INDEX idx_categories_parent ON public.categories(parent_id);
 CREATE INDEX idx_categories_created_by ON public.categories(created_by);
-CREATE INDEX idx_codes_category ON public.codes(category_id);
-CREATE INDEX idx_codes_stock ON public.codes(stock);
-CREATE INDEX idx_codes_created_by ON public.codes(created_by);
-CREATE INDEX idx_codes_price ON public.codes(price);
-CREATE INDEX idx_codes_name ON public.codes(name text_pattern_ops);
+CREATE INDEX idx_products_category ON public.products(category_id);
+CREATE INDEX idx_products_stock ON public.products(stock);
+CREATE INDEX idx_products_created_by ON public.products(created_by);
+CREATE INDEX idx_products_price ON public.products(price);
+CREATE INDEX idx_products_name ON public.products(name text_pattern_ops);
 CREATE INDEX idx_register_sessions_dates ON public.register_sessions(opened_at, closed_at);
 CREATE INDEX idx_register_sessions_status ON public.register_sessions(closed_at) WHERE closed_at IS NULL;
 CREATE INDEX idx_orders_register_session ON public.orders(register_session_id);
 CREATE INDEX idx_orders_created_by ON public.orders(created_by);
 CREATE INDEX idx_orders_created_at ON public.orders(created_at);
 CREATE INDEX idx_sales_order ON public.sales(order_id);
-CREATE INDEX idx_sales_code ON public.sales(code_id);
+CREATE INDEX idx_sales_product ON public.sales(product_id);
 CREATE INDEX idx_sales_created_at ON public.sales(created_at);
 CREATE INDEX idx_sales_is_treat ON public.sales(is_treat) WHERE is_treat = true;
 CREATE INDEX idx_sales_is_deleted ON public.sales(is_deleted) WHERE is_deleted = true;
@@ -191,7 +191,7 @@ CREATE INDEX idx_football_bookings_user ON public.football_field_bookings(user_i
 -- =============================================================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.register_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.register_closings ENABLE ROW LEVEL SECURITY;
@@ -257,18 +257,18 @@ CREATE POLICY "Enable delete for admin users" ON public.categories
         (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
     );
 
--- Codes policies
-CREATE POLICY "Enable read access for all users" ON public.codes
+-- Products policies
+CREATE POLICY "Enable read access for all users" ON public.products
     FOR SELECT TO authenticated
     USING (true);
 
-CREATE POLICY "Enable insert for admin users" ON public.codes
+CREATE POLICY "Enable insert for admin users" ON public.products
     FOR INSERT TO authenticated
     WITH CHECK (
         (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
     );
 
-CREATE POLICY "Enable update for admin users" ON public.codes
+CREATE POLICY "Enable update for admin users" ON public.products
     FOR UPDATE TO authenticated
     USING (
         (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
@@ -277,7 +277,7 @@ CREATE POLICY "Enable update for admin users" ON public.codes
         (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
     );
 
-CREATE POLICY "Enable delete for admin users" ON public.codes
+CREATE POLICY "Enable delete for admin users" ON public.products
     FOR DELETE TO authenticated
     USING (
         (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
@@ -433,17 +433,17 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-    v_code text;
+    v_product_name text;
 BEGIN
     -- Skip check for unlimited stock items (-1)
     IF EXISTS (
-        SELECT 1 FROM public.codes 
-        WHERE id = NEW.code_id 
+        SELECT 1 FROM public.products 
+        WHERE id = NEW.product_id 
         AND stock != -1
         AND stock < NEW.quantity
     ) THEN
-        SELECT name INTO v_code FROM public.codes WHERE id = NEW.code_id;
-        RAISE EXCEPTION 'Insufficient stock for product %', v_code;
+        SELECT name INTO v_product_name FROM public.products WHERE id = NEW.product_id;
+        RAISE EXCEPTION 'Insufficient stock for product %', v_product_name;
     END IF;
     RETURN NEW;
 END;
@@ -464,9 +464,9 @@ SET search_path = ''
 AS $$
 BEGIN
     -- Skip update for unlimited stock items (-1)
-    UPDATE public.codes
+    UPDATE public.products
     SET stock = stock - NEW.quantity
-    WHERE id = NEW.code_id
+    WHERE id = NEW.product_id
     AND stock != -1;
     
     RETURN NEW;
@@ -498,8 +498,8 @@ CREATE TRIGGER update_users_modtime
     FOR EACH ROW
     EXECUTE FUNCTION public.update_modified_column();
 
-CREATE TRIGGER update_codes_modtime
-    BEFORE UPDATE ON public.codes
+CREATE TRIGGER update_products_modtime
+    BEFORE UPDATE ON public.products
     FOR EACH ROW
     EXECUTE FUNCTION public.update_modified_column();
 

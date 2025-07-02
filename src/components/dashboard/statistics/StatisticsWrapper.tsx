@@ -2,7 +2,7 @@
 
 import StatsCards from "./StatsCards";
 import SalesChart from "./SalesChart";
-import TopCodesChart from "./TopCodesChart";
+import TopProductsChart from "./TopProductsChart";
 import CategorySalesChart from "./CategorySalesChart";
 import RevenueChart from "./RevenueChart";
 import StatisticsFilter from "./StatisticsFilter";
@@ -52,19 +52,15 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
         <StatsCards sales={filteredSales} />
 
         {/* Daily Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SalesChart sales={filteredSales} />
           <RevenueChart sales={filteredSales} />
-        </div>
-
-        {/* Analysis Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <TopCodesChart sales={filteredSales} />
           <CategorySalesChart 
             sales={filteredSales} 
-            categories={categories} 
-            subCategories={subCategories} 
+            categories={categories}
+            subCategories={subCategories}
           />
+          <TopProductsChart sales={filteredSales} />
         </div>
       </div>
     </div>

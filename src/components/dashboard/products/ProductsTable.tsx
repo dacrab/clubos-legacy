@@ -5,18 +5,31 @@ import { useRouter } from "next/navigation";
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from "sonner";
 import { Trash2, Edit2, PackageX } from "lucide-react";
-import { usePolling } from "@/hooks/utils/usePolling";
+import useSWR from 'swr';
 import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
+import { createClientSupabase } from '@/lib/supabase/client';
+import { Table, TableBody, TableCell, TableHead, TableHeader as UiTableHeader, TableRow as UiTableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import AddProductButton from "./AddProductButton";
+import ManageCategoriesButton from "./ManageCategoriesButton";
+import { ProductImage } from "@/components/ui/product-image";
+import { StockStatusBadge } from "@/components/ui/stock-status-badge";
+import { SortButton } from "@/components/ui/sort-button";
+import { formatPrice } from "@/lib/utils";
 
 // Database and types
-import { createClientSupabase } from "@/lib/supabase/client";
-import type { Product } from "@/types/products";
+import type { Category } from "@/types/products";
+
+type Product = import('@/types/products').Product & {
+  category: (import('@/types/products').Category & {
+    parent: Pick<import('@/types/products').Category, 'id' | 'name' | 'description'> | null
+  }) | null
+};
 
 // UI Components
-import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { CodeImage } from "@/components/ui/code-image";
-import { StockStatusBadge } from "@/components/ui/stock-status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
 
@@ -28,7 +41,7 @@ import { deleteProduct } from "@/app/actions/deleteProduct";
 import { cn } from "@/lib/utils";
 import { 
   UNLIMITED_STOCK,
-  CODE_MESSAGES as PRODUCT_MESSAGES,
+  PRODUCT_MESSAGES,
   STOCK_MESSAGES,
   LOW_STOCK_THRESHOLD,
   API_ERROR_MESSAGES
@@ -52,7 +65,7 @@ interface TableRowProps {
 // Helper Functions
 const getStockStatus = (stock: number) => {
   if (stock === UNLIMITED_STOCK) {
-    return { text: 'Аπεριόριστο', className: 'bg-green-100 text-green-800 ring-green-600/20' };
+    return { text: 'Απεριόριστο', className: 'bg-green-100 text-green-800 ring-green-600/20' };
   }
   if (stock === 0) {
     return { text: 'Εξαντλημένο', className: 'bg-red-100 text-red-800 ring-red-600/20' };
@@ -68,7 +81,7 @@ const hasUnlimitedStock = (product: Product) => product.stock === UNLIMITED_STOC
 const formatCategoryPath = (product: Product) => {
   if (!product.category) return '';
   return product.category.parent?.name 
-    ? `${product.category.parent.name}/${product.category.name}`
+    ? `${product.category.parent.name} / ${product.category.name}`
     : product.category.name;
 };
 
@@ -145,30 +158,36 @@ export default function ProductsTable({ products: initialProducts, isAdmin }: Pr
   const router = useRouter();
   const supabase = createClientSupabase();
 
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => { setProducts(initialProducts); }, [initialProducts]);
-
   const fetchProducts = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('codes')
-        .select(`*, category:categories!codes_category_id_fkey (*, parent:categories!parent_id(id, name, description))`)
-        .order('name')
-        .returns<Product[]>();
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error polling for products:', error);
+    const { data, error } = await supabase
+      .from('products')
+      .select(`*, category:categories(*, parent:categories(*))`)
+      .order('name')
+      .returns<Product[]>();
+    if (error) {
+      console.error("Error fetching products:", error);
+      throw error;
     }
+    return data || [];
   }, [supabase]);
 
-  usePolling({ onPoll: fetchProducts, interval: 5000, enabled: true });
+  const { data: swrProducts } = useSWR('products', fetchProducts, {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+  });
+
+  useEffect(() => {
+    if (swrProducts) {
+      setProducts(swrProducts);
+    }
+  }, [swrProducts]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleSort = useCallback((field: SortField) => {
     setSortOrder(current => sortField === field ? (current === 'asc' ? 'desc' : 'asc') : 'asc');
@@ -200,8 +219,16 @@ export default function ProductsTable({ products: initialProducts, isAdmin }: Pr
       if (fieldB === null || fieldB === undefined) return -1;
 
       let comparison = 0;
-      if (fieldA > fieldB) comparison = 1;
-      else if (fieldA < fieldB) comparison = -1;
+      if (sortField === 'category') {
+        const categoryA = formatCategoryPath(a);
+        const categoryB = formatCategoryPath(b);
+        comparison = categoryA.localeCompare(categoryB);
+      } else if (typeof fieldA === 'string' && typeof fieldB === 'string') {
+        comparison = fieldA.localeCompare(fieldB);
+      } else {
+        if (fieldA > fieldB) comparison = 1;
+        else if (fieldA < fieldB) comparison = -1;
+      }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   }, [products, sortField, sortOrder]);
@@ -248,7 +275,9 @@ export default function ProductsTable({ products: initialProducts, isAdmin }: Pr
               const product = sortedProducts[virtualRow.index];
               return (
                 <div key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={cn("absolute top-0 left-0 w-full border-b", virtualRow.index === sortedProducts.length - 1 && "border-b-0")} style={{ transform: `translateY(${virtualRow.start}px)` }}>
-                  <TableRow product={product} isAdmin={isAdmin} onEdit={setEditingProduct} onDelete={setProductToDelete} />
+                  <UiTableRow>
+                    <TableRow product={product} isAdmin={isAdmin} onEdit={setEditingProduct} onDelete={setProductToDelete} />
+                  </UiTableRow>
                 </div>
               );
             })}

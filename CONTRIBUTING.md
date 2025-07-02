@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-Thank you for your interest in contributing to Proteas! This document provides guidelines and instructions for contributing to this project.
+First off, thank you for considering contributing to Proteas. It's people like you that make Proteas such a great tool.
 
 ## 📋 Table of Contents
 
@@ -18,12 +18,7 @@ Thank you for your interest in contributing to Proteas! This document provides g
 
 ## 📜 Code of Conduct
 
-By participating in this project, you agree to abide by our code of conduct:
-
-- Be respectful and inclusive of all contributors
-- Provide constructive feedback
-- Focus on the best outcomes for the project
-- Be open to different viewpoints and experiences
+This project and everyone participating in it is governed by the [Proteas Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [email@example.com](mailto:email@example.com).
 
 ## 🔧 Development Setup
 
@@ -68,6 +63,7 @@ src/
 │   ├── dashboard/         # Dashboard routes
 │   │   ├── codes/        # Product code management
 │   │   ├── history/      # Sales history tracking
+│   │   ├── products/     # Product management
 │   │   ├── overview/     # Dashboard overview
 │   │   ├── register-closings/ # Register closing records
 │   │   ├── statistics/   # Sales analytics and statistics
@@ -81,8 +77,9 @@ src/
 │   │   ├── inventory/   # Inventory management components
 │   │   ├── register/    # Register management components
 │   │   ├── sales/       # Sales-related components
-│   │   ├── statistics/  # Statistics visualization components
-│   │   └── users/       # User management components
+│   │   ├── products/    # Product management components
+│   │   ├── users/       # User management components
+│   │   └── statistics/  # Statistics-related components
 │   ├── layout/          # Layout components
 │   ├── providers/       # Context providers
 │   └── ui/              # UI components

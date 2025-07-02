@@ -1,46 +1,35 @@
-'use server'
+"use server"
 
 import { revalidatePath } from 'next/cache'
-import { CODE_MESSAGES as PRODUCT_MESSAGES } from '@/lib/constants'
-import { 
-  ActionResponse, 
-  getActionSupabase, 
-  actionSuccess, 
-  handleActionError 
-} from '@/lib/action-utils'
+import { createServerSupabase } from '@/lib/supabase/server'
+import { PRODUCT_MESSAGES } from '@/lib/constants'
+import { ActionResponse, handleActionError, actionSuccess } from '@/lib/action-utils'
 
 export async function deleteProduct(productId: string): Promise<ActionResponse> {
   try {
-    const supabase = await getActionSupabase()
+    const supabase = await createServerSupabase()
 
-    const { data: existingProduct, error: fetchError } = await supabase
-      .from('codes')
+    const { data: sales, error: salesError } = await supabase
+      .from('sales')
       .select('id')
-      .eq('id', productId)
-      .single()
+      .eq('product_id', productId)
+      .limit(1)
 
-    if (fetchError || !existingProduct) {
-      throw new Error('Product not found')
+    if (salesError) {
+      return handleActionError(salesError, PRODUCT_MESSAGES.ERROR_CHECKING_SALES)
     }
 
-    const { error: salesUpdateError } = await supabase
-      .from('sales')
-      .update({ is_deleted: true })
-      .eq('code_id', productId)
-
-    if (salesUpdateError) {
-      console.error('Error updating sales:', salesUpdateError)
-      throw new Error(salesUpdateError.message)
+    if (sales && sales.length > 0) {
+      return { success: false, message: PRODUCT_MESSAGES.PRODUCT_IN_USE_ERROR }
     }
 
     const { error: deleteError } = await supabase
-      .from('codes')
+      .from('products')
       .delete()
       .eq('id', productId)
 
     if (deleteError) {
-      console.error('Delete error:', deleteError)
-      throw new Error(deleteError.message)
+      return handleActionError(deleteError, PRODUCT_MESSAGES.ERROR_DELETING_PRODUCT)
     }
 
     revalidatePath('/dashboard/products')

@@ -112,21 +112,17 @@ export interface DatabaseRegisterSession {
     total_amount: number;
     final_amount: number;
     card_discount_count: number;
+    created_by: string;
     sales: Array<{
       id: string;
       quantity: number;
-      unit_price: number;
       total_price: number;
       is_treat: boolean;
-      is_edited?: boolean;
-      is_deleted?: boolean;
-      original_code?: string;
-      original_quantity?: number;
-      codes: {
+      product: {
         id: string;
         name: string;
         price: number;
-        categories?: string[];
+        image_url: string | null;
       } | null;
     }> | null;
   }> | null;

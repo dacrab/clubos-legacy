@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart as PieChartIcon, Medal } from "lucide-react";
-import { aggregateSalesByCode, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
+import { aggregateSalesByProduct, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
 import { formatPrice } from "@/lib/utils";
 
-interface TopCodesChartProps {
+interface TopProductsChartProps {
   sales: SaleWithDetails[];
 }
 
@@ -50,12 +50,12 @@ const CHART_CONFIG = {
   }
 };
 
-export default function TopCodesChart({ sales }: TopCodesChartProps) {
-  const [topCount, setTopCount] = useState<number>(STATISTICS.DEFAULT_TOP_CODES_COUNT);
+export default function TopProductsChart({ sales }: TopProductsChartProps) {
+  const [topCount, setTopCount] = useState<number>(STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT);
   const [showAll, setShowAll] = useState(false);
 
   const data = useMemo(() => {
-    return aggregateSalesByCode(sales, topCount, showAll);
+    return aggregateSalesByProduct(sales, topCount, showAll);
   }, [sales, topCount, showAll]);
 
   const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
@@ -93,7 +93,7 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-medium">
-          Κορυφαίοι Κωδικοί
+          Κορυφαία Προϊόντα
         </CardTitle>
         <PieChartIcon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
@@ -101,7 +101,7 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <Label htmlFor="topCount" className="text-sm text-muted-foreground">
-              Αριθμός κωδικών ({STATISTICS.MIN_TOP_CODES_COUNT}-{STATISTICS.MAX_TOP_CODES_COUNT})
+              Αριθμός προϊόντων ({STATISTICS.MIN_TOP_PRODUCTS_COUNT}-{STATISTICS.MAX_TOP_PRODUCTS_COUNT})
             </Label>
             <div className="flex items-center gap-4">
               <Input
@@ -110,14 +110,14 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
                 value={topCount}
                 onChange={e => {
                   const value = parseInt(e.target.value);
-                  if (value >= STATISTICS.MIN_TOP_CODES_COUNT && value <= STATISTICS.MAX_TOP_CODES_COUNT) {
+                  if (value >= STATISTICS.MIN_TOP_PRODUCTS_COUNT && value <= STATISTICS.MAX_TOP_PRODUCTS_COUNT) {
                     setTopCount(value);
                   }
                 }}
                 className="w-24"
                 disabled={showAll}
-                min={STATISTICS.MIN_TOP_CODES_COUNT}
-                max={STATISTICS.MAX_TOP_CODES_COUNT}
+                min={STATISTICS.MIN_TOP_PRODUCTS_COUNT}
+                max={STATISTICS.MAX_TOP_PRODUCTS_COUNT}
               />
               <div className="flex items-center space-x-2">
                 <Checkbox
