@@ -13,6 +13,8 @@ import { formatPrice } from "@/lib/utils";
 import { SaleWithDetails, Product } from "@/types/sales";
 import { createClientSupabase } from "@/lib/supabase/client";
 import { useSaleActions } from '@/hooks/features/sales/useSaleActions';
+import { Gift, Pencil, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Constants
 const EDIT_WINDOW_MINUTES = 5;
@@ -55,7 +57,12 @@ function SaleStatusBadge({
     return <Badge variant="destructive">Διαγράφηκε</Badge>;
   }
   if (isTreat) {
-    return <Badge variant="default" className="bg-amber-500">Κέρασμα</Badge>;
+    return (
+      <Badge variant="default" className="bg-amber-500 flex items-center gap-1">
+        <Gift className="h-3 w-3" />
+        <span>Κέρασμα</span>
+      </Badge>
+    );
   }
   if (isEdited) {
     return (
@@ -125,8 +132,8 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
           </Select>
           <Input type="number" value={quantity} onChange={e => setQuantity(parseInt(e.target.value))} />
           <Checkbox checked={isTreat} onCheckedChange={c => setIsTreat(Boolean(c))} />
-          <Button type="submit">Save</Button>
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button type="submit">Αποθήκευση</Button>
+          <Button variant="ghost" onClick={onCancel}>Ακύρωση</Button>
         </form>
       </CardContent>
     </Card>
@@ -194,17 +201,51 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
       {isEditing ? (
         <EditSaleForm sale={currentSale} onSave={handleEdit} onCancel={() => setIsEditing(false)} />
       ) : (
-        <div>
-          <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>
-          <SaleStatusBadge 
-            isDeleted={currentSale.is_deleted} 
-            isTreat={currentSale.is_treat}
-            isEdited={currentSale.is_edited}
-            originalProductCode={currentSale.original_product_name || undefined}
-            originalQuantity={currentSale.original_quantity || undefined}
-          />
-          {canEdit && <Button onClick={() => setIsEditing(true)}>Edit ({timeLeft})</Button>}
-          <Button onClick={handleDelete} disabled={isLoading}>Delete</Button>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>
+            <SaleStatusBadge 
+              isDeleted={currentSale.is_deleted} 
+              isTreat={currentSale.is_treat}
+              isEdited={currentSale.is_edited}
+              originalProductCode={currentSale.original_product_name || undefined}
+              originalQuantity={currentSale.original_quantity || undefined}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsEditing(true)}
+              disabled={!canEdit || isLoading || currentSale.is_deleted}
+              title={
+                currentSale.is_deleted
+                  ? 'Το προϊόν έχει διαγραφεί'
+                  : canEdit
+                  ? `Επεξεργασία (${timeLeft} απομένουν)`
+                  : 'Ο χρόνος για επεξεργασία έχει λήξει'
+              }
+            >
+              <Pencil className="w-4 h-4" />
+              <span className="sr-only">Επεξεργασία</span>
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={handleDelete}
+              disabled={!canEdit || isLoading || currentSale.is_deleted}
+              title={
+                currentSale.is_deleted
+                  ? 'Το προϊόν έχει διαγραφεί'
+                  : canEdit
+                  ? 'Διαγραφή'
+                  : 'Ο χρόνος για διαγραφή έχει λήξει'
+              }
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="sr-only">Διαγραφή</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

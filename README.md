@@ -1,4 +1,4 @@
-# 🚀 Proteas - Modern Next.js Dashboard
+# 🚀 Modern Custom POS System in NextJS and Supabase
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -141,45 +141,45 @@ Before you begin, ensure you have the following installed:
 ```text
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── actions/           # Server actions
-│   ├── api/               # API routes
-│   ├── dashboard/         # Dashboard routes
-│   │   ├── codes/        # Product code management
-│   │   ├── history/      # Sales history tracking
-│   │   ├── products/     # Product management
-│   │   ├── overview/     # Dashboard overview
-│   │   ├── closings/     # Cash register closing history
-│   │   └── statistics/   # Sales statistics and charts
-│   ├── loading/          # Loading state components
-│   └── fonts/            # Custom fonts
-├── components/            # React components
-│   ├── auth/             # Authentication components
-│   ├── dashboard/        # Dashboard-specific components
-│   │   ├── codes/       # Product code management components
-│   │   ├── inventory/   # Inventory management components
-│   │   ├── register/    # Register management components
-│   │   ├── sales/       # Sales-related components
-│   │   ├── products/    # Product management components
-│   │   ├── users/       # User management components
-│   │   └── statistics/  # Statistics-related components
-│   ├── layout/          # Layout components
-│   ├── providers/       # Context providers
-│   └── ui/              # UI components
-├── hooks/                # Custom React hooks
-│   ├── usePolling.ts    # Data polling hook
-│   ├── useSales.ts      # Sales management hook
-│   └── useSaleActions.ts # Sale action handlers
-├── lib/                  # Shared libraries and utilities
-│   ├── utils/           # Utility functions
-│   ├── constants.ts     # Application constants
-│   ├── supabase.ts      # Supabase client
-│   └── utils.ts         # Helper functions
-├── types/                # TypeScript types
-│   ├── supabase.ts      # Supabase database types
-│   ├── sales.ts         # Sales-related types
-│   ├── register.ts      # Register-related types
-│   └── appointments.ts  # Appointment types
-└── middleware.ts        # Next.js middleware
+│   ├── actions/            # Server actions
+│   ├── api/                # API routes
+│   ├── dashboard/          # Dashboard routes and pages
+│   │   ├── history/
+│   │   ├── overview/
+│   │   ├── products/
+│   │   ├── register-closings/
+│   │   ├── statistics/
+│   │   └── users/
+│   ├── fonts/              # Custom fonts
+│   ├── layout.tsx          # Root layout
+│   └── page.tsx            # Landing page
+├── components/             # React components
+│   ├── auth/               # Authentication components
+│   ├── dashboard/          # Dashboard-specific components
+│   │   ├── appointments/
+│   │   ├── bookings/
+│   │   ├── inventory/
+│   │   ├── layout/
+│   │   ├── overview/
+│   │   ├── products/
+│   │   ├── register/
+│   │   ├── sales/
+│   │   ├── statistics/
+│   │   └── users/
+│   ├── layout/             # General layout components
+│   ├── providers/          # Context providers
+│   └── ui/                 # UI components from shadcn/ui
+├── hooks/                  # Custom React hooks
+│   ├── auth/               # Authorization hooks
+│   ├── data/               # Data fetching hooks
+│   ├── features/           # Hooks for specific features
+│   └── utils/              # Utility hooks
+├── lib/                    # Shared libraries and utilities
+│   ├── supabase/           # Supabase client instances
+│   ├── utils/              # Utility functions
+│   └── ...                 # Other helpers and constants
+├── middleware.ts           # Next.js middleware
+└── types/                  # TypeScript type definitions
 ```
 
 ## 🔧 Development

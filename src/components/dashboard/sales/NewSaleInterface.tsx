@@ -111,12 +111,6 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   // Handlers
   const handleProductSelect = useCallback((product: Product) => {
     setOrderItems(prev => {
-      const existing = prev.find(item => item.product.id === product.id && !item.isTreat);
-      if (existing) {
-        return prev.map(item =>
-          item.id === existing.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
       return [
         ...prev,
         { id: uuidv4(), product, quantity: 1, isTreat: false }
@@ -184,7 +178,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
 
   // Renderers
   const renderDesktopView = () => (
-    <div className="grid grid-cols-[300px_1fr_380px] h-[calc(100vh-100px)]">
+    <div className="grid grid-cols-[300px_1fr_380px] h-full">
       <div className="border-r">
         <CategorySection
           categories={categories.map(c => c.name)}
@@ -281,13 +275,12 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className={cn(
-        "max-w-none w-full h-full lg:h-auto lg:w-auto p-0 gap-0 overflow-hidden",
-        "lg:max-w-7xl"
+        "max-w-none w-full h-full p-0 gap-0 overflow-hidden flex flex-col"
       )}>
-        <DialogHeader className="p-4 border-b hidden lg:block">
+        <DialogHeader className="p-4 border-b hidden lg:block flex-shrink-0">
           <DialogTitle>Νέα Πώληση</DialogTitle>
         </DialogHeader>
-        <div className="h-full lg:h-auto">
+        <div className="flex-grow overflow-auto">
           {isDesktop ? renderDesktopView() : renderMobileView()}
         </div>
       </DialogContent>

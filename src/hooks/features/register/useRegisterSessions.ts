@@ -30,7 +30,7 @@ const SESSION_QUERY_FIELDS = `
       is_treat,
       is_edited,
       is_deleted,
-      original_code,
+      original_product_name,
       original_quantity,
       product:products (
         id,
