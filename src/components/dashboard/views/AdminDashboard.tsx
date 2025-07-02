@@ -117,11 +117,9 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
               <p className="text-sm text-muted-foreground">Όριο: {LOW_STOCK_THRESHOLD} τεμάχια</p>
             </div>
           </div>
-          {lowStock.length > 0 && (
-            <Link href="/dashboard/codes" className="text-sm text-primary hover:text-primary/80 transition-colors">
-              Διαχείριση →
-            </Link>
-          )}
+          <Link href="/dashboard/products" className="text-sm text-primary hover:text-primary/80 transition-colors">
+            Διαχείριση →
+          </Link>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto max-h-[400px] sm:max-h-[500px] p-4 sm:p-6">

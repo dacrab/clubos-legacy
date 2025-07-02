@@ -6,70 +6,68 @@ import {
   ALLOWED_USER_ROLES 
 } from '@/lib/constants';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { 
-  checkAdminAccess, 
-  errorResponse, 
-  successResponse, 
-  handleApiError 
-} from '@/lib/api-utils';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Λείπει το Supabase URL ή το service key');
+}
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: Request) {
   try {
-    await checkAdminAccess();
     const { username, password, role = DEFAULT_USER_ROLE } = await request.json();
-    const email = `${username.toLowerCase()}@example.com`; // Create a dummy email
 
     if (!password || !username) {
-      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, 400);
+      return new NextResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, { status: 400 });
     }
 
     if (!ALLOWED_USER_ROLES.includes(role)) {
-      return errorResponse(API_ERROR_MESSAGES.INVALID_ROLE, 400);
+      return new NextResponse(API_ERROR_MESSAGES.INVALID_ROLE, { status: 400 });
     }
 
-    const adminClient = createAdminClient();
-    const { data, error } = await adminClient.auth.admin.createUser({
+    const email = `${username.toLowerCase().replace(/\s+/g, '_')}@example.com`;
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm the dummy email
+      email_confirm: true,
       user_metadata: { username, role }
     });
 
     if (error) {
-      // Check for a more specific error, like user already exists
       if (error.message.includes('already exists')) {
-        return errorResponse(USER_MESSAGES.USER_ALREADY_EXISTS, 409);
+        return new NextResponse(USER_MESSAGES.USER_ALREADY_EXISTS, { status: 409 });
       }
-      console.error('User creation error:', error);
-      return errorResponse('Failed to create user.', 500, error);
+      return new NextResponse(`Αποτυχία δημιουργίας χρήστη: ${error.message}`, { status: 500 });
     }
     
-    // The database trigger (`create_public_user_on_signup`) will handle creating the user profile.
-    // No need for additional logic here to insert/update the `public.users` table.
-
-    return successResponse(data.user, USER_MESSAGES.CREATE_SUCCESS);
-  } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json(data.user);
+  } catch (error: any) {
+    return new NextResponse(`Εσωτερικό σφάλμα διακομιστή: ${error.message}`, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
-    await checkAdminAccess();
-    const supabase = createAdminClient();
-    
-    const { data: users, error } = await supabase
+    const { data: users, error } = await createAdminClient()
       .from('users')
       .select('id, username, role, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
-      return errorResponse('Error fetching users', 500, error);
+      return new NextResponse(
+        JSON.stringify({ error: `Σφάλμα κατά την ανάκτηση χρηστών: ${error.message}` }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-
-    // Return data in the format expected by the useUsers hook
-    return successResponse({ users });
-  } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json({ users });
+  } catch (error: any) {
+    return new NextResponse(
+      JSON.stringify({ error: `Εσωτερικό σφάλμα διακομιστή: ${error.message}` }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

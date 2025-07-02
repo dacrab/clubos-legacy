@@ -72,11 +72,11 @@ export function useUsers() {
   };
 
   const updateUserRole = async (userId: string, role: UserRole) => {
-    await apiRequest(`/api/users/${userId}/role`, 'PATCH', { role }, 'Role updated successfully.');
+    await apiRequest(`/api/users/${userId}`, 'PATCH', { role }, 'Role updated successfully.');
   };
 
   const resetPassword = async (userId: string, password: string) => {
-    await apiRequest(`/api/users/${userId}/reset-password`, 'POST', { password }, USER_MESSAGES.PASSWORD_RESET_SUCCESS);
+    await apiRequest(`/api/users/${userId}`, 'POST', { password }, USER_MESSAGES.PASSWORD_RESET_SUCCESS);
   };
 
   return {

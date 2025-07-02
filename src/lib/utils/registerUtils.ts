@@ -109,6 +109,11 @@ export const calculateProductSummary = (orders?: Order[]): Record<string, Produc
 
   orders.forEach(({ sales = [] }) => {
     sales.forEach((sale) => {
+      if (!sale || !sale.product) {
+        console.warn('Skipping sale with no product:', sale);
+        return;
+      }
+
       const extendedSale = sale as ExtendedSale;
       const { product: { id, name }, quantity, total_price, is_treat } = sale;
       
@@ -173,7 +178,7 @@ export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals 
 
   return orders.reduce((acc, { sales = [], card_discount_count = 0 }) => {
     sales.forEach(sale => {
-      if ((sale as ExtendedSale)?.is_deleted) return;
+      if (!sale || (sale as ExtendedSale)?.is_deleted) return;
       
       if (!sale.is_treat) {
         acc.totalBeforeDiscounts += sale.total_price;

@@ -32,7 +32,7 @@ const SESSION_QUERY_FIELDS = `
       is_deleted,
       original_code,
       original_quantity,
-      codes (
+      product:codes (
         id,
         name,
         price

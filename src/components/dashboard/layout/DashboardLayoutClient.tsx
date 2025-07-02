@@ -2,7 +2,6 @@
 
 import DesktopSidebar from "./DesktopSidebar";
 import MobileBottomNav from "./MobileBottomNav";
-import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
 import { Suspense } from "react";
@@ -12,8 +11,9 @@ import { ErrorFallback } from "@/components/error-fallback";
 import { useState, useEffect } from "react";
 import type { User } from '@supabase/supabase-js';
 import SecretariatDashboard from "../views/SecretariatDashboard";
-import { UserRole } from "@/lib/constants";
 import { UserProfile } from "@/types/next-auth";
+import { useDemoSession } from "@/hooks/useDemoSession";
+import { DemoTimer } from "./DemoTimer";
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
@@ -28,6 +28,7 @@ export default function DashboardLayoutClient({
 }: DashboardLayoutClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
+  const { isDemoSession, remainingTime } = useDemoSession();
 
   // Loading effect on route change
   useEffect(() => {
@@ -61,6 +62,9 @@ export default function DashboardLayoutClient({
                 </>
               )}
             </main>
+          )}
+          {isDemoSession && remainingTime !== null && (
+            <DemoTimer remainingTime={remainingTime} />
           )}
         </div>
       </Suspense>

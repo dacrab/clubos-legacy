@@ -1,11 +1,19 @@
 -- Initial schema for the Proteas application
 BEGIN;
 
--- Enable necessary extensions
+-- =============================================================================
+-- EXTENSIONS
+-- =============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create payment method enum
+-- =============================================================================
+-- TYPES
+-- =============================================================================
 CREATE TYPE public.payment_method_type AS ENUM ('cash', 'card', 'treat');
+
+-- =============================================================================
+-- TABLES
+-- =============================================================================
 
 -- Create users table to bridge auth.users with our application
 CREATE TABLE public.users (
@@ -147,7 +155,9 @@ CREATE TABLE public.football_field_bookings (
     CONSTRAINT unique_field_booking UNIQUE (field_number, booking_datetime)
 );
 
--- Add indexes for better query performance
+-- =============================================================================
+-- INDEXES
+-- =============================================================================
 CREATE INDEX idx_users_role ON public.users(role);
 CREATE INDEX idx_categories_parent ON public.categories(parent_id);
 CREATE INDEX idx_categories_created_by ON public.categories(created_by);
@@ -176,7 +186,9 @@ CREATE INDEX idx_football_bookings_datetime ON public.football_field_bookings(bo
 CREATE INDEX idx_football_bookings_field ON public.football_field_bookings(field_number);
 CREATE INDEX idx_football_bookings_user ON public.football_field_bookings(user_id);
 
--- Enable Row Level Security
+-- =============================================================================
+-- RLS (ROW LEVEL SECURITY)
+-- =============================================================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.codes ENABLE ROW LEVEL SECURITY;
@@ -186,6 +198,10 @@ ALTER TABLE public.register_closings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.football_field_bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+-- =============================================================================
+-- POLICIES
+-- =============================================================================
 
 -- Users policies
 CREATE POLICY "users_select_policy" ON public.users
@@ -321,19 +337,22 @@ CREATE POLICY "Enable insert for authenticated users" ON public.appointments
     FOR INSERT TO authenticated
     WITH CHECK (true);
 
-CREATE POLICY "Enable update for admin users" ON public.appointments
+CREATE POLICY "Enable update for creator or admin users" ON public.appointments
     FOR UPDATE TO authenticated
     USING (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     )
     WITH CHECK (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     );
 
-CREATE POLICY "Enable delete for admin users" ON public.appointments
+CREATE POLICY "Enable delete for creator or admin users" ON public.appointments
     FOR DELETE TO authenticated
     USING (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     );
 
 -- Football field bookings policies
@@ -345,19 +364,22 @@ CREATE POLICY "Enable insert for authenticated users" ON public.football_field_b
     FOR INSERT TO authenticated
     WITH CHECK (true);
 
-CREATE POLICY "Enable update for admin users" ON public.football_field_bookings
+CREATE POLICY "Enable update for creator or admin users" ON public.football_field_bookings
     FOR UPDATE TO authenticated
     USING (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     )
     WITH CHECK (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     );
 
-CREATE POLICY "Enable delete for admin users" ON public.football_field_bookings
+CREATE POLICY "Enable delete for creator or admin users" ON public.football_field_bookings
     FOR DELETE TO authenticated
     USING (
-        (SELECT role FROM public.users WHERE id = (SELECT auth.uid())) = 'admin'
+        user_id = (select auth.uid()) OR
+        (SELECT role FROM public.users WHERE id = (select auth.uid())) = 'admin'
     );
 
 -- Orders policies
@@ -368,6 +390,10 @@ CREATE POLICY "Enable read access for all users" ON public.orders
 CREATE POLICY "Enable insert for authenticated users" ON public.orders
     FOR INSERT TO authenticated
     WITH CHECK (created_by = (SELECT auth.uid()));
+
+-- =============================================================================
+-- FUNCTIONS
+-- =============================================================================
 
 -- Create function to sync auth users to public users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -392,6 +418,12 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_new_user();
+
+-- Backfill existing users from auth.users to public.users
+INSERT INTO public.users (id, username, role)
+SELECT id, COALESCE(raw_user_meta_data->>'username', email), COALESCE(raw_user_meta_data->>'role', 'employee')
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
 
 -- Create function to check stock availability
 CREATE OR REPLACE FUNCTION public.check_stock()
@@ -562,7 +594,9 @@ EXCEPTION
 END;
 $$;
 
--- Grant necessary permissions
+-- =============================================================================
+-- GRANTS
+-- =============================================================================
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
@@ -571,6 +605,10 @@ GRANT EXECUTE ON FUNCTION public.check_stock TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_stock_after_sale TO authenticated;
 GRANT EXECUTE ON FUNCTION public.handle_new_user TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_modified_column TO authenticated;
+
+-- =============================================================================
+-- STORAGE
+-- =============================================================================
 
 -- Create storage bucket for product images
 INSERT INTO storage.buckets (id, name, public)

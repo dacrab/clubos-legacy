@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { UserX } from "lucide-react";
 import ResetPasswordDialog from "@/components/dashboard/users/ResetPasswordDialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 
 export default function UsersPage() {
   const authorizationStatus = useAuthorization();
@@ -28,17 +29,9 @@ export default function UsersPage() {
     loading: mutationLoading
   } = useUsers();
   
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-
-  // Check for mobile view
-  useState(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  });
 
   if (authorizationStatus === 'loading' || usersLoading) return <LoadingAnimation />;
   if (authorizationStatus === 'unauthorized' || isError) {

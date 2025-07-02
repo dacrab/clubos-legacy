@@ -1,79 +1,157 @@
-import { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { 
   checkAdminAccess, 
-  errorResponse, 
-  successResponse, 
-  handleApiError
 } from '@/lib/api-utils';
-import { createServerSupabase } from '@/lib/supabase/server';
-import { RouteHandler } from '@/types/next-auth';
-import { ALLOWED_USER_ROLES, PASSWORD_MIN_LENGTH, USER_MESSAGES } from '@/lib/constants';
+import { ALLOWED_USER_ROLES, PASSWORD_MIN_LENGTH } from '@/lib/constants';
 
-type Params = {
-  userId: string;
-};
-
-// --- DELETE Handler ---
-export const DELETE: RouteHandler<Params> = async (req, { params }) => {
+// GET a specific user
+export async function GET(
+  request: NextRequest
+) {
   try {
-    const { userId } = await params;
+    const userId = request.nextUrl.pathname.split('/').pop();
+    if (!userId) {
+      return new NextResponse(
+        JSON.stringify({ error: 'User ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data, error } = await createAdminClient()
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return new NextResponse('User not found', { status: 404 });
+      }
+      throw error;
+    }
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return new NextResponse(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// DELETE a user
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
     await checkAdminAccess();
     
-    const adminClient = createAdminClient();
-    const { error } = await adminClient.auth.admin.deleteUser(userId);
-
-    if (error) {
-      return errorResponse('Error deleting user', 500, error);
+    const userId = request.nextUrl.pathname.split('/').pop();
+    if (!userId) {
+      return new NextResponse(
+        JSON.stringify({ error: 'User ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    return successResponse(null, USER_MESSAGES.DELETE_SUCCESS);
-  } catch (error) {
-    return handleApiError(error);
-  }
-};
 
-// --- PATCH Handler (for role update) ---
-export const PATCH: RouteHandler<Params> = async (req, { params }) => {
+    const { error } = await createAdminClient().auth.admin.deleteUser(userId);
+    if (error) throw error;
+    
+    return new NextResponse(null, { status: 204 });
+  } catch (error: any) {
+    return new NextResponse(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// PATCH to update a user's role
+export async function PATCH(
+  request: NextRequest
+) {
   try {
-    const { userId } = await params;
     await checkAdminAccess();
 
-    const { role } = await req.json();
+    const userId = request.nextUrl.pathname.split('/').pop();
+    if (!userId) {
+      return new NextResponse(
+        JSON.stringify({ error: 'User ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { role } = await request.json();
     if (!role || !ALLOWED_USER_ROLES.includes(role)) {
-      return errorResponse('Invalid role specified', 400);
+      return new NextResponse(
+        JSON.stringify({ error: 'Invalid role specified' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const supabase = createAdminClient();
+    
+    const { data: user, error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      { app_metadata: { role } }
+    );
+
+    if (updateError) {
+      throw updateError;
     }
 
-    const supabase = await createServerSupabase();
-    const { error } = await supabase.from('users').update({ role }).eq('id', userId);
+    // Also update the public.users table
+    const { error: publicUserError } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', userId);
 
-    if (error) {
-      return errorResponse('Failed to update user role', 500, error);
+    if (publicUserError) {
+      // Log the error but don't block success if auth user was updated
+      console.error('Error updating public.users table:', publicUserError);
     }
-    return successResponse(null, 'User role updated successfully.');
-  } catch (error) {
-    return handleApiError(error);
+    
+    return NextResponse.json(user);
+  } catch (error: any) {
+    return new NextResponse(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-};
+}
 
-// --- POST Handler (for password reset) ---
-export const POST: RouteHandler<Params> = async (req, { params }) => {
+// POST to reset a user's password
+export async function POST(
+  request: NextRequest
+) {
   try {
-    const { userId } = await params;
     await checkAdminAccess();
 
-    const { password } = await req.json();
+    const userId = request.nextUrl.pathname.split('/').pop();
+    if (!userId) {
+      return new NextResponse(
+        JSON.stringify({ error: 'User ID is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { password } = await request.json();
     if (!password || password.length < PASSWORD_MIN_LENGTH) {
-      return errorResponse('Password does not meet the minimum length requirement', 400);
+      return new NextResponse(
+        JSON.stringify({ error: 'Password does not meet the minimum length requirement' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
+    
+    const { data, error } = await createAdminClient().auth.admin.updateUserById(userId, { password });
 
-    const adminClient = createAdminClient();
-    const { error } = await adminClient.auth.admin.updateUserById(userId, { password });
-
-    if (error) {
-      return errorResponse('Failed to reset password', 500, error);
-    }
-    return successResponse(null, USER_MESSAGES.PASSWORD_RESET_SUCCESS);
-  } catch (error) {
-    return handleApiError(error);
+    if (error) throw error;
+    
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return new NextResponse(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-};
+}

@@ -10,8 +10,13 @@ import type { Sale, SaleWithDetails } from '@/types/sales';
 import type { Database } from "@/types/supabase";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 
-export default async function HistoryPage({ searchParams }: any) {
-  const { from, to, startTime, endTime } = searchParams;
+interface HistoryPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function HistoryPage({ searchParams }: HistoryPageProps) {
+  const resolvedParams = await searchParams;
+  const { from, to, startTime, endTime } = resolvedParams;
 
   if (!from) {
     const start = format(startOfMonth(new Date()), DATE_FORMAT.API);

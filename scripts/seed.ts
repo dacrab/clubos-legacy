@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 
 dotenv.config({ path: '.env.local' });
 
@@ -57,6 +59,44 @@ async function createUser(email: string, password: string, metadata: { role: 'ad
   }
 }
 
+async function clearDatabase() {
+  console.log('  - Clearing database...');
+
+  const tables = [
+    'sales',
+    'orders',
+    'appointments',
+    'football_field_bookings',
+    'codes',
+    'categories',
+    'register_sessions',
+  ];
+
+  for (const table of tables) {
+    const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) {
+      console.error(`Error clearing table ${table}:`, error.message);
+      throw new Error(`Failed to clear table ${table}`);
+    }
+  }
+
+  // Clear users
+  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+  if (listError) {
+    console.error('Error listing users for deletion:', listError);
+    throw new Error('Failed to list users for deletion');
+  }
+
+  for (const user of users) {
+    await supabase.auth.admin.deleteUser(user.id);
+  }
+
+  // Add a delay to ensure users are deleted before recreating them
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  console.log('  ✅ Database cleared');
+}
+
 async function createCategories(adminId: string) {
   const categories = [
     {
@@ -95,7 +135,7 @@ async function createCategories(adminId: string) {
   
   if (error) {
     console.error('Error creating categories:', error.message);
-    return;
+    throw new Error('Failed to create categories');
   }
 
   // Update parent_id for subcategories
@@ -106,10 +146,10 @@ async function createCategories(adminId: string) {
 
   if (updateError) {
     console.error('Error updating category parents:', updateError.message);
-    return;
+    throw new Error('Failed to update category parents');
   }
 
-  console.log('Created categories');
+  console.log('✅ Created categories');
 }
 
 async function createProducts(adminId: string) {
@@ -188,10 +228,10 @@ async function createProducts(adminId: string) {
   
   if (error) {
     console.error('Error creating products:', error.message);
-    return;
+    throw new Error('Failed to create products');
   }
 
-  console.log('Created products');
+  console.log('✅ Created products');
 }
 
 async function createRegisterSession() {
@@ -205,23 +245,23 @@ async function createRegisterSession() {
 
   if (error) {
     console.error('Error creating register session:', error.message);
-    return null;
+    throw new Error('Failed to create register session');
   }
 
-  console.log('Created register session');
+  console.log('✅ Created register session');
   return session;
 }
 
-async function createSales(staffId: string) {
+async function createSales(staffId: string, registerSessionId: string) {
   // Create an order first
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       id: 'f8e7d6c5-b4a3-4e2f-91b2-890123456def',
-      register_session_id: 'e9d8c7b6-a5f4-4e3d-b2c1-1a2b3c4d5e6f',
-      total_amount: 7.50,    // Sum of all original prices (2.00 + 3.50 + 2.00)
-      final_amount: 3.50,    // After all discounts (7.50 - 4.00)
-      card_discount_count: 1, // One €2 card discount used
+      register_session_id: registerSessionId,
+      total_amount: 7.50,
+      final_amount: 3.50,
+      card_discount_count: 1,
       created_by: staffId
     })
     .select()
@@ -229,7 +269,7 @@ async function createSales(staffId: string) {
 
   if (orderError) {
     console.error('Error creating order:', orderError.message);
-    return;
+    throw new Error('Failed to create order');
   }
 
   // Create sales linked to the order
@@ -240,7 +280,7 @@ async function createSales(staffId: string) {
       code_id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a', // Espresso
       quantity: 1,
       unit_price: 2.00,
-      total_price: 2.00,     // Now storing actual price, UI will show "Δωρεάν"
+      total_price: 2.00,
       is_treat: true
     },
     {
@@ -249,16 +289,16 @@ async function createSales(staffId: string) {
       code_id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc', // Chocolate
       quantity: 1,
       unit_price: 3.50,
-      total_price: 3.50,     // Original price (discount is handled at order level)
+      total_price: 3.50,
       is_treat: false
     },
     {
       id: 'b6a5f4e3-d2c1-4b3a-92f1-012345678abc',
       order_id: order.id,
-      code_id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Chips
+      code_id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Κρουασάν
       quantity: 1,
       unit_price: 2.00,
-      total_price: 2.00,     // Original price
+      total_price: 2.00,
       is_treat: false
     }
   ];
@@ -267,10 +307,10 @@ async function createSales(staffId: string) {
   
   if (error) {
     console.error('Error creating sales:', error.message);
-    return;
+    throw new Error('Failed to create sales');
   }
 
-  console.log('Created order and sales');
+  console.log('✅ Created order and sales');
 }
 
 async function createAppointments(staffId: string) {
@@ -301,10 +341,10 @@ async function createAppointments(staffId: string) {
   
   if (error) {
     console.error('Error creating appointments:', error.message);
-    return;
+    throw new Error('Failed to create appointments');
   }
 
-  console.log('Created appointments');
+  console.log('✅ Created appointments');
 }
 
 async function createFootballBookings(staffId: string) {
@@ -335,69 +375,75 @@ async function createFootballBookings(staffId: string) {
   
   if (error) {
     console.error('Error creating football bookings:', error.message);
-    return;
+    throw new Error('Failed to create football bookings');
   }
 
-  console.log('Created football bookings');
+  console.log('✅ Created football bookings');
 }
 
 async function seedDatabase() {
   try {
-    console.log('Starting database seeding...');
+    console.log('⏳ Starting database seeding...');
+    
+    await clearDatabase();
 
-    // Create users
-    console.log('Creating admin user...');
+    // Step 1: Create users sequentially as they are prerequisites for everything.
+    console.log('  - Creating users...');
     const admin = await createUser('admin@example.com', 'admin123', { role: 'admin', username: 'Admin User' });
-    if (!admin) {
-      throw new Error('Failed to create admin user');
-    }
+    if (!admin) throw new Error('Failed to create admin user');
 
-    console.log('Creating staff user...');
-    const staff = await createUser('staff@example.com', 'staff123', { role: 'employee', username: 'Staff One' });
-    if (!staff) {
-      throw new Error('Failed to create staff user');
-    }
+    const staff = await createUser('staff@example.com', 'staff123', { role: 'employee', username: 'Staff User' });
+    if (!staff) throw new Error('Failed to create staff user');
 
-    console.log('Creating secretary user...');
     const secretary = await createUser('secretary@example.com', 'secretary123', { role: 'secretary', username: 'Secretary User' });
-    if (!secretary) {
-      throw new Error('Failed to create secretary user');
-    }
+    if (!secretary) throw new Error('Failed to create secretary user');
+    console.log('  ✅ Users created');
 
-    // Create other data
-    console.log('Creating categories...');
+    // Step 2: Create data with dependencies.
+    // These are run sequentially to respect foreign key constraints.
+    console.log('  - Creating catalog data...');
     await createCategories(admin.id);
-    
-    console.log('Creating products...');
     await createProducts(admin.id);
-    
-    console.log('Creating register session...');
-    const session = await createRegisterSession();
-    if (!session) {
-      throw new Error('Failed to create register session');
-    }
-    
-    console.log('Creating sales...');
-    await createSales(staff.id);
-    
-    console.log('Creating appointments...');
-    await createAppointments(staff.id);
-    
-    console.log('Creating football bookings...');
-    await createFootballBookings(staff.id);
+    console.log('  ✅ Catalog data created');
 
-    console.log('Database seeding completed successfully!');
+    console.log('  - Creating initial operational data...');
+    const session = await createRegisterSession();
+    await createSales(staff.id, session.id);
+    console.log('  ✅ Operational data created');
+
+    // Step 3: Create independent data in parallel for efficiency.
+    console.log('  - Creating bookings and appointments in parallel...');
+    await Promise.all([
+      createAppointments(staff.id),
+      createFootballBookings(staff.id),
+    ]);
+    console.log('  ✅ Bookings and appointments created');
+
+    console.log('🚀 Database seeding completed successfully!');
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('❌ Error seeding database:', error);
     if (error instanceof Error) {
-      console.error('Error details:', error.message);
-      console.error('Stack trace:', error.stack);
+      console.error('  Error details:', error.message);
     }
-  } finally {
-    // Add a small delay before exiting to ensure all console logs are printed
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    process.exit(0);
+    throw error;
   }
 }
 
-seedDatabase();
+if (resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  seedDatabase().catch((error) => {
+    console.error('Error executing seed script:', error);
+    process.exit(1);
+  });
+}
+
+export {
+  seedDatabase,
+  createUser,
+  createCategories,
+  createProducts,
+  createRegisterSession,
+  createSales,
+  createAppointments,
+  createFootballBookings,
+  supabase,
+};

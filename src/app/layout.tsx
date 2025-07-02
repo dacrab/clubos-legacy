@@ -52,9 +52,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <LoadingProvider>
-            <PageWrapper variant="root">
+            <main className="flex-1 flex flex-col">
               {children}
-            </PageWrapper>
+            </main>
             <Footer />
             <Toaster position="top-right" />
           </LoadingProvider>

@@ -26,7 +26,7 @@ export const navigation: NavigationItem[] = [
   },
   {
     name: "Κωδικοί",
-    href: "/dashboard/codes",
+    href: "/dashboard/products",
     icon: Barcode,
     roles: ['admin'],
   },
