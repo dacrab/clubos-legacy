@@ -238,7 +238,7 @@ Refer to the inline code comments and type definitions in the codebase.
 
 ## 🤝 Contributing
 
-We welcome contributions to Proteas! Please follow these steps:
+We welcome contributions to Custom NextJS POS! Please follow these steps:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
