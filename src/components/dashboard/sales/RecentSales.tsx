@@ -38,18 +38,12 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
   const { 
     sales, 
     isLoading 
-  } = useSalesData({ limit });
-  
-  // Use initial data if provided and we're still loading
-  const displaySales = useMemo(() => {
-    if (isLoading && initialSales.length > 0) return initialSales;
-    return sales;
-  }, [sales, initialSales, isLoading]);
+  } = useSalesData({ limit }, initialSales);
   
   // Memoize our grouped orders
   const groupedOrders = useMemo(() => 
-    groupSalesIntoOrders(displaySales || []),
-    [displaySales]
+    groupSalesIntoOrders(sales || []),
+    [sales]
   );
   
   // Memoize toggle function

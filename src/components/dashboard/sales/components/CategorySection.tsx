@@ -5,15 +5,15 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { Product } from "@/types/sales";
+import type { Category, Product } from "@/types/sales";
 
 interface CategorySectionProps {
-    categories: string[];
+    categories: Category[];
     categoriesMap: Record<string, any[]>;
-    selectedCategory: string | null;
-    selectedSubcategory: string | null;
-    onCategorySelect: (category: string | null) => void;
-    onSubcategorySelect: (name: string) => void;
+    selectedCategory: Category | null;
+    selectedSubcategory: Category | null;
+    onCategorySelect: (category: Category | null) => void;
+    onSubcategorySelect: (name: Category) => void;
     onClose?: () => void;
     products: Product[];
     isMobile?: boolean;
@@ -24,7 +24,7 @@ const CategoryButton = memo(({
     isSelected,
     onClick
 }: {
-    category: string | null;
+    category: Category | null;
     isSelected: boolean;
     onClick: () => void;
 }) => (
@@ -39,17 +39,17 @@ const CategoryButton = memo(({
                 : "hover:bg-muted/80 text-foreground"
         )}
     >
-        {category || 'Όλα τα προϊόντα'}
+        {category?.name || 'Όλα τα προϊόντα'}
     </button>
 ));
 CategoryButton.displayName = 'CategoryButton';
 
 const SubcategoryButton = memo(({
-    name,
+    subcategory,
     isSelected,
     onClick
 }: {
-    name: string;
+    subcategory: Category;
     isSelected: boolean;
     onClick: () => void;
 }) => (
@@ -65,7 +65,7 @@ const SubcategoryButton = memo(({
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
         )}
     >
-        <span className="ml-2">↳ {name}</span>
+        <span className="ml-2">↳ {subcategory.name}</span>
     </button>
 ));
 SubcategoryButton.displayName = 'SubcategoryButton';
@@ -104,23 +104,21 @@ const CategorySection = memo(({
                     />
 
                     {categories.map(category => (
-                        <div key={category} className="space-y-1 mb-3">
+                        <div key={category.id} className="space-y-1 mb-3">
                             <CategoryButton
                                 category={category}
-                                isSelected={selectedCategory === category}
+                                isSelected={selectedCategory?.id === category.id}
                                 onClick={() => onCategorySelect(category)}
                             />
 
-                            {selectedCategory === category && (
+                            {selectedCategory?.id === category.id && (
                                 <div className="ml-2 space-y-1 mt-1">
-                                    {categoriesMap[products.find(product =>
-                                        product.category?.name === category
-                                    )?.category?.id || '']?.map(subcat => (
+                                    {categoriesMap[category.id]?.map(subcat => (
                                         <SubcategoryButton
                                             key={subcat.id}
-                                            name={subcat.name}
-                                            isSelected={selectedSubcategory === subcat.name}
-                                            onClick={() => onSubcategorySelect(subcat.name)}
+                                            subcategory={subcat}
+                                            isSelected={selectedSubcategory?.id === subcat.id}
+                                            onClick={() => onSubcategorySelect(subcat)}
                                         />
                                     ))}
                                 </div>

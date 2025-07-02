@@ -8,7 +8,7 @@ import { Trash2, Edit2, PackageX } from "lucide-react";
 import useSWR from 'swr';
 import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 import { createClientSupabase } from '@/lib/supabase/client';
-import { Table, TableBody, TableCell, TableHead, TableHeader as UiTableHeader, TableRow as UiTableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader as UiTableHeader } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import AddProductButton from "./AddProductButton";
@@ -73,7 +73,7 @@ const getStockStatus = (stock: number) => {
   if (stock < LOW_STOCK_THRESHOLD) {
     return { text: `Χαμηλό (${stock})`, className: 'bg-yellow-100 text-yellow-800 ring-yellow-600/20' };
   }
-  return { text: 'Σε απόθεμα', className: 'bg-blue-100 text-blue-800 ring-blue-600/20' };
+  return { text: `Σε απόθεμα (${stock})`, className: 'bg-blue-100 text-blue-800 ring-blue-600/20' };
 };
 
 const hasUnlimitedStock = (product: Product) => product.stock === UNLIMITED_STOCK;
@@ -275,9 +275,7 @@ export default function ProductsTable({ products: initialProducts, isAdmin }: Pr
               const product = sortedProducts[virtualRow.index];
               return (
                 <div key={virtualRow.key} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} className={cn("absolute top-0 left-0 w-full border-b", virtualRow.index === sortedProducts.length - 1 && "border-b-0")} style={{ transform: `translateY(${virtualRow.start}px)` }}>
-                  <UiTableRow>
-                    <TableRow product={product} isAdmin={isAdmin} onEdit={setEditingProduct} onDelete={setProductToDelete} />
-                  </UiTableRow>
+                  <TableRow product={product} isAdmin={isAdmin} onEdit={setEditingProduct} onDelete={setProductToDelete} />
                 </div>
               );
             })}

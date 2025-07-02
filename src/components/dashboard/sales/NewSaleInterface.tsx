@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useCallback, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CategorySection } from "./components/CategorySection";
@@ -10,6 +11,7 @@ import { CartSection } from "./components/CartSection";
 import { useSales } from '@/hooks/features/sales/useSales';
 import { cn } from "@/lib/utils";
 import type { OrderItem as OrderItemType, Product, Category } from "@/types/sales";
+import { EXTRA_SHOT_PRICE } from "@/lib/constants";
 
 // ----------------------
 // Type Definitions
@@ -26,6 +28,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   // Sales data and actions
   const {
     products,
+    categories: allCategories,
     categoriesMap,
     isLoading: salesLoading,
     createSale,
@@ -38,21 +41,13 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   const [orderItems, setOrderItems] = useState<OrderItemType[]>([]);
   const [cardDiscountCount, setCardDiscountCount] = useState(0);
   const [view, setView] = useState<'products' | 'categories' | 'cart'>('products');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<Category | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const categories = useMemo(() => {
-    const mainCategories: (Product['category'])[] = [];
-    const seen = new Set<string>();
-    products.forEach(p => {
-      if (p.category && !p.category.parent_id && !seen.has(p.category.id)) {
-        mainCategories.push(p.category);
-        seen.add(p.category.id);
-      }
-    });
-    return mainCategories.filter(Boolean) as Category[];
-  }, [products]);
+    return allCategories.filter((c) => !c.parent_id);
+  }, [allCategories]);
 
   // Reset all state
   const handleReset = useCallback(() => {
@@ -69,20 +64,22 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     if (open) handleReset();
   }, [open, handleReset]);
 
+  const handleCategorySelect = (category: Category | null) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory(null);
+  };
+
   // Filtered products
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    if (selectedCategory) {
-      const categoryId = products.find(p => p.category?.name === selectedCategory)?.category?.id;
-      if (categoryId) {
-        filtered = filtered.filter(
-          p => p.category?.id === categoryId || p.category?.parent_id === categoryId
-        );
-      }
-    }
     if (selectedSubcategory) {
-      filtered = filtered.filter(p => p.category?.name === selectedSubcategory);
+      filtered = filtered.filter(p => p.category?.id === selectedSubcategory.id);
+    } else if (selectedCategory) {
+      const categoryId = selectedCategory.id;
+      filtered = filtered.filter(
+        p => p.category?.id === categoryId || p.category?.parent_id === categoryId
+      );
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -94,17 +91,30 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   }, [products, selectedCategory, selectedSubcategory, searchQuery]);
 
   // Totals
-  const { subtotal, finalTotal } = useMemo(() => {
-    const subtotal = orderItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const finalTotal = Math.max(0, subtotal - cardDiscountCount * 2);
-    return { subtotal, finalTotal };
+  const { subtotal, finalTotal, treatsValue } = useMemo(() => {
+    let subtotal = 0;
+    let treatsValue = 0;
+
+    orderItems.forEach(item => {
+      const dosageExtra = item.dosageCount && item.dosageCount > 1 ? (item.dosageCount - 1) * EXTRA_SHOT_PRICE : 0;
+      const itemPrice = ((item.product.price || 0) + dosageExtra) * item.quantity;
+
+      if (item.isTreat) {
+        treatsValue += itemPrice;
+      } else {
+        subtotal += itemPrice;
+      }
+    });
+
+    const finalTotal = Math.max(0, subtotal - (cardDiscountCount * 2));
+    return { subtotal, finalTotal, treatsValue };
   }, [orderItems, cardDiscountCount]);
 
   // Product section title
   const productSectionTitle = useMemo(() => {
     if (searchQuery) return "Αποτελέσματα Αναζήτησης";
-    if (selectedSubcategory) return selectedSubcategory;
-    if (selectedCategory) return selectedCategory;
+    if (selectedSubcategory) return selectedSubcategory.name;
+    if (selectedCategory) return selectedCategory.name;
     return "Όλα τα προϊόντα";
   }, [selectedCategory, selectedSubcategory, searchQuery]);
 
@@ -131,31 +141,21 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     );
   }, []);
 
-  const handleIncreaseDosage = useCallback((id: string) => {
-    setOrderItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+  const handleDosageIncrease = useCallback((id: string) => {
+    setOrderItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, dosageCount: (item.dosageCount || 1) + 1 } : item
       )
     );
   }, []);
 
-  const handleCategorySelect = useCallback((category: string | null) => {
-    setSelectedCategory(category);
-    setSelectedSubcategory(null);
-    if (!isDesktop) setView('products');
-  }, [isDesktop]);
+  const handleCardDiscountIncrease = useCallback(() => {
+    setCardDiscountCount(prev => prev + 1);
+  }, []);
 
-  const handleSubcategorySelect = useCallback((name: string) => {
-    setSelectedSubcategory(name);
-    if (!isDesktop) setView('products');
-  }, [isDesktop]);
-
-  const handleCardDiscount = useCallback(() => {
-    const nonTreatCount = orderItems.filter(item => !item.isTreat).length;
-    if (cardDiscountCount < Math.floor(nonTreatCount / 3)) {
-      setCardDiscountCount(prev => prev + 1);
-    }
-  }, [orderItems, cardDiscountCount]);
+  const handleCardDiscountDecrease = useCallback(() => {
+    setCardDiscountCount(prev => Math.max(0, prev - 1));
+  }, []);
 
   const handleCardDiscountReset = useCallback(() => setCardDiscountCount(0), []);
 
@@ -167,9 +167,8 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
       finalAmount: finalTotal,
       cardDiscountCount,
     });
-    onOpenChange(false);
     handleReset();
-  }, [createSale, onOpenChange, handleReset, orderItems, subtotal, finalTotal, cardDiscountCount]);
+  }, [createSale, handleReset, orderItems, subtotal, finalTotal, cardDiscountCount]);
 
   const handleCloseDialog = (isOpen: boolean) => {
     if (!isOpen) handleReset();
@@ -181,12 +180,12 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     <div className="grid grid-cols-[300px_1fr_380px] h-full">
       <div className="border-r">
         <CategorySection
-          categories={categories.map(c => c.name)}
+          categories={categories}
           categoriesMap={categoriesMap}
           selectedCategory={selectedCategory}
           selectedSubcategory={selectedSubcategory}
           onCategorySelect={handleCategorySelect}
-          onSubcategorySelect={handleSubcategorySelect}
+          onSubcategorySelect={setSelectedSubcategory}
           products={products}
         />
       </div>
@@ -197,8 +196,8 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
           onProductSelect={handleProductSelect}
           searchQuery={searchQuery}
           onSearchChange={e => setSearchQuery(e.target.value)}
-          selectedCategory={selectedCategory}
-          selectedSubcategory={selectedSubcategory}
+          selectedCategory={selectedCategory?.name ?? null}
+          selectedSubcategory={selectedSubcategory?.name ?? null}
           cartItemsCount={orderItems.length}
         />
       </div>
@@ -207,14 +206,17 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
           orderItems={orderItems}
           onRemove={handleRemoveItem}
           onTreatToggle={handleToggleTreat}
-          onDosageIncrease={handleIncreaseDosage}
+          onDosageIncrease={handleDosageIncrease}
           subtotal={subtotal}
+          treatsValue={treatsValue}
           finalTotal={finalTotal}
           cardDiscountCount={cardDiscountCount}
-          onCardDiscountIncrease={handleCardDiscount}
+          onCardDiscountIncrease={handleCardDiscountIncrease}
+          onCardDiscountDecrease={handleCardDiscountDecrease}
           onCardDiscountReset={handleCardDiscountReset}
           onPayment={handlePayment}
           loading={salesLoading}
+          onShowProducts={() => setView('products')}
         />
       </div>
     </div>
@@ -225,12 +227,12 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
       return (
         <CategorySection
           isMobile
-          categories={categories.map(c => c.name)}
+          categories={categories}
           categoriesMap={categoriesMap}
           selectedCategory={selectedCategory}
           selectedSubcategory={selectedSubcategory}
           onCategorySelect={handleCategorySelect}
-          onSubcategorySelect={handleSubcategorySelect}
+          onSubcategorySelect={setSelectedSubcategory}
           onClose={() => setView('products')}
           products={products}
         />
@@ -243,11 +245,13 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
           orderItems={orderItems}
           onRemove={handleRemoveItem}
           onTreatToggle={handleToggleTreat}
-          onDosageIncrease={handleIncreaseDosage}
+          onDosageIncrease={handleDosageIncrease}
           subtotal={subtotal}
+          treatsValue={treatsValue}
           finalTotal={finalTotal}
           cardDiscountCount={cardDiscountCount}
-          onCardDiscountIncrease={handleCardDiscount}
+          onCardDiscountIncrease={handleCardDiscountIncrease}
+          onCardDiscountDecrease={handleCardDiscountDecrease}
           onCardDiscountReset={handleCardDiscountReset}
           onPayment={handlePayment}
           loading={salesLoading}
@@ -266,8 +270,8 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
         onShowCategories={() => setView('categories')}
         onShowCart={() => setView('cart')}
         cartItemsCount={orderItems.length}
-        selectedCategory={selectedCategory}
-        selectedSubcategory={selectedSubcategory}
+        selectedCategory={selectedCategory?.name ?? null}
+        selectedSubcategory={selectedSubcategory?.name ?? null}
       />
     );
   };

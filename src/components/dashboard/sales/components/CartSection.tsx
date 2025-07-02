@@ -15,9 +15,11 @@ interface CartSectionProps {
   onTreatToggle: (id: string) => void;
   onDosageIncrease: (id: string) => void;
   subtotal: number;
+  treatsValue: number;
   finalTotal: number;
   cardDiscountCount: number;
   onCardDiscountIncrease: () => void;
+  onCardDiscountDecrease: () => void;
   onCardDiscountReset: () => void;
   onPayment: () => void;
   loading: boolean;
@@ -31,9 +33,11 @@ const CartSection = memo(({
   onTreatToggle,
   onDosageIncrease,
   subtotal,
+  treatsValue,
   finalTotal,
   cardDiscountCount,
   onCardDiscountIncrease,
+  onCardDiscountDecrease,
   onCardDiscountReset,
   onPayment,
   loading,
@@ -97,6 +101,13 @@ const CartSection = memo(({
             <span>{subtotal.toFixed(2)}€</span>
           </div>
 
+          {treatsValue > 0 && (
+            <div className="flex items-center justify-between text-sm text-amber-500">
+              <span>Κεράσματα ({treatCount}x):</span>
+              <span>Δωρεάν ({treatsValue.toFixed(2)}€)</span>
+            </div>
+          )}
+
           {cardDiscountCount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-1.5">
@@ -106,8 +117,8 @@ const CartSection = memo(({
                   variant="ghost"
                   size="icon"
                   className="h-5 w-5 text-destructive rounded-full"
-                  onClick={onCardDiscountReset}
-                  aria-label="Αφαίρεση κουπονιών"
+                  onClick={onCardDiscountDecrease}
+                  aria-label="Αφαίρεση ενός κουπονιού"
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -121,12 +132,23 @@ const CartSection = memo(({
             <span>{finalTotal.toFixed(2)}€</span>
           </div>
 
-          {treatCount > 0 && (
-            <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
-              <Gift className="h-3.5 w-3.5" />
-              <span>{treatCount} κεράσματα</span>
-            </div>
-          )}
+          <div className="flex items-center justify-between text-xs mt-1">
+            {treatCount > 0 && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Gift className="h-3.5 w-3.5" />
+                <span>{treatCount} κεράσματα</span>
+              </div>
+            )}
+            {cardDiscountCount > 0 && (
+              <Button
+                variant="link"
+                className="p-0 h-auto text-xs text-destructive"
+                onClick={onCardDiscountReset}
+              >
+                Καθαρισμός κουπονιών
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">

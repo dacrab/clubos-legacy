@@ -52,15 +52,10 @@ export default function SalesTable({
   }), [dateRange, timeRange, searchQuery]);
   
   // Use our custom hook
-  const { sales, isLoading } = useSalesData(filters);
-  
-  // Use initial data if provided and not loading our own
-  const displaySales = useMemo(() => 
-    (isLoading && initialSales.length > 0) ? initialSales : sales,
-  [sales, initialSales, isLoading]);
+  const { sales, isLoading } = useSalesData(filters, initialSales);
   
   // Group the sales for display
-  const groupedSales = useMemo(() => groupSalesIntoOrders(displaySales || []), [displaySales]);
+  const groupedSales = useMemo(() => groupSalesIntoOrders(sales || []), [sales]);
   
   // Calculate total amount
   const totalAmount = useMemo(() => 

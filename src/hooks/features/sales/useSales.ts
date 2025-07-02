@@ -1,20 +1,17 @@
 import useSWR from 'swr';
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { createClientSupabase } from '@/lib/supabase/client';
 import type { OrderItem, NewSale } from '@/types/sales';
-import { Product } from '@/types/products';
+import { Product, Category } from '@/types/products';
 import { useRegisterSessions } from '../register/useRegisterSessions';
 
 const supabase = createClientSupabase();
 
-type CategoriesMap = { [key: string]: (Product['category'])[] };
+type CategoriesMap = { [key: string]: Category[] };
 
 export function useSales() {
   const [isCreating, setIsCreating] = useState(false);
-  const [categoriesMap, setCategoriesMap] = useState<CategoriesMap>({});
-  const router = useRouter();
   const { sessions, refreshData: mutateSession } = useRegisterSessions();
   const session = sessions?.find(s => !s.closed_at);
   
@@ -26,24 +23,36 @@ export function useSales() {
         .select(`*, category:categories(*)`)
         .order('name');
       if (error) throw new Error(error.message);
-      
-      if (data) {
-        const newCategoriesMap = data.reduce((acc: CategoriesMap, product: Product) => {
-          if (product.category?.parent_id) {
-            if (!acc[product.category.parent_id]) {
-              acc[product.category.parent_id] = [];
-            }
-            if (!acc[product.category.parent_id].some(c => c?.id === product.category?.id)) {
-              acc[product.category.parent_id].push(product.category);
-            }
-          }
-          return acc;
-        }, {});
-        setCategoriesMap(newCategoriesMap);
-      }
       return data as Product[];
     }
   );
+  
+  const { data: categories, error: categoriesError, isLoading: isCategoriesLoading } = useSWR(
+    'categories',
+    async () => {
+        const { data, error } = await supabase
+            .from('categories')
+            .select('*')
+            .order('name');
+        if (error) throw new Error(error.message);
+        return data as Category[];
+    }
+  );
+  
+  const categoriesMap = useMemo(() => {
+    if (!categories) return {};
+    return categories.reduce((acc: CategoriesMap, category: Category) => {
+      if (category.parent_id) {
+        if (!acc[category.parent_id]) {
+          acc[category.parent_id] = [];
+        }
+        if (!acc[category.parent_id].some(c => c.id === category.id)) {
+          acc[category.parent_id].push(category);
+        }
+      }
+      return acc;
+    }, {});
+  }, [categories]);
 
   const createSale = useCallback(async (newSale: NewSale) => {
     setIsCreating(true);
@@ -91,19 +100,19 @@ export function useSales() {
       toast.success('Sale created successfully');
       mutateProducts();
       mutateSession();
-      router.push('/dashboard/history');
 
     } catch (error: any) {
       toast.error(`Error creating sale: ${error.message}`);
     } finally {
       setIsCreating(false);
     }
-  }, [session, router, mutateProducts, mutateSession]);
+  }, [session, mutateProducts, mutateSession]);
 
   return {
     products: products || [],
+    categories: categories || [],
     categoriesMap,
-    isLoading: isProductsLoading,
+    isLoading: isProductsLoading || isCategoriesLoading,
     createSale,
     isCreating,
   };
