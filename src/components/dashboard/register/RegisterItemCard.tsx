@@ -87,8 +87,8 @@ const TransactionSummary = memo(function TransactionSummary({
         label="Κεράσματα" 
         value={`${treatsCount}x`} 
         subValue={treatsCount > 0 ? formatPrice(treatsAmount) : undefined} 
-        subValueClassname="text-green-500" 
-        icon={<Gift className="h-3 w-3 text-red-500" />} 
+        subValueClassname="text-amber-500" 
+        icon={<Gift className="h-3 w-3 text-amber-500" />} 
       />
     </div>
   );

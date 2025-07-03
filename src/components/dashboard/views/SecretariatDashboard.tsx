@@ -71,28 +71,66 @@ export default function SecretariatDashboard({ user }: { user: User }) {
               <TabButton value="football" label="Γήπεδα 5x5" />
             </TabsList>
 
-            <TabsContent value="appointments" className="space-y-4 sm:space-y-6">
-              <ListSection icon={Calendar} title="Νέο Παιδικό Πάρτυ">
-                <AppointmentForm />
-              </ListSection>
-              <ListSection icon={Calendar} title="Προσεχή Παιδικά Πάρτυ">
-                <AppointmentsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_UPCOMING} />} />
-              </ListSection>
-              <ListSection icon={Calendar} title="Όλα τα Παιδικά Πάρτυ">
-                <AppointmentsList emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_APPOINTMENTS} />} />
-              </ListSection>
+            <TabsContent value="appointments">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div className="lg:col-span-1">
+                  <ListSection icon={Calendar} title="Νέο Παιδικό Πάρτυ">
+                    <AppointmentForm />
+                  </ListSection>
+                </div>
+                <div className="lg:col-span-2">
+                  <Tabs defaultValue="upcoming" className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg sm:text-xl font-semibold">Λίστα Πάρτυ</h2>
+                      <TabsList>
+                        <TabsTrigger value="upcoming">Προσεχή</TabsTrigger>
+                        <TabsTrigger value="all">Όλα</TabsTrigger>
+                      </TabsList>
+                    </div>
+                    <TabsContent value="upcoming">
+                      <div className="rounded-xl border bg-card">
+                        <AppointmentsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_UPCOMING} />} />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="all">
+                      <div className="rounded-xl border bg-card">
+                        <AppointmentsList emptyState={<EmptyState icon={Calendar} message={APPOINTMENT_MESSAGES.NO_APPOINTMENTS} />} />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
             </TabsContent>
 
-            <TabsContent value="football" className="space-y-4 sm:space-y-6">
-              <ListSection icon={Calendar} title="Κράτηση Γηπέδου 5x5">
-                <FootballFieldBookingForm />
-              </ListSection>
-              <ListSection icon={Calendar} title="Προσεχείς Κρατήσεις">
-                <FootballFieldBookingsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_UPCOMING} />} />
-              </ListSection>
-              <ListSection icon={Calendar} title="Όλες οι Κρατήσεις">
-                <FootballFieldBookingsList emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_BOOKINGS} />} />
-              </ListSection>
+            <TabsContent value="football">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div className="lg:col-span-1">
+                  <ListSection icon={Calendar} title="Κράτηση Γηπέδου 5x5">
+                    <FootballFieldBookingForm />
+                  </ListSection>
+                </div>
+                <div className="lg:col-span-2">
+                  <Tabs defaultValue="upcoming" className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg sm:text-xl font-semibold">Λίστα Κρατήσεων</h2>
+                      <TabsList>
+                        <TabsTrigger value="upcoming">Προσεχή</TabsTrigger>
+                        <TabsTrigger value="all">Όλα</TabsTrigger>
+                      </TabsList>
+                    </div>
+                    <TabsContent value="upcoming">
+                      <div className="rounded-xl border bg-card">
+                        <FootballFieldBookingsList showUpcomingOnly emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_UPCOMING} />} />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="all">
+                      <div className="rounded-xl border bg-card">
+                        <FootballFieldBookingsList emptyState={<EmptyState icon={Calendar} message={FOOTBALL_BOOKING_MESSAGES.NO_BOOKINGS} />} />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

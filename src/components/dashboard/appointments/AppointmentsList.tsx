@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
-import { el } from 'date-fns/locale';
-import { Pencil, Trash2, X, Check } from 'lucide-react';
+import { addDays, isWithinInterval, parseISO, format } from 'date-fns';
+import { Pencil, Trash2, X, Check, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppointments } from '@/hooks/features/appointments/useAppointments';
-import AppointmentForm from './AppointmentForm';
-import { formatDate, formatDateWithGreekAmPm } from "@/lib/utils";
+import { formatDateWithGreekAmPm } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -16,6 +14,8 @@ import {
   TableHeader,
   TableHead,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,20 +23,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   APPOINTMENT_MESSAGES,
   FORM_LABELS,
   BUTTON_LABELS, 
   PLACEHOLDERS,
-  DIALOG_MESSAGES
+  DIALOG_MESSAGES,
+  DATE_FORMAT,
 } from '@/lib/constants';
 import type { Appointment } from '@/types/appointments';
+import { cn } from '@/lib/utils';
+import { el } from 'date-fns/locale';
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
-  <p className="text-xs text-muted-foreground">
-    <span className="font-medium">{label}:</span> {value}
+  <p className="text-sm text-muted-foreground">
+    <span className="font-medium text-foreground">{label}:</span> {value}
   </p>
 );
 
@@ -45,17 +47,27 @@ interface AppointmentsListProps {
   emptyState?: React.ReactNode;
 }
 
+interface EditAppointmentFormState {
+  id?: string;
+  who_booked?: string;
+  contact_details?: string;
+  num_children?: number;
+  num_adults?: number;
+  notes?: string | null;
+  date?: Date;
+  time?: string;
+}
+
 export default function AppointmentsList({ showUpcomingOnly = false, emptyState }: AppointmentsListProps) {
   // State
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Appointment>>({});
+  const [editForm, setEditForm] = useState<EditAppointmentFormState>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
   
   // Data fetching and mutations from hook
-  const { appointments = [], error, isLoading, updateAppointment, deleteAppointment, addAppointment } = useAppointments();
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const { appointments = [], error, isLoading, updateAppointment, deleteAppointment } = useAppointments();
 
   // Filter appointments based on props
   const filteredAppointments = useMemo(() => {
@@ -75,34 +87,36 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
     });
   }, [appointments, showUpcomingOnly]);
 
-  const upcomingAppointments = useMemo(() => {
-    const now = new Date();
-    const threeDaysFromNow = addDays(now, 3);
-    return appointments.filter(appointment => {
-      try {
-        const appointmentDate = parseISO(appointment.date_time);
-        return isWithinInterval(appointmentDate, { start: now, end: threeDaysFromNow });
-      } catch {
-        return false;
-      }
-    });
-  }, [appointments]);
-
   // Event handlers
   const handleEdit = (appointment: Appointment) => {
     setEditingId(appointment.id);
-    setEditForm(appointment);
+    const appointmentDate = new Date(appointment.date_time);
+    setEditForm({
+      ...appointment,
+      date: appointmentDate,
+      time: format(appointmentDate, "HH:mm"),
+    });
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId || !editForm.date_time || !editForm.who_booked || 
-        !editForm.contact_details || !editForm.num_children) {
+    if (!editingId || !editForm.date || !editForm.time || !editForm.who_booked || !editForm.contact_details) {
       toast.error(APPOINTMENT_MESSAGES.REQUIRED_FIELDS);
       return;
     }
     
     setIsMutating(true);
-    const { success } = await updateAppointment(editingId, editForm);
+    
+    const { date, time, ...restOfForm } = editForm;
+    const [hours, minutes] = time.split(':').map(Number);
+    const appointmentDateTime = new Date(date);
+    appointmentDateTime.setHours(hours, minutes);
+
+    const updatePayload: Partial<Appointment> = {
+        ...restOfForm,
+        date_time: appointmentDateTime.toISOString(),
+    };
+
+    const { success } = await updateAppointment(editingId, updatePayload);
     if (success) {
       setEditingId(null);
       setEditForm({});
@@ -150,44 +164,69 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
 
   // Render appointment edit form
   const renderEditForm = (appointment: Appointment) => (
-    <div className="space-y-3 sm:space-y-4" key={appointment.id}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-        <div className="space-y-1.5 sm:space-y-2">
-          <Label htmlFor="who_booked" className="text-sm sm:text-base">{FORM_LABELS.WHO_BOOKED}</Label>
+    <div className="space-y-4" key={appointment.id}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="who_booked">{FORM_LABELS.WHO_BOOKED}</Label>
           <Input
             id="who_booked"
             value={editForm.who_booked || ''}
             onChange={(e) => setEditForm(prev => ({ ...prev, who_booked: e.target.value }))}
             placeholder={PLACEHOLDERS.WHO_BOOKED}
-            className="h-8 sm:h-10 text-sm sm:text-base"
+            className="h-10"
           />
         </div>
-        <div className="space-y-1.5 sm:space-y-2">
-          <Label htmlFor="date_time" className="text-sm sm:text-base">{FORM_LABELS.DATE_TIME}</Label>
-          <Input
-            id="date_time"
-            type="datetime-local"
-            value={editForm.date_time || ''}
-            onChange={(e) => setEditForm(prev => ({ ...prev, date_time: e.target.value }))}
-            className="h-8 sm:h-10 text-sm sm:text-base"
-          />
+        <div className="space-y-2">
+          <Label htmlFor="date_time">{FORM_LABELS.DATE_TIME}</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-10 truncate",
+                      !editForm.date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    {editForm.date ? format(editForm.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editForm.date}
+                    onSelect={(day: Date | undefined) => setEditForm(prev => ({ ...prev, date: day }))}
+                    initialFocus
+                    locale={el}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                value={editForm.time || ''}
+                onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                className="text-center h-10"
+                step="300"
+              />
+            </div>
         </div>
       </div>
 
-      <div className="space-y-1.5 sm:space-y-2">
-        <Label htmlFor="contact_details" className="text-sm sm:text-base">{FORM_LABELS.CONTACT_DETAILS}</Label>
+      <div className="space-y-2">
+        <Label htmlFor="contact_details">{FORM_LABELS.CONTACT_DETAILS}</Label>
         <Input
           id="contact_details"
           value={editForm.contact_details || ''}
           onChange={(e) => setEditForm(prev => ({ ...prev, contact_details: e.target.value }))}
           placeholder={PLACEHOLDERS.CONTACT_DETAILS}
-          className="h-8 sm:h-10 text-sm sm:text-base"
+          className="h-10"
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-        <div className="space-y-1.5 sm:space-y-2">
-          <Label htmlFor="num_children" className="text-sm sm:text-base">{FORM_LABELS.NUM_CHILDREN}</Label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="num_children">{FORM_LABELS.NUM_CHILDREN}</Label>
           <Input
             id="num_children"
             type="number"
@@ -195,11 +234,11 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
             onChange={(e) => setEditForm(prev => ({ ...prev, num_children: parseInt(e.target.value) }))}
             min="1"
             placeholder={PLACEHOLDERS.NUM_CHILDREN}
-            className="h-8 sm:h-10 text-sm sm:text-base"
+            className="h-10"
           />
         </div>
-        <div className="space-y-1.5 sm:space-y-2">
-          <Label htmlFor="num_adults" className="text-sm sm:text-base">{FORM_LABELS.NUM_ADULTS}</Label>
+        <div className="space-y-2">
+          <Label htmlFor="num_adults">{FORM_LABELS.NUM_ADULTS}</Label>
           <Input
             id="num_adults"
             type="number"
@@ -207,43 +246,40 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
             onChange={(e) => setEditForm(prev => ({ ...prev, num_adults: parseInt(e.target.value) }))}
             min="0"
             placeholder={PLACEHOLDERS.NUM_ADULTS}
-            className="h-8 sm:h-10 text-sm sm:text-base"
+            className="h-10"
           />
         </div>
       </div>
 
-      <div className="space-y-1.5 sm:space-y-2">
-        <Label htmlFor="notes" className="text-sm sm:text-base">{FORM_LABELS.NOTES}</Label>
+      <div className="space-y-2">
+        <Label htmlFor="notes">{FORM_LABELS.NOTES}</Label>
         <Textarea
           id="notes"
           value={editForm.notes || ''}
           onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
           rows={3}
           placeholder={PLACEHOLDERS.NOTES}
-          className="text-sm sm:text-base resize-none min-h-[80px]"
+          className="resize-none min-h-[80px]"
         />
       </div>
 
-      <div className="flex justify-end space-x-2">
+      <div className="flex justify-end gap-2 pt-4">
         <Button
-          variant="outline"
-          size="sm"
+          variant="destructive"
           onClick={handleCancelEdit}
-          className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+          className="flex items-center"
         >
-          <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <X className="mr-2 h-4 w-4 flex-shrink-0" />
           {BUTTON_LABELS.CANCEL}
         </Button>
         <LoadingButton
-          variant="default"
-          size="sm"
           onClick={handleSaveEdit}
-          className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+          className="flex items-center"
           loading={isMutating}
           loadingText={DIALOG_MESSAGES.SAVE_LOADING}
         >
-          <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          {BUTTON_LABELS.SAVE}
+          <Check className="mr-2 h-4 w-4 flex-shrink-0" />
+          <span>{BUTTON_LABELS.SAVE}</span>
         </LoadingButton>
       </div>
     </div>
@@ -252,62 +288,50 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
   // Render appointment details
   const renderAppointmentDetails = (appointment: Appointment) => (
     <>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
+      <div className="flex justify-between items-start gap-4 mb-2">
         <div className="flex-1 space-y-1">
-          <h3 className="font-medium text-foreground text-sm sm:text-base">{appointment.who_booked}</h3>
+          <h3 className="font-medium text-foreground">{appointment.who_booked}</h3>
           <p className="text-sm text-muted-foreground">
             {formatDateWithGreekAmPm(new Date(appointment.date_time))}
           </p>
-          <InfoRow 
-            label={FORM_LABELS.CREATED_AT} 
-            value={appointment.created_at ? formatDateWithGreekAmPm(new Date(appointment.created_at)) : ''}
-          />
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-xs sm:text-sm font-medium bg-primary/10 text-primary px-1.5 py-0.5 sm:px-2 sm:py-1 rounded">
-            {appointment.num_children} {FORM_LABELS.NUM_CHILDREN}, {appointment.num_adults} {FORM_LABELS.NUM_ADULTS}
-          </span>
-          <div className="flex gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={() => handleEdit(appointment)}
-              className="h-7 sm:h-9 text-xs sm:text-sm px-1.5 sm:px-3 flex items-center gap-1 sm:gap-2"
+              className="h-8 w-8"
             >
-              <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">{BUTTON_LABELS.EDIT}</span>
+              <Pencil className="h-4 w-4" />
             </Button>
             <Button
               variant="destructive"
-              size="sm"
+              size="icon"
               onClick={() => handleOpenDeleteDialog(appointment.id)}
-              className="h-7 sm:h-9 text-xs sm:text-sm px-1.5 sm:px-3 flex items-center gap-1 sm:gap-2"
+              className="h-8 w-8"
             >
-              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">{DIALOG_MESSAGES.DELETE_BUTTON}</span>
+              <Trash2 className="h-4 w-4" />
             </Button>
-          </div>
         </div>
       </div>
-      <div className="text-xs sm:text-sm">
-        <p className="text-muted-foreground">{FORM_LABELS.CONTACT_DETAILS}:</p>
-        <p className="text-foreground">{appointment.contact_details}</p>
+      <div className="space-y-2">
+        <InfoRow label={FORM_LABELS.CONTACT_DETAILS} value={appointment.contact_details} />
+        <InfoRow label="Συμμετέχοντες" value={`${appointment.num_children} ${FORM_LABELS.NUM_CHILDREN}, ${appointment.num_adults} ${FORM_LABELS.NUM_ADULTS}`} />
+        {appointment.notes && <InfoRow label={FORM_LABELS.NOTES} value={appointment.notes} />}
+         <InfoRow 
+            label={FORM_LABELS.CREATED_AT} 
+            value={appointment.created_at ? formatDateWithGreekAmPm(new Date(appointment.created_at)) : ''}
+          />
       </div>
-      {appointment.notes && (
-        <div className="mt-2 text-xs sm:text-sm">
-          <p className="text-muted-foreground">{FORM_LABELS.NOTES}:</p>
-          <p className="text-foreground">{appointment.notes}</p>
-        </div>
-      )}
     </>
   );
 
   return (
     <>
-      <div className="space-y-3 sm:space-y-4">
+      <div className="space-y-4">
         {filteredAppointments.map((appointment) => (
           <Card key={appointment.id}>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="p-4">
               {editingId === appointment.id 
                 ? renderEditForm(appointment)
                 : renderAppointmentDetails(appointment)

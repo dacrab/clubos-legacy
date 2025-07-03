@@ -46,7 +46,7 @@ const TransactionSummaryCard = ({ totals, closing }: { totals: TransactionTotals
             <div className="text-right">
               <span className="font-medium">{totals.treats}x</span>
               {totals.treats > 0 && (
-                <span className="text-xs text-green-500 block">
+                <span className="text-xs text-amber-500 block">
                   {formatPrice(totals.treatsAmount)}
                 </span>
               )}
@@ -124,7 +124,9 @@ const ProductDetailsCard = ({ productSummary }: { productSummary: Record<string,
                         product.isDeleted ? "text-muted-foreground" : "text-muted-foreground"
                       )}>
                         {product.quantity}x
-                        {product.treatCount > 0 && ` (${product.treatCount}x κέρασμα)`}
+                        {product.treatCount > 0 && 
+                          <span className="text-amber-500"> ({product.treatCount}x κέρασμα)</span>
+                        }
                         {product.isEdited && !product.isDeleted && product.originalCode && product.originalQuantity && (
                           <span className="text-xs text-blue-500 ml-2">
                             από: {product.originalCode} ({product.originalQuantity}x)

@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
-import { el } from 'date-fns/locale';
-import { Pencil, Trash2, X, Check } from 'lucide-react';
+import { addDays, isWithinInterval, parseISO, format } from 'date-fns';
+import { Pencil, Trash2, X, Check, CalendarIcon } from 'lucide-react';
 import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
-import FootballFieldBookingForm from './FootballFieldBookingForm';
 import { formatDateStringWithGreekAmPm } from '@/lib/utils';
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   FOOTBALL_BOOKING_MESSAGES,
   FORM_LABELS, 
@@ -26,15 +25,34 @@ import {
   DATE_FORMAT
 } from '@/lib/constants';
 import type { FootballFieldBooking } from '@/types/bookings';
+import { cn } from '@/lib/utils';
+import { el } from 'date-fns/locale';
+
+const InfoRow = ({ label, value }: { label: string; value: string | number }) => (
+  <p className="text-sm text-muted-foreground">
+    <span className="font-medium text-foreground">{label}:</span> {value}
+  </p>
+);
 
 interface FootballFieldBookingsListProps {
   showUpcomingOnly?: boolean;
   emptyState?: React.ReactNode;
 }
 
+interface EditBookingFormState {
+  id?: string;
+  who_booked?: string;
+  contact_details?: string;
+  field_number?: number;
+  num_players?: number;
+  notes?: string | null;
+  date?: Date;
+  time?: string;
+}
+
 export default function FootballFieldBookingsList({ showUpcomingOnly = false, emptyState }: FootballFieldBookingsListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<FootballFieldBooking>>({});
+  const [editForm, setEditForm] = useState<EditBookingFormState>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
@@ -60,19 +78,40 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
 
   const handleEdit = (booking: FootballFieldBooking) => {
     setEditingId(booking.id);
-    setEditForm(booking);
+    const bookingDate = new Date(booking.booking_datetime);
+    setEditForm({
+      ...booking,
+      date: bookingDate,
+      time: format(bookingDate, "HH:mm"),
+    });
   };
 
   const handleSaveEdit = async () => {
-    if (!editingId) return;
+    if (!editingId || !editForm.date || !editForm.time) return;
     
     setIsMutating(true);
-    const { success } = await updateBooking(editingId, editForm);
+
+    const { date, time, ...restOfForm } = editForm;
+    const [hours, minutes] = time.split(':').map(Number);
+    const bookingDateTime = new Date(date);
+    bookingDateTime.setHours(hours, minutes);
+
+    const updatePayload: Partial<FootballFieldBooking> = {
+        ...restOfForm,
+        booking_datetime: bookingDateTime.toISOString(),
+    };
+    
+    const { success } = await updateBooking(editingId, updatePayload);
     if(success){
       setEditingId(null);
       setEditForm({});
     }
     setIsMutating(false);
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({});
   };
 
   const handleDeleteConfirm = async () => {
@@ -105,54 +144,79 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
 
   return (
     <>
-      <div className="space-y-3 sm:space-y-4">
+      <div className="space-y-4">
         {filteredBookings.map((booking) => (
           <Card key={booking.id}>
-            <CardContent className="p-3 sm:p-4">
+            <CardContent className="p-4">
               {editingId === booking.id ? (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="who_booked" className="text-sm sm:text-base">{FORM_LABELS.WHO_BOOKED}</Label>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="who_booked">{FORM_LABELS.WHO_BOOKED}</Label>
                       <Input
                         id="who_booked"
                         value={editForm.who_booked || ''}
-                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, who_booked: e.target.value }))}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, who_booked: e.target.value }))}
                         placeholder={PLACEHOLDERS.WHO_BOOKED}
-                        className="h-8 sm:h-10 text-sm sm:text-base"
+                        className="h-10"
                       />
                     </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="booking_datetime" className="text-sm sm:text-base">{FORM_LABELS.DATE_TIME}</Label>
-                      <Input
-                        id="booking_datetime"
-                        type="datetime-local"
-                        value={editForm.booking_datetime || ''}
-                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, booking_datetime: e.target.value }))}
-                        className="h-8 sm:h-10 text-sm sm:text-base"
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="booking_datetime">{FORM_LABELS.DATE_TIME}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal h-10 truncate",
+                                !editForm.date && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                              {editForm.date ? format(editForm.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={editForm.date}
+                              onSelect={(day: Date | undefined) => setEditForm(prev => ({ ...prev, date: day }))}
+                              initialFocus
+                              locale={el}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Input
+                          type="time"
+                          value={editForm.time || ''}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                          className="text-center h-10"
+                          step="300"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="contact_details" className="text-sm sm:text-base">{FORM_LABELS.CONTACT_DETAILS}</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_details">{FORM_LABELS.CONTACT_DETAILS}</Label>
                     <Input
                       id="contact_details"
                       value={editForm.contact_details || ''}
-                      onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, contact_details: e.target.value }))}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, contact_details: e.target.value }))}
                       placeholder={PLACEHOLDERS.CONTACT_DETAILS}
-                      className="h-8 sm:h-10 text-sm sm:text-base"
+                      className="h-10"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="field_number" className="text-sm sm:text-base">{FORM_LABELS.FIELD_NUMBER}</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="field_number">{FORM_LABELS.FIELD_NUMBER}</Label>
                       <Select
                         value={editForm.field_number?.toString()}
-                        onValueChange={(value) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, field_number: parseInt(value) }))}
+                        onValueChange={(value) => setEditForm((prev) => ({ ...prev, field_number: parseInt(value) }))}
                       >
-                        <SelectTrigger id="field_number" className="h-8 sm:h-10 text-sm sm:text-base">
+                        <SelectTrigger id="field_number" className="h-10">
                           <SelectValue placeholder="Επιλέξτε γήπεδο" />
                         </SelectTrigger>
                         <SelectContent>
@@ -162,111 +226,94 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="num_players" className="text-sm sm:text-base">{FORM_LABELS.NUM_PLAYERS}</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="num_players">{FORM_LABELS.NUM_PLAYERS}</Label>
                       <Input
                         id="num_players"
                         type="number"
                         value={editForm.num_players || ''}
-                        onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, num_players: parseInt(e.target.value) }))}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, num_players: parseInt(e.target.value) }))}
                         min="2"
                         max="12"
                         placeholder={PLACEHOLDERS.NUM_PLAYERS}
-                        className="h-8 sm:h-10 text-sm sm:text-base"
+                        className="h-10"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="notes" className="text-sm sm:text-base">{FORM_LABELS.NOTES}</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">{FORM_LABELS.NOTES}</Label>
                     <Textarea
                       id="notes"
                       value={editForm.notes || ''}
-                      onChange={(e) => setEditForm((prev: Partial<FootballFieldBooking>) => ({ ...prev, notes: e.target.value }))}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
                       rows={3}
                       placeholder={PLACEHOLDERS.NOTES}
-                      className="text-sm sm:text-base resize-none min-h-[80px]"
+                      className="resize-none min-h-[80px]"
                     />
                   </div>
 
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex justify-end gap-2 pt-4">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingId(null);
-                        setEditForm({});
-                      }}
-                      className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+                      variant="destructive"
+                      onClick={handleCancelEdit}
+                      className="flex items-center"
                     >
-                      <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <X className="mr-2 h-4 w-4 flex-shrink-0" />
                       {BUTTON_LABELS.CANCEL}
                     </Button>
                     <LoadingButton
-                      variant="default"
-                      size="sm"
                       onClick={handleSaveEdit}
-                      className="h-8 sm:h-9 text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
+                      className="flex items-center"
                       loading={isMutating}
                       loadingText={DIALOG_MESSAGES.SAVE_LOADING}
                     >
-                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      {BUTTON_LABELS.SAVE}
+                      <Check className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>{BUTTON_LABELS.SAVE}</span>
                     </LoadingButton>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
-                    <div>
-                      <h3 className="font-medium text-foreground text-sm sm:text-base">{booking.who_booked}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <div className="flex-1 space-y-1">
+                      <h3 className="font-medium text-foreground">{booking.who_booked}</h3>
+                      <p className="text-sm text-muted-foreground">
                         {formatDateStringWithGreekAmPm(booking.booking_datetime)}
                       </p>
-                      <p className="text-[10px] xs:text-xs text-muted-foreground mt-1">
-                        {FORM_LABELS.CREATED_AT}: {formatDateStringWithGreekAmPm(booking.created_at)}
-                        {' '}({formatDistanceToNow(new Date(booking.created_at), { addSuffix: true, locale: el })})
-                      </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <span className="text-xs sm:text-sm font-medium bg-primary/10 text-primary px-1.5 py-0.5 sm:px-2 sm:py-1 rounded">
-                        {FORM_LABELS.FIELD} {booking.field_number}, {booking.num_players} {FORM_LABELS.PLAYERS}
-                      </span>
-                      <div className="flex gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleEdit(booking)}
-                          className="h-7 sm:h-9 text-xs sm:text-sm px-1.5 sm:px-3 flex items-center gap-1 sm:gap-2"
+                          className="h-8 w-8"
                         >
-                          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">{BUTTON_LABELS.EDIT}</span>
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"
-                          size="sm"
+                          size="icon"
                           onClick={() => {
                             setSelectedBookingId(booking.id);
                             setDeleteDialogOpen(true);
                           }}
-                          className="h-7 sm:h-9 text-xs sm:text-sm px-1.5 sm:px-3 flex items-center gap-1 sm:gap-2"
+                          className="h-8 w-8"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">{DIALOG_MESSAGES.DELETE_BUTTON}</span>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
                     </div>
                   </div>
-                  <div className="text-xs sm:text-sm">
-                    <p className="text-muted-foreground">{FORM_LABELS.CONTACT_DETAILS}:</p>
-                    <p className="text-foreground">{booking.contact_details}</p>
+                  <div className="space-y-2">
+                    <InfoRow label={FORM_LABELS.CONTACT_DETAILS} value={booking.contact_details} />
+                    <InfoRow label="Γήπεδο" value={booking.field_number} />
+                    <InfoRow label="Παίκτες" value={booking.num_players} />
+                    {booking.notes && <InfoRow label={FORM_LABELS.NOTES} value={booking.notes} />}
+                    <InfoRow 
+                      label={FORM_LABELS.CREATED_AT} 
+                      value={formatDateStringWithGreekAmPm(booking.created_at)}
+                    />
                   </div>
-                  {booking.notes && (
-                    <div className="mt-2 text-xs sm:text-sm">
-                      <p className="text-muted-foreground">{FORM_LABELS.NOTES}:</p>
-                      <p className="text-foreground">{booking.notes}</p>
-                    </div>
-                  )}
                 </>
               )}
             </CardContent>

@@ -96,49 +96,52 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
 
   // Main Render
   return (
-    <div className="flex flex-col space-y-8 h-full">
-      <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full p-4 md:p-6">
+      {/* Main Actions Column */}
+      <div className="lg:col-span-2 flex flex-col gap-8">
+        
         {/* Add Sale Card */}
-        <div className="group relative overflow-hidden rounded-xl border bg-card hover:shadow-xl transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-full bg-primary/10 p-2.5">
-                <ShoppingBag className="h-5 w-5 text-primary" />
+        <div className="bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300">
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-primary/10 text-primary p-3 rounded-xl">
+                <ShoppingBag className="h-7 w-7" />
               </div>
-              <h2 className="text-xl font-semibold">Νέα Πώληση</h2>
+              <h3 className="text-xl font-bold">Νέα Πώληση</h3>
             </div>
-            <div className="w-full">
-              <AddSaleButton />
-            </div>
+            <p className="text-muted-foreground text-sm mb-6">
+              Ξεκινήστε μια νέα συναλλαγή, προσθέστε προϊόντα και ολοκληρώστε την πώληση.
+            </p>
+            <AddSaleButton className="w-full" />
           </div>
         </div>
 
         {/* Close Register Card */}
-        <div className="group relative overflow-hidden rounded-xl border bg-card hover:shadow-xl transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-full bg-primary/10 p-2.5">
-                <Calculator className="h-5 w-5 text-destructive" />
+        <div className="bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300">
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-destructive/10 text-destructive p-3 rounded-xl">
+                <Calculator className="h-7 w-7" />
               </div>
-              <h2 className="text-xl font-semibold">{REGISTER_DIALOG.TITLE}</h2>
+              <h3 className="text-xl font-bold">{REGISTER_DIALOG.TITLE}</h3>
             </div>
-            <div className="w-full">
-              <CloseRegisterButton onRegisterClosed={() => setLocalRecentSales([])} />
-            </div>
+            <p className="text-muted-foreground text-sm mb-6">
+              Ολοκληρώστε την ημέρα κάνοντας το κλείσιμο του ταμείου και δείτε τα σύνολα.
+            </p>
+            <CloseRegisterButton onRegisterClosed={() => setLocalRecentSales([])} />
           </div>
         </div>
+
       </div>
 
       {/* Recent Sales Section */}
-      <div className="flex-1">
-      <RecentSales 
-        initialSales={localRecentSales} 
-        onDeleteClick={(saleId) => {
-          setLocalRecentSales(prevSales => prevSales.filter(sale => sale.id !== saleId));
-        }}
-      />
+      <div className="lg:col-span-3">
+        <RecentSales 
+          initialSales={localRecentSales} 
+          onDeleteClick={(saleId) => {
+            setLocalRecentSales(prevSales => prevSales.filter(sale => sale.id !== saleId));
+          }}
+        />
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ interface AppointmentFormProps {
 
 const initialFormData = {
   who_booked: '',
-  date: new Date(),
+  date: undefined as Date | undefined,
   time: '',
   contact_details: '',
   num_children: '',
@@ -50,7 +50,7 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
     const { addAppointment } = useAppointments();
     
     const validateForm = () => {
-      if (!formData.who_booked || !formData.time || !formData.contact_details || !formData.num_children || !formData.num_adults) {
+      if (!formData.who_booked || !formData.date || !formData.time || !formData.contact_details || !formData.num_children || !formData.num_adults) {
         toast.error(APPOINTMENT_MESSAGES.REQUIRED_FIELDS);
         return false;
       }
@@ -66,7 +66,8 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
         if (!validateForm()) return;
         
         const [hours, minutes] = formData.time.split(':').map(Number);
-        const appointmentDateTime = new Date(formData.date);
+        // The date is validated in validateForm, so it's safe to assume it's a Date object here.
+        const appointmentDateTime = new Date(formData.date as Date);
         appointmentDateTime.setHours(hours, minutes);
 
         const appointmentData: AppointmentFormData = {
@@ -90,66 +91,65 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
     };
 
     return (
-      <div className="w-full max-w-full sm:max-w-lg mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="who_booked">
-                {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
-              </Label>
+      <div className="w-full">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="who_booked">
+              {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="who_booked"
+              value={formData.who_booked}
+              onChange={(e) => setFormData(prev => ({ ...prev, who_booked: e.target.value }))}
+              placeholder={PLACEHOLDERS.WHO_BOOKED}
+              disabled={isSubmitting}
+              required
+              className="h-10"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-10 truncate",
+                      !formData.date && "text-muted-foreground"
+                    )}
+                    disabled={isSubmitting}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    {formData.date ? format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date}
+                    onSelect={(day: Date | undefined) => setFormData(prev => ({ ...prev, date: day }))}
+                    initialFocus
+                    locale={el}
+                  />
+                </PopoverContent>
+              </Popover>
               <Input
-                id="who_booked"
-                value={formData.who_booked}
-                onChange={(e) => setFormData(prev => ({ ...prev, who_booked: e.target.value }))}
-                placeholder={PLACEHOLDERS.WHO_BOOKED}
-                disabled={isSubmitting}
+                type="time"
+                value={formData.time}
+                onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                className="text-center h-10"
                 required
-                className="h-9 sm:h-10 text-sm sm:text-base"
+                disabled={isSubmitting}
+                step="300"
               />
-            </div>
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label>
-                {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
-              </Label>
-              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal h-9 sm:h-10 text-sm sm:text-base",
-                        !formData.date && "text-muted-foreground"
-                      )}
-                      disabled={isSubmitting}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date ? format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.date}
-                      onSelect={(day: Date | undefined) => setFormData(prev => ({ ...prev, date: day || new Date() }))}
-                      initialFocus
-                      locale={el}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  className="text-center h-9 sm:h-10 text-sm sm:text-base"
-                  required
-                  disabled={isSubmitting}
-                  step="300"
-                />
-              </div>
             </div>
           </div>
   
-          <div className="space-y-1.5 sm:space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="contact_details">
               {FORM_LABELS.CONTACT_DETAILS} <span className="text-destructive">*</span>
             </Label>
@@ -160,12 +160,12 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
               placeholder={PLACEHOLDERS.CONTACT_DETAILS}
               required
               disabled={isSubmitting}
-              className="h-9 sm:h-10 text-sm sm:text-base"
+              className="h-10"
             />
           </div>
   
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-1.5 sm:space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="num_children">
                 {FORM_LABELS.NUM_CHILDREN} <span className="text-destructive">*</span>
               </Label>
@@ -178,10 +178,10 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
                 required
                 placeholder={PLACEHOLDERS.NUM_CHILDREN}
                 disabled={isSubmitting}
-                className="h-9 sm:h-10 text-sm sm:text-base"
+                className="h-10"
               />
             </div>
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="num_adults">
                 {FORM_LABELS.NUM_ADULTS} <span className="text-destructive">*</span>
               </Label>
@@ -194,13 +194,13 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
                 required
                 placeholder={PLACEHOLDERS.NUM_ADULTS}
                 disabled={isSubmitting}
-                className="h-9 sm:h-10 text-sm sm:text-base"
+                className="h-10"
               />
             </div>
           </div>
   
-          <div className="space-y-1.5 sm:space-y-2">
-            <Label htmlFor="notes" className="text-sm sm:text-base">
+          <div className="space-y-2">
+            <Label htmlFor="notes">
               {FORM_LABELS.NOTES}
             </Label>
             <Textarea
@@ -210,13 +210,13 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
               rows={3}
               placeholder={PLACEHOLDERS.NOTES}
               disabled={isSubmitting}
-              className="text-sm sm:text-base resize-none"
+              className="resize-none"
             />
           </div>
   
           <LoadingButton
             type="submit"
-            className="w-full h-11 text-base"
+            className="w-full h-10"
             loading={isSubmitting}
             loadingText={DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}
           >

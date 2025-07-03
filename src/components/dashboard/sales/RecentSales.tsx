@@ -65,7 +65,7 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">Πρόσφατες Πωλήσεις</h2>
           <p className="text-sm text-muted-foreground">
-            Τα τελευταία {limit} προϊόντα που πουλήθηκαν
+            Οι {limit} τελευταίες πωλήσεις.
           </p>
         </div>
         <Link

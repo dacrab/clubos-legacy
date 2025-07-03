@@ -5,11 +5,8 @@ import { toast } from 'sonner';
 import { format } from "date-fns";
 import { el } from 'date-fns/locale';
 import { CalendarIcon } from "lucide-react";
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatDateToYYYYMMDD, formatTimeToHHMM } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +27,6 @@ import {
 // UI Components
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Calendar } from "@/components/ui/calendar";
-import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
 
 // Types
 type FootballFieldBookingFormData = {
@@ -52,7 +48,7 @@ const initialFormData = {
   time: '',
   contact_details: '',
   field_number: '1',
-  num_players: '5',
+  num_players: '',
   notes: ''
 };
 
@@ -115,69 +111,67 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
     };
 
     return (
-        <div className="w-full max-w-full sm:max-w-lg mx-auto">
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
-                        <Label htmlFor="who_booked">
-                            {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
-                        </Label>
+        <div className="w-full">
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="who_booked">
+                        {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                        id="who_booked"
+                        value={formData.who_booked}
+                        onChange={(e) => setFormData(prev => ({ ...prev, who_booked: e.target.value }))}
+                        placeholder={PLACEHOLDERS.WHO_BOOKED}
+                        disabled={isSubmitting}
+                        required
+                        className="h-10"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>
+                        {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={cn(
+                                        "justify-start text-left font-normal w-full h-10 truncate",
+                                        !formData.date && "text-muted-foreground"
+                                    )}
+                                    disabled={isSubmitting}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                                    {formData.date ? 
+                                      format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) :
+                                      "Επιλέξτε ημερομηνία"
+                                    }
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={formData.date}
+                                    onSelect={(date: Date | undefined) => setFormData(prev => ({ ...prev, date }))}
+                                    initialFocus
+                                    className="rounded-md border shadow p-3"
+                                />
+                            </PopoverContent>
+                        </Popover>
                         <Input
-                            id="who_booked"
-                            value={formData.who_booked}
-                            onChange={(e) => setFormData(prev => ({ ...prev, who_booked: e.target.value }))}
-                            placeholder={PLACEHOLDERS.WHO_BOOKED}
-                            disabled={isSubmitting}
+                            type="time"
+                            value={formData.time}
+                            onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                            className="text-center h-10"
                             required
-                            className="h-9 sm:h-10 text-sm sm:text-base"
+                            disabled={isSubmitting}
+                            step="300"
                         />
-                    </div>
-                    <div className="space-y-1.5 sm:space-y-2">
-                        <Label>
-                            {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "justify-start text-left font-normal w-full h-9 sm:h-10 text-xs sm:text-sm",
-                                            !formData.date && "text-muted-foreground"
-                                        )}
-                                        disabled={isSubmitting}
-                                    >
-                                        <CalendarIcon className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                                        {formData.date ? 
-                                          format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) :
-                                          "Επιλέξτε ημερομηνία"
-                                        }
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={formData.date}
-                                        onSelect={(date: Date | undefined) => setFormData(prev => ({ ...prev, date }))}
-                                        initialFocus
-                                        className="rounded-md border shadow p-2 sm:p-3"
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            <Input
-                                type="time"
-                                value={formData.time}
-                                onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                                className="text-center h-9 sm:h-10 text-sm sm:text-base"
-                                required
-                                disabled={isSubmitting}
-                                step="300"
-                            />
-                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-1.5 sm:space-y-2">
+                <div className="space-y-2">
                     <Label htmlFor="contact_details">
                         {FORM_LABELS.CONTACT_DETAILS} <span className="text-destructive">*</span>
                     </Label>
@@ -188,12 +182,12 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                         placeholder={PLACEHOLDERS.CONTACT_DETAILS}
                         required
                         disabled={isSubmitting}
-                        className="h-9 sm:h-10 text-sm sm:text-base"
+                        className="h-10"
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5 sm:space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
                         <Label htmlFor="field_number">
                             {FORM_LABELS.FIELD_NUMBER} <span className="text-destructive">*</span>
                         </Label>
@@ -202,19 +196,19 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                             onValueChange={(value) => setFormData(prev => ({ ...prev, field_number: value }))}
                             disabled={isSubmitting}
                         >
-                            <SelectTrigger id="field_number" className="h-9 sm:h-10 text-sm sm:text-base">
+                            <SelectTrigger id="field_number" className="h-10">
                                 <SelectValue placeholder="Επιλέξτε γήπεδο" />
                             </SelectTrigger>
                             <SelectContent>
                                 {[1,2,3,4,5].map(num => (
-                                    <SelectItem key={num} value={num.toString()} className="text-sm sm:text-base">
+                                    <SelectItem key={num} value={num.toString()}>
                                         Γήπεδο {num}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="space-y-1.5 sm:space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="num_players">
                             {FORM_LABELS.NUM_PLAYERS} <span className="text-destructive">*</span>
                         </Label>
@@ -228,13 +222,13 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                             required
                             placeholder={PLACEHOLDERS.NUM_PLAYERS}
                             disabled={isSubmitting}
-                            className="h-9 sm:h-10 text-sm sm:text-base"
+                            className="h-10"
                         />
                     </div>
                 </div>
 
-                <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="notes" className="text-sm sm:text-base">{FORM_LABELS.NOTES}</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="notes">{FORM_LABELS.NOTES}</Label>
                     <Textarea
                         id="notes"
                         value={formData.notes}
@@ -242,13 +236,13 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                         rows={3}
                         placeholder={PLACEHOLDERS.NOTES}
                         disabled={isSubmitting}
-                        className="text-sm sm:text-base resize-none min-h-[80px]"
+                        className="resize-none min-h-[80px]"
                     />
                 </div>
 
                 <LoadingButton 
                     type="submit" 
-                    className="w-full h-9 sm:h-10 text-sm sm:text-base"
+                    className="w-full h-10"
                     loading={isSubmitting}
                     loadingText={DIALOG_MESSAGES.SAVE_LOADING}
                 >

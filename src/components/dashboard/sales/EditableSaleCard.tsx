@@ -13,7 +13,7 @@ import { formatPrice } from "@/lib/utils";
 import { SaleWithDetails, Product } from "@/types/sales";
 import { createClientSupabase } from "@/lib/supabase/client";
 import { useSaleActions } from '@/hooks/features/sales/useSaleActions';
-import { Gift, Pencil, Trash2 } from "lucide-react";
+import { Gift, Pencil, Trash2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Constants
@@ -55,14 +55,6 @@ function SaleStatusBadge({
 }) {
   if (isDeleted) {
     return <Badge variant="destructive">Διαγράφηκε</Badge>;
-  }
-  if (isTreat) {
-    return (
-      <Badge variant="default" className="bg-amber-500 flex items-center gap-1">
-        <Gift className="h-3 w-3" />
-        <span>Κέρασμα</span>
-      </Badge>
-    );
   }
   if (isEdited) {
     return (
@@ -202,49 +194,72 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
         <EditSaleForm sale={currentSale} onSave={handleEdit} onCancel={() => setIsEditing(false)} />
       ) : (
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>
-            <SaleStatusBadge 
-              isDeleted={currentSale.is_deleted} 
-              isTreat={currentSale.is_treat}
-              isEdited={currentSale.is_edited}
-              originalProductCode={currentSale.original_product_name || undefined}
-              originalQuantity={currentSale.original_quantity || undefined}
-            />
+          <div className="flex items-center gap-2">
+            {currentSale.is_treat && (
+              <Gift className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            )}
+            <div>
+              <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>
+              <SaleStatusBadge 
+                isDeleted={currentSale.is_deleted} 
+                isTreat={false} // Handled by the icon now
+                isEdited={currentSale.is_edited}
+                originalProductCode={currentSale.original_product_name || undefined}
+                originalQuantity={currentSale.original_quantity || undefined}
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsEditing(true)}
-              disabled={!canEdit || isLoading || currentSale.is_deleted}
-              title={
-                currentSale.is_deleted
-                  ? 'Το προϊόν έχει διαγραφεί'
-                  : canEdit
-                  ? `Επεξεργασία (${timeLeft} απομένουν)`
-                  : 'Ο χρόνος για επεξεργασία έχει λήξει'
-              }
-            >
-              <Pencil className="w-4 h-4" />
-              <span className="sr-only">Επεξεργασία</span>
-            </Button>
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={handleDelete}
-              disabled={!canEdit || isLoading || currentSale.is_deleted}
-              title={
-                currentSale.is_deleted
-                  ? 'Το προϊόν έχει διαγραφεί'
-                  : canEdit
-                  ? 'Διαγραφή'
-                  : 'Ο χρόνος για διαγραφή έχει λήξει'
-              }
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="sr-only">Διαγραφή</span>
-            </Button>
+            {canEdit && !isLoading && !currentSale.is_deleted && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+                <Clock className="h-3 w-3" />
+                <span>{timeLeft}</span>
+              </div>
+            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsEditing(true)}
+                    disabled={!canEdit || isLoading || currentSale.is_deleted}
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span className="sr-only">Επεξεργασία</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {currentSale.is_deleted
+                    ? 'Το προϊόν έχει διαγραφεί'
+                    : canEdit
+                    ? `Επεξεργασία`
+                    : 'Ο χρόνος για επεξεργασία έχει λήξει'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={handleDelete}
+                    disabled={!canEdit || isLoading || currentSale.is_deleted}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="sr-only">Διαγραφή</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                   {currentSale.is_deleted
+                    ? 'Το προϊόν έχει διαγραφεί'
+                    : canEdit
+                    ? 'Διαγραφή'
+                    : 'Ο χρόνος για διαγραφή έχει λήξει'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       )}
