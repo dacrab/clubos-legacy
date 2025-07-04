@@ -1,4 +1,4 @@
--- Initial schema for the Proteas application
+-- Initial schema for the NextJS POS System application
 BEGIN;
 
 -- =============================================================================

@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-First off, thank you for considering contributing to Proteas. It's people like you that make Proteas such a great tool.
+First off, thank you for considering contributing to POS system. It's people like you that make POS Systems such a great tool.
 
 ## 📋 Table of Contents
 
@@ -18,7 +18,7 @@ First off, thank you for considering contributing to Proteas. It's people like y
 
 ## 📜 Code of Conduct
 
-This project and everyone participating in it is governed by the [Proteas Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [email@example.com](mailto:email@example.com).
+This project and everyone participating in it is governed by the [POS System Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [vkavouras@proton.me](mailto:vkavouras@proton.me).
 
 ## 🔧 Development Setup
 
@@ -200,4 +200,4 @@ If you have questions or encounter any problems:
 
 ---
 
-By contributing to Proteas, you agree that your contributions will be licensed under the MIT License.
+By contributing to Custom POS System, you agree that your contributions will be licensed under the MIT License.

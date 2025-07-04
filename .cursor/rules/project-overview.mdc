@@ -1,9 +1,9 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
-# Proteas Project Overview
+# NextJS Custom POS System Project Overview
 
 ## About the Project
 - Medical practice management web application built with Next.js, TypeScript, and Supabase

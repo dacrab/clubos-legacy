@@ -11,7 +11,7 @@ A comprehensive warehouse management system designed specifically for sports fac
 
 ## 📋 Table of Contents
 
-- [About the App](#-about-proteas-app)
+- [About the App](#-about-this-app)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Prerequisites](#-prerequisites)
@@ -24,9 +24,9 @@ A comprehensive warehouse management system designed specifically for sports fac
 - [License](#-license)
 - [Acknowledgments](#-acknowledgments)
 
-## 🌟 About Proteas App
+## 🌟 About this App:
 
-Proteas is a comprehensive warehouse management system designed specifically for sports facility operations. It streamlines multiple aspects of business management through an intuitive web interface with role-based access control. The system caters to three distinct user roles:
+Custom NextJS POS System is a comprehensive warehouse management system designed specifically for sports facility operations. It streamlines multiple aspects of business management through an intuitive web interface with role-based access control. The system caters to three distinct user roles:
 
 ### 👨‍💼 Admin Features
 - **💰 Sales Management:** Track and manage all sales transactions with detailed product information
