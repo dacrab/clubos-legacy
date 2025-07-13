@@ -1,5 +1,5 @@
 {
-  "name": "proteas-site-demo",
+  "name": "clubos",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -59,6 +59,7 @@
     "eslint-config-next": "^15.2.4",
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.3",
     "typescript": "^5.7.2"
   }
 }

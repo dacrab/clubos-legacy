@@ -104,8 +104,8 @@ Before you begin, ensure you have the following installed:
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/dacrab/proteas-site-demo.git
-   cd proteas-site-demo
+   git clone https://github.com/dacrab/clubos.git
+   cd clubos
    ```
 
 2. **Install dependencies:**

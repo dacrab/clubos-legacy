@@ -25,8 +25,8 @@ This project and everyone participating in it is governed by the [POS System Cod
 1. **Fork and clone the repository:**
 
    ```bash
-   git clone https://github.com/dacrab/proteas-site-demo.git
-   cd proteas-site-demo
+   git clone https://github.com/dacrab/clubos.git
+   cd clubos
    ```
 
 2. **Install dependencies:**
