@@ -2,8 +2,8 @@ import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
 import { createClientSupabase } from '@/lib/supabase/client';
 import { FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
-import type { 
-  FootballFieldBooking, 
+import type {
+  FootballFieldBooking,
   FootballFieldBookingFormData,
   FootballFieldBookingUpdate
 } from '@/types/bookings';
@@ -32,7 +32,7 @@ export function useFootballFieldBookings() {
 
       const { error } = await supabase.from('football_field_bookings').insert([{ ...formData, user_id: user.id }]);
       if (error) throw error;
-      
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
       revalidate();
       return { success: true };

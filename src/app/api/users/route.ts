@@ -8,13 +8,15 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Λείπει το Supabase URL ή το service key');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Λείπει το Supabase URL ή το service key');
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
 
     const email = `${username.toLowerCase().replace(/\s+/g, '_')}@example.com`;
 
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
       email_confirm: true,

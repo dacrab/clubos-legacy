@@ -2,21 +2,23 @@ import type { NextConfig } from "next";
 import withBundleAnalyzer from '@next/bundle-analyzer';
 
 // Configuration for Supabase storage
-const supabaseHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').hostname;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : 'localhost';
 
 const nextConfig: NextConfig = {
   
   // Configure remote image patterns for Supabase storage
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
+      // Only add Supabase hostname if URL is configured
+      ...(supabaseUrl ? [{
+        protocol: 'https' as const,
         hostname: supabaseHostname,
         port: '',
         pathname: '/storage/v1/object/public/**',
-      },
+      }] : []),
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'xnxurkgwjgphvhtrqaiz.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',

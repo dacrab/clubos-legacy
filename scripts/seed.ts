@@ -5,16 +5,19 @@ import { resolve } from 'path';
 
 dotenv.config({ path: '.env.local' });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase URL or service role key');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase URL or service role key');
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 async function createUser(email: string, password: string, metadata: { role: 'admin' | 'employee' | 'secretary', username: string }) {
+  const supabase = getSupabaseClient();
   try {
     // First check if user already exists
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
@@ -60,6 +63,7 @@ async function createUser(email: string, password: string, metadata: { role: 'ad
 }
 
 async function clearDatabase() {
+  const supabase = getSupabaseClient();
   console.log('  - Clearing database...');
 
   const tables = [
@@ -98,6 +102,7 @@ async function clearDatabase() {
 }
 
 async function createCategories(adminId: string) {
+  const supabase = getSupabaseClient();
   const categories = [
     {
       id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -153,6 +158,7 @@ async function createCategories(adminId: string) {
 }
 
 async function createProducts(adminId: string) {
+  const supabase = getSupabaseClient();
   const products = [
     // Hot Coffees
     {
@@ -235,6 +241,7 @@ async function createProducts(adminId: string) {
 }
 
 async function createRegisterSession() {
+  const supabase = getSupabaseClient();
   const { data: session, error } = await supabase
     .from('register_sessions')
     .insert({
@@ -253,6 +260,7 @@ async function createRegisterSession() {
 }
 
 async function createSales(staffId: string, registerSessionId: string) {
+  const supabase = getSupabaseClient();
   // Create an order first
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -314,6 +322,7 @@ async function createSales(staffId: string, registerSessionId: string) {
 }
 
 async function createAppointments(staffId: string) {
+  const supabase = getSupabaseClient();
   const appointments = [
     {
       id: 'c5b4a3f2-e1d0-4c3b-a2a1-123456789abc',
@@ -348,6 +357,7 @@ async function createAppointments(staffId: string) {
 }
 
 async function createFootballBookings(staffId: string) {
+  const supabase = getSupabaseClient();
   const bookings = [
     {
       id: 'e3d2c1b0-a9f8-4e3d-c2c1-345678901abc',
@@ -445,5 +455,5 @@ export {
   createSales,
   createAppointments,
   createFootballBookings,
-  supabase,
+  getSupabaseClient,
 };
