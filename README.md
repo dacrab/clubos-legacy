@@ -1,13 +1,16 @@
-# 🚀 Modern Custom POS System in NextJS and Supabase
+# 🚀 Modern Custom POS System with Next.js, NeonDB, and Better Auth
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.2.4-black)
 ![React](https://img.shields.io/badge/React-19.0.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-blue)
-![Supabase](https://img.shields.io/badge/Supabase-2.47.10-green)
+![NeonDB](https://img.shields.io/badge/NeonDB-PostgreSQL-green)
+![Drizzle](https://img.shields.io/badge/Drizzle-ORM-orange)
+![Better Auth](https://img.shields.io/badge/Better%20Auth-1.1.1-purple)
+![Bun](https://img.shields.io/badge/Bun-1.1.38-yellow)
 
-A comprehensive warehouse management system designed specifically for sports facility operations with role-based access control.
+A comprehensive warehouse management system designed specifically for sports facility operations with role-based access control. Built with modern technologies including NeonDB, Drizzle ORM, and Better Auth for enhanced performance and developer experience.
 
 ## 📋 Table of Contents
 
@@ -78,7 +81,10 @@ Proteas provides a centralized solution for sports facility management, helping 
 |----------|------------|
 | **Framework** | Next.js 15.2.4 |
 | **Language** | TypeScript 5.7.2 |
-| **Database** | Supabase 2.47.10 |
+| **Database** | NeonDB (PostgreSQL) |
+| **ORM** | Drizzle ORM 0.36.4 |
+| **Authentication** | Better Auth 1.1.1 |
+| **Package Manager** | Bun 1.1.38 |
 | **UI Library** | React 19.0.0 |
 | **Styling** | Tailwind CSS 3.4.17 |
 | **UI Components** | shadcn/ui, Radix UI |
@@ -89,15 +95,16 @@ Proteas provides a centralized solution for sports facility management, helping 
 | **Notifications** | Sonner 1.7.0 |
 | **Animation** | Framer Motion 11.15.0 |
 | **Data Fetching** | SWR 2.3.0 |
+| **Code Quality** | Enhanced ESLint with unused imports detection |
 
 ## 🔍 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js:** version 18.x or later
-- **npm:** version 9.x or later (or yarn)
+- **Bun:** Latest version (recommended package manager)
+- **Node.js:** version 18.x or later (fallback)
 - **Git:** for repository cloning
-- **Supabase Account:** To set up your own backend
+- **NeonDB Account:** To set up your PostgreSQL database
 
 ## 📦 Installation
 
@@ -111,7 +118,7 @@ Before you begin, ensure you have the following installed:
 2. **Install dependencies:**
 
    ```bash
-   npm install
+   bun install
    ```
 
 3. **Set up environment variables:**
@@ -120,21 +127,48 @@ Before you begin, ensure you have the following installed:
    cp .env.example .env.local
    ```
 
-   Fill in your Supabase credentials in `.env.local`:
+   Fill in your credentials in `.env.local`:
 
    ```env
-   NEXT_PUBLIC_SUPABASE_URL=your-project-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   # Database
+   DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+   # Better Auth
+   BETTER_AUTH_SECRET=your-super-secret-key-here-min-32-chars
+   BETTER_AUTH_URL=http://localhost:3000
+
+   # App
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```
 
-4. **Start the development server:**
+4. **Set up the database:**
 
    ```bash
-   npm run dev
+   # Generate migration files
+   bun run db:generate
+   
+   # Run migrations
+   bun run db:migrate
+   
+   # Seed with sample data
+   bun run db:seed
+   ```
+
+5. **Start the development server:**
+
+   ```bash
+   bun run dev
    ```
 
    Your application should now be running at http://localhost:3000
+
+## 🔐 Default Login Credentials
+
+After seeding, you can log in with:
+
+- **Admin:** admin@clubos.com / password123
+- **Staff:** staff@clubos.com / password123  
+- **Secretary:** secretary@clubos.com / password123
 
 ## 📁 Project Structure
 
@@ -188,16 +222,25 @@ src/
 
 ```bash
 # Development server
-npm run dev
+bun run dev
 
 # Build for production
-npm run build
+bun run build
 
 # Start production server
-npm start
+bun run start
 
-# Lint Check
-npm run lint
+# Lint check
+bun run lint
+
+# Auto-fix lint issues
+bun run lint:fix
+
+# Database commands
+bun run db:generate  # Generate migrations
+bun run db:migrate   # Run migrations
+bun run db:studio    # Open Drizzle Studio
+bun run db:seed      # Seed database
 ```
 
 ### Best Practices
