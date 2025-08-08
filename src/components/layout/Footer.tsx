@@ -22,7 +22,7 @@ export function Footer() {
       isSidebarVisible && "lg:pl-72",
       "pb-mobile-nav lg:pb-0" // Add padding to the bottom on mobile to avoid overlap with mobile nav
     )}>
-      <div className="mx-auto max-w-screen-xl flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 text-base">
+      <div className="mx-auto max-w-(--breakpoint-xl) flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 text-base">
         <div className="flex flex-col items-center sm:items-start">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80 font-light">
             <Copyright className="h-4 w-4 text-muted-foreground/80" />

@@ -196,7 +196,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {currentSale.is_treat && (
-              <Gift className="h-4 w-4 text-amber-500 flex-shrink-0" />
+              <Gift className="h-4 w-4 text-amber-500 shrink-0" />
             )}
             <div>
               <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>

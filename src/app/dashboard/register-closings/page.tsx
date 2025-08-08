@@ -74,7 +74,7 @@ export default function RegisterClosingsPage() {
 
   return (
     <PageWrapper>
-      <div className="w-full max-w-[100vw] px-2 sm:px-4 space-y-4">
+      <div className="w-full max-w-screen px-2 sm:px-4 space-y-4">
         {pageHeader}
         {filterComponent}
         {/* No extra card container to reduce nesting and maximize space */}

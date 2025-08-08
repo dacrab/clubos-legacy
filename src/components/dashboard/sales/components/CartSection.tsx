@@ -49,7 +49,7 @@ const CartSection = memo(({
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card w-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b flex-shrink-0">
+      <div className="flex items-center justify-between p-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           {isMobile && onShowProducts && (
             <Button

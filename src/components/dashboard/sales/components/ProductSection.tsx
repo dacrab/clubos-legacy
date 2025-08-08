@@ -63,12 +63,12 @@ const ProductSection = memo(({
 }: ProductSectionProps) => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            <div className="flex items-center gap-2 p-3 border-b flex-shrink-0">
+            <div className="flex items-center gap-2 p-3 border-b shrink-0">
                 {isMobile && onShowCategories && (
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 flex-shrink-0"
+                        className="h-9 w-9 shrink-0"
                         onClick={onShowCategories}
                     >
                         <Menu className="h-5 w-5" />

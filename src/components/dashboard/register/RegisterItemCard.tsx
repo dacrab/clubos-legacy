@@ -136,7 +136,7 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
             <div className="flex items-center gap-2">
-              <Badge variant={isActive ? "outline" : "secondary"} className={isActive ? "border-primary text-primary" : ""}>
+              <Badge variant={isActive ? "outline-solid" : "secondary"} className={isActive ? "border-primary text-primary" : ""}>
                 {isActive ? "Ενεργό Ταμείο" : `Έκλεισε από: ${item.closed_by_name}`}
               </Badge>
             </div>

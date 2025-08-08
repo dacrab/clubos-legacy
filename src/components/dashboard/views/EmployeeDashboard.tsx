@@ -101,7 +101,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
       <div className="lg:col-span-2 flex flex-col gap-8">
         
         {/* Add Sale Card */}
-        <div className="bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300">
+        <div className="bg-card rounded-2xl border shadow-xs hover:shadow-lg transition-all duration-300">
           <div className="p-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="bg-primary/10 text-primary p-3 rounded-xl">
@@ -117,7 +117,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
         </div>
 
         {/* Close Register Card */}
-        <div className="bg-card rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300">
+        <div className="bg-card rounded-2xl border shadow-xs hover:shadow-lg transition-all duration-300">
           <div className="p-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="bg-destructive/10 text-destructive p-3 rounded-xl">

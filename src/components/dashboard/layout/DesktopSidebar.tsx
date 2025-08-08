@@ -27,8 +27,8 @@ export default function Sidebar({ role }: SidebarProps) {
         className={cn(
           "group flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-all duration-200",
           isActive
-            ? "bg-primary text-primary-foreground shadow-soft translate-y-[-1px]"
-            : "hover:bg-secondary/80 hover:translate-y-[-1px] hover:shadow-soft"
+            ? "bg-primary text-primary-foreground shadow-soft -translate-y-px"
+            : "hover:bg-secondary/80 hover:-translate-y-px hover:shadow-soft"
         )}
       >
         <Icon className={cn(

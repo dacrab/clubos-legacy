@@ -167,13 +167,13 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
-                              variant={"outline"}
+                              variant={"outline-solid"}
                               className={cn(
                                 "w-full justify-start text-left font-normal h-10 truncate",
                                 !editForm.date && "text-muted-foreground"
                               )}
                             >
-                              <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                              <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                               {editForm.date ? format(editForm.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
                             </Button>
                           </PopoverTrigger>
@@ -259,7 +259,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                       onClick={handleCancelEdit}
                       className="flex items-center"
                     >
-                      <X className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <X className="mr-2 h-4 w-4 shrink-0" />
                       {BUTTON_LABELS.CANCEL}
                     </Button>
                     <LoadingButton
@@ -268,7 +268,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
                       loading={isMutating}
                       loadingText={DIALOG_MESSAGES.SAVE_LOADING}
                     >
-                      <Check className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <Check className="mr-2 h-4 w-4 shrink-0" />
                       <span>{BUTTON_LABELS.SAVE}</span>
                     </LoadingButton>
                   </div>

@@ -112,7 +112,7 @@ export function Calendar({
   }
 
   return (
-    <div className={cn("p-3 space-y-4 bg-background rounded-lg shadow-sm", className)}>
+    <div className={cn("p-3 space-y-4 bg-background rounded-lg shadow-xs", className)}>
       {/* Header */}
       <div className="relative flex items-center justify-center">
         <button
@@ -162,7 +162,7 @@ export function Calendar({
               className={cn(
                 "h-9 w-9 rounded-md flex items-center justify-center text-sm transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                 isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                 !isSelected && isToday && "border border-primary/50 text-foreground",
                 !isCurrentMonth && "text-muted-foreground opacity-50"

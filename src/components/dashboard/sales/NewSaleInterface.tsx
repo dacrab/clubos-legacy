@@ -281,10 +281,10 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
       <DialogContent className={cn(
         "max-w-none w-full h-full p-0 gap-0 overflow-hidden flex flex-col"
       )}>
-        <DialogHeader className="p-4 border-b hidden lg:block flex-shrink-0">
+        <DialogHeader className="p-4 border-b hidden lg:block shrink-0">
           <DialogTitle>Νέα Πώληση</DialogTitle>
         </DialogHeader>
-        <div className="flex-grow overflow-auto">
+        <div className="grow overflow-auto">
           {isDesktop ? renderDesktopView() : renderMobileView()}
         </div>
       </DialogContent>

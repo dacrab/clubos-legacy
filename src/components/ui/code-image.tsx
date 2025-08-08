@@ -20,7 +20,7 @@ export function CodeImage({ imageUrl, code, size = "sm" }: CodeImageProps) {
   }
 
   return (
-    <div className="w-10 h-10 md:w-12 md:h-12 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+    <div className="w-10 h-10 md:w-12 md:h-12 bg-muted rounded-md flex items-center justify-center shrink-0">
       <Package className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground" />
     </div>
   );

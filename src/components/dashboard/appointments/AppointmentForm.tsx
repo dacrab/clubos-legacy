@@ -116,14 +116,14 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant={"outline"}
+                    variant={"outline-solid"}
                     className={cn(
                       "w-full justify-start text-left font-normal h-10 truncate",
                       !formData.date && "text-muted-foreground"
                     )}
                     disabled={isSubmitting}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                     {formData.date ? format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) : <span>Επιλέξτε ημερομηνία</span>}
                   </Button>
                 </PopoverTrigger>

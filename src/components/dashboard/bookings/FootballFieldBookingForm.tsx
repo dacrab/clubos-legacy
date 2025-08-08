@@ -142,7 +142,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                                     )}
                                     disabled={isSubmitting}
                                 >
-                                    <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                                     {formData.date ? 
                                       format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) :
                                       "Επιλέξτε ημερομηνία"
@@ -155,7 +155,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                                     selected={formData.date}
                                     onSelect={(date: Date | undefined) => setFormData(prev => ({ ...prev, date }))}
                                     initialFocus
-                                    className="rounded-md border shadow p-3"
+                                    className="rounded-md border shadow-sm p-3"
                                 />
                             </PopoverContent>
                         </Popover>
