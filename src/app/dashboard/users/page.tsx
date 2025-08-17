@@ -1,20 +1,19 @@
 "use client";
 
+import { UserX } from "lucide-react";
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { transitions } from "@/lib/animations";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+
 import AddUserButton from "@/components/dashboard/users/AddUserButton";
+import ResetPasswordDialog from "@/components/dashboard/users/ResetPasswordDialog";
 import UsersTable from "@/components/dashboard/users/UsersTable";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
 import { useAuthorization } from "@/hooks/auth/useAuthorization";
 import { useUsers } from "@/hooks/data/useUsers";
-import { EmptyState } from "@/components/ui/empty-state";
-import { UserX } from "lucide-react";
-import ResetPasswordDialog from "@/components/dashboard/users/ResetPasswordDialog";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
+import { cn } from "@/lib/utils";
 
 export default function UsersPage() {
   const authorizationStatus = useAuthorization();
@@ -33,7 +32,7 @@ export default function UsersPage() {
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
-  if (authorizationStatus === 'loading' || usersLoading) return <LoadingAnimation />;
+  if (authorizationStatus === 'loading' || usersLoading) {return <LoadingAnimation />;}
   if (authorizationStatus === 'unauthorized' || isError) {
     return (
       <EmptyState
@@ -60,11 +59,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={transitions.smooth}
-      >
+      <div className="animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Χρήστες</h1>
@@ -74,14 +69,9 @@ export default function UsersPage() {
           </div>
           <AddUserButton onAddUser={addUser} loading={mutationLoading} />
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, ...transitions.smooth }}
-        className="w-full"
-      >
+      <div className="animate-fade-in w-full" style={{ animationDelay: '200ms' }}>
         <Card className={cn(isMobile ? "border-0 p-0 shadow-none bg-transparent" : "p-0")}>
           <UsersTable 
             users={users} 
@@ -92,7 +82,7 @@ export default function UsersPage() {
             onUpdateRole={updateUserRole}
           />
         </Card>
-      </motion.div>
+      </div>
 
       <ResetPasswordDialog
         open={!!resetPasswordUserId}

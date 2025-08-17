@@ -1,7 +1,7 @@
 "use client";
 
-import { memo } from "react";
 import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -9,69 +9,17 @@ import type { Category, Product } from "@/types/sales";
 
 interface CategorySectionProps {
     categories: Category[];
-    categoriesMap: Record<string, any[]>;
+    categoriesMap: Record<string, Category[]>;
     selectedCategory: Category | null;
     selectedSubcategory: Category | null;
     onCategorySelect: (category: Category | null) => void;
-    onSubcategorySelect: (name: Category) => void;
+    onSubcategorySelect: (subcategory: Category) => void;
     onClose?: () => void;
     products: Product[];
     isMobile?: boolean;
 }
 
-const CategoryButton = memo(({
-    category,
-    isSelected,
-    onClick
-}: {
-    category: Category | null;
-    isSelected: boolean;
-    onClick: () => void;
-}) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-            "w-full px-3 py-2 rounded-md text-sm font-medium transition-colors",
-            "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-            isSelected
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "hover:bg-muted/80 text-foreground"
-        )}
-    >
-        {category?.name || 'Όλα τα προϊόντα'}
-    </button>
-));
-CategoryButton.displayName = 'CategoryButton';
-
-const SubcategoryButton = memo(({
-    subcategory,
-    isSelected,
-    onClick
-}: {
-    subcategory: Category;
-    isSelected: boolean;
-    onClick: () => void;
-}) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-            "w-full text-left px-3 py-1.5 rounded-md text-sm",
-            "transition-colors duration-200",
-            "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-            isSelected
-                ? "text-primary bg-primary/10 font-medium"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-        )}
-    >
-        <span className="ml-2">↳ {subcategory.name}</span>
-    </button>
-));
-SubcategoryButton.displayName = 'SubcategoryButton';
-
-
-const CategorySection = memo(({
+const CategorySection = ({
     categories,
     categoriesMap,
     selectedCategory,
@@ -79,9 +27,16 @@ const CategorySection = memo(({
     onCategorySelect,
     onSubcategorySelect,
     onClose,
-    products,
     isMobile
 }: CategorySectionProps) => {
+    const isSelected = (categoryId: string | null) => {
+        return selectedCategory?.id === categoryId;
+    };
+
+    const isSubcategorySelected = (subcategoryId: string) => {
+        return selectedSubcategory?.id === subcategoryId;
+    };
+
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {isMobile && (
@@ -97,29 +52,54 @@ const CategorySection = memo(({
 
             <ScrollArea className="flex-1 p-3">
                 <div className="space-y-2">
-                    <CategoryButton
-                        category={null}
-                        isSelected={!selectedCategory}
+                    <button
+                        type="button"
                         onClick={() => onCategorySelect(null)}
-                    />
+                        className={cn(
+                            "w-full px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                            "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                            !selectedCategory
+                                ? "bg-primary text-primary-foreground shadow-xs"
+                                : "hover:bg-muted/80 text-foreground"
+                        )}
+                    >
+                        Όλα τα προϊόντα
+                    </button>
 
                     {categories.map(category => (
                         <div key={category.id} className="space-y-1 mb-3">
-                            <CategoryButton
-                                category={category}
-                                isSelected={selectedCategory?.id === category.id}
+                            <button
+                                type="button"
                                 onClick={() => onCategorySelect(category)}
-                            />
+                                className={cn(
+                                    "w-full px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                    "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                                    isSelected(category.id)
+                                        ? "bg-primary text-primary-foreground shadow-xs"
+                                        : "hover:bg-muted/80 text-foreground"
+                                )}
+                            >
+                                {category.name}
+                            </button>
 
-                            {selectedCategory?.id === category.id && (
+                            {isSelected(category.id) && categoriesMap[category.id] && (
                                 <div className="ml-2 space-y-1 mt-1">
-                                    {categoriesMap[category.id]?.map(subcat => (
-                                        <SubcategoryButton
-                                            key={subcat.id}
-                                            subcategory={subcat}
-                                            isSelected={selectedSubcategory?.id === subcat.id}
-                                            onClick={() => onSubcategorySelect(subcat)}
-                                        />
+                                    {categoriesMap[category.id].map(subcategory => (
+                                        <button
+                                            key={subcategory.id}
+                                            type="button"
+                                            onClick={() => onSubcategorySelect(subcategory)}
+                                            className={cn(
+                                                "w-full text-left px-3 py-1.5 rounded-md text-sm",
+                                                "transition-colors duration-200",
+                                                "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                                                isSubcategorySelected(subcategory.id)
+                                                    ? "text-primary bg-primary/10 font-medium"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                            )}
+                                        >
+                                            <span className="ml-2">↳ {subcategory.name}</span>
+                                        </button>
                                     ))}
                                 </div>
                             )}
@@ -129,7 +109,5 @@ const CategorySection = memo(({
             </ScrollArea>
         </div>
     );
-});
-CategorySection.displayName = 'CategorySection';
-
+};
 export { CategorySection }; 

@@ -1,11 +1,11 @@
-"use client";
-
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Gift, Wallet, TrendingUp } from "lucide-react";
-import type { SaleWithDetails } from "@/types/sales";
-import { calculateSalesStats } from "@/lib/utils/chart-utils";
+import { useMemo } from "react";
+
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { calculateSalesStats } from "@/lib/utils/chart-utils";
+import type { SaleWithDetails } from "@/types/sales";
 
 interface StatsCardsProps {
   sales: SaleWithDetails[];

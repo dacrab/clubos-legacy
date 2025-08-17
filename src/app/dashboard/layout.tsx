@@ -1,14 +1,14 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { redirect } from "next/navigation";
-import { cookies } from 'next/headers';
-import { DashboardProvider } from "@/components/dashboard/provider/DashboardProvider";
+
 import DashboardLayoutClient from '@/components/dashboard/layout/DashboardLayoutClient';
-import { DashboardContextSetter } from "@/components/dashboard/provider/DashboardContextSetter";
-import { createServerClient } from '@supabase/ssr';
-import { UserProfile } from '@/types/next-auth';
 import Header from '@/components/dashboard/layout/Header';
+import { DashboardProvider } from "@/components/dashboard/provider/DashboardProvider";
+import { stackServerApp } from '@/lib/auth';
+import { logger } from '@/lib/utils/logger';
+import { getUserById } from '@/lib/db/services/users';
 import { cn } from '@/lib/utils';
-import { Database } from '@/types/supabase';
+import type { UserProfile } from '@/types/users';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -21,43 +21,42 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: async (name: string) => (await cookies()).get(name)?.value,
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await stackServerApp.getUser();
 
   if (!user) {
     return redirect('/');
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('id, username, role')
-    .eq('id', user.id)
-    .single();
+  const profile = await getUserById(user.id);
 
-  if (profileError || !profile) {
-    console.error('Error fetching user profile:', profileError);
-    // It might be better to sign out the user if their profile is missing
+  if (!profile) {
+    logger.error('Error fetching user profile');
     return redirect('/');
   }
 
   const isAdmin = profile.role === 'admin';
 
+  // Transform profile to match UserProfile interface
+  const userProfile: UserProfile = {
+    id: profile.id,
+    username: profile.username,
+    role: profile.role,
+    email: profile.email,
+    displayName: user.displayName,
+    isActive: true, // Assuming logged-in users are active
+    profileImageUrl: user.profileImageUrl,
+  };
+
+  // Create a compatible profile object for Header
+  const headerProfile = {
+    username: profile.username,
+  };
+
   return (
     <DashboardProvider>
-      <DashboardContextSetter isSidebarVisible={isAdmin} />
       <div className={cn("flex flex-1 flex-col", isAdmin && "lg:pl-72")}>
-        <Header user={user} profile={profile as UserProfile} />
-        <DashboardLayoutClient user={user} profile={profile as UserProfile}>
+        <Header user={user} profile={headerProfile} />
+        <DashboardLayoutClient profile={userProfile}>
           {children}
         </DashboardLayoutClient>
       </div>
@@ -65,39 +64,3 @@ export default async function DashboardLayout({
   );
 }
 
-async function getUserRole() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
-      },
-    }
-  );
-  
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    redirect('/');
-  }
-
-  const { data: userData, error: userDataError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (userDataError) {
-    console.error('User error:', userDataError);
-    throw userDataError;
-  }
-
-  if (!userData) {
-    redirect('/');
-  }
-
-  return userData.role;
-}

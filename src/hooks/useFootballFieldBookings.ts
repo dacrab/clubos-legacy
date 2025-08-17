@@ -1,80 +1,92 @@
-import useSWR, { useSWRConfig } from 'swr';
-import { toast } from 'sonner';
-import { createClientSupabase } from '@/lib/supabase/client';
-import { FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
-import type {
-  FootballFieldBooking,
-  FootballFieldBookingFormData,
-  FootballFieldBookingUpdate
-} from '@/types/bookings';
+import { useState } from "react";
+import { toast } from "sonner";
 
-const bookingsFetcher = (supabase: ReturnType<typeof createClientSupabase>) => async (): Promise<FootballFieldBooking[]> => {
-  const { data, error } = await supabase
-    .from('football_field_bookings')
-    .select('*')
-    .order('booking_datetime', { ascending: true });
+import { FOOTBALL_BOOKING_MESSAGES } from "@/lib/constants";
+import type { FootballFieldBookingFormData, FootballFieldBookingUpdate } from '@/types/bookings';
 
-  if (error) throw new Error(error.message);
-  return data || [];
-}
 
-export function useFootballFieldBookings() {
-  const supabase = createClientSupabase();
-  const { data: bookings, error, isLoading } = useSWR<FootballFieldBooking[]>('football_field_bookings', bookingsFetcher(supabase));
-  const { mutate } = useSWRConfig();
 
-  const revalidate = () => mutate('football_field_bookings');
+export const useFootballFieldBookings = () => {
+  const [isLoading, setIsLoading] = useState(false);
 
   const addBooking = async (formData: FootballFieldBookingFormData) => {
+    setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-      const { error } = await supabase.from('football_field_bookings').insert([{ ...formData, user_id: user.id }]);
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create booking');
+      }
 
       toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
-      revalidate();
-      return { success: true };
-    } catch (error) {
-      console.error('Error adding booking:', error);
-      toast.error(error instanceof Error ? error.message : FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
-      return { success: false };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Σφάλμα δημιουργίας κράτησης: ${message}`);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const updateBooking = async (id: string, formData: Partial<FootballFieldBookingUpdate>) => {
+    setIsLoading(true);
     try {
-      const { error } = await supabase.from('football_field_bookings').update(formData).eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update booking');
+      }
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.UPDATE_SUCCESS);
-      revalidate();
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
-      return { success: false };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Σφάλμα ενημέρωσης κράτησης: ${message}`);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const deleteBooking = async (id: string) => {
+    setIsLoading(true);
     try {
-      const { error } = await supabase.from('football_field_bookings').delete().eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete booking');
+      }
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.DELETE_SUCCESS);
-      revalidate();
-    } catch (error) {
-      console.error('Error deleting booking:', error);
-      toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Σφάλμα διαγραφής κράτησης: ${message}`);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    bookings,
-    error,
-    isLoading,
     addBooking,
     updateBooking,
     deleteBooking,
+    isLoading,
   };
-} 
+};

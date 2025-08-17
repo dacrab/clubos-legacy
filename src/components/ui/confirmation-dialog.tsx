@@ -1,3 +1,6 @@
+   import { Loader2 } from "lucide-react";
+
+ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -6,9 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
   } from "@/components/ui/dialog";
-  import { Button } from "@/components/ui/button";
   import { DIALOG_MESSAGES } from "@/lib/constants";
-  import { Loader2 } from "lucide-react";
+
   
   interface ConfirmationDialogProps {
     open: boolean;

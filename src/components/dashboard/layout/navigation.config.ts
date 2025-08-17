@@ -6,13 +6,14 @@ import {
   History,
   Receipt,
 } from "lucide-react";
-import { UserRole } from "@/lib/constants";
+
+import type { UserRole } from "@/lib/constants";
 
 // Types
 export interface NavigationItem {
   name: string;
   href: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   roles: UserRole[];
 }
 

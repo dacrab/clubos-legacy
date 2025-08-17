@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/utils/logger';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { signIn } from '@/lib/auth-client';
-import { toast } from 'sonner';
+import { useStackApp } from '@/lib/auth-client';
+
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -18,6 +21,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const stackApp = useStackApp();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,21 +29,16 @@ export function LoginForm() {
     setError('');
 
     try {
-      const result = await signIn.email({
+      await stackApp.signInWithCredential({
         email,
         password,
       });
 
-      if (result.error) {
-        setError(result.error.message || 'Σφάλμα σύνδεσης');
-        return;
-      }
-
       toast.success('Επιτυχής σύνδεση!');
       router.push('/dashboard');
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Σφάλμα σύνδεσης. Παρακαλώ δοκιμάστε ξανά.');
+    } catch (err: unknown) {
+      logger.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Σφάλμα σύνδεσης. Παρακαλώ δοκιμάστε ξανά.');
     } finally {
       setIsLoading(false);
     }

@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+
 import { LoginForm } from "@/components/auth/LoginForm";
+import { stackServerApp } from "@/lib/auth";
 
 export default async function Home() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const user = await stackServerApp.getUser();
   
-  if (session) {
+  if (user) {
     return redirect("/dashboard");
   }
 

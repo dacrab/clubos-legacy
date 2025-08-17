@@ -3,20 +3,32 @@ description:
 globs: 
 alwaysApply: false
 ---
-# NextJS Custom POS System Project Overview
+# ClubOS - Modern POS System Project Overview
 
 ## About the Project
-- Medical practice management web application built with Next.js, TypeScript, and Supabase
+- Club/business point-of-sale (POS) management web application built with Next.js, TypeScript, and modern stack
 - Focus on server-side rendering, type safety, and modern UI/UX with shadcn/ui
-- **IMPORTANT**: This is NOT a todo application - understand the codebase before modifications
+- **IMPORTANT**: This is a POS system for clubs/businesses - understand the domain before modifications
 
 ## Tech Stack
-- Next.js - React framework with App Router
-- TypeScript - Static typing for JavaScript
-- Tailwind CSS - Utility-first CSS framework
-- Shadcn UI - Component library built on Radix UI
-- Supabase - Backend as a Service (auth, database, storage)
-- React Server Components - Server-rendered React components
+- **Frontend**: Next.js 15 with App Router, React 19, TypeScript
+- **Styling**: Tailwind CSS v4 (config-less), shadcn/ui components, tailwindcss-animate
+- **Database**: NeonDB (PostgreSQL) with Drizzle ORM and postgres.js client
+- **Authentication**: Stack Auth (@stackframe/stack) - Neon's official auth solution
+- **State Management**: SWR for data fetching, React hooks for local state
+- **Forms**: React Hook Form with Zod validation
+- **Charts**: Recharts for analytics and statistics
+- **Icons**: Lucide React
+- **Package Manager**: Bun
+
+## Key Features
+- **Sales Management**: POS interface, order processing, inventory tracking
+- **User Management**: Role-based access (admin, employee, secretary)
+- **Product Management**: Categories, stock levels, pricing
+- **Register Sessions**: Cash register opening/closing with reconciliation
+- **Analytics**: Sales statistics, revenue charts, top products
+- **Appointments**: Booking system for services
+- **Football Field Bookings**: Sports facility management
 
 ## Getting Started
 
@@ -25,7 +37,16 @@ Before making changes:
 2. Understand the directory structure in `project-structure.mdc`
 3. Follow coding conventions in `coding-standards.mdc`
 4. Reference existing components for styling patterns
+5. Understand the database schema in `src/lib/db/schema.ts`
 
 ## Project Organization
 
 Key project files and directories are organized according to the structure described in `project-structure.mdc`. All code should follow the established patterns and conventions.
+
+## Database & Auth Migration Status
+
+- ✅ Migrated from Supabase to NeonDB + Drizzle ORM
+- ✅ Migrated from better-auth to Stack Auth (Neon Auth)
+- ✅ Updated to Tailwind CSS v4 (config-less)
+- ✅ Replaced framer-motion with tailwindcss-animate
+- 🔄 Some client hooks still need API route implementations

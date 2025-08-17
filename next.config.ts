@@ -7,10 +7,11 @@ const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : 'localhos
 
 const nextConfig: NextConfig = {
   
-  // Configure remote image patterns for Supabase storage
+  // Configure image handling
   images: {
+    unoptimized: true, // Allow local images without optimization
     remotePatterns: [
-      // Only add Supabase hostname if URL is configured
+      // Keep Supabase patterns for any existing images during migration
       ...(supabaseUrl ? [{
         protocol: 'https' as const,
         hostname: supabaseHostname,

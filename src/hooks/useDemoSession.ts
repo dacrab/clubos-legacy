@@ -1,27 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/utils/logger';
 import { toast } from 'sonner';
-import { Database } from '@/types/supabase';
+
+import { useUser, useStackApp } from '@/lib/auth-client';
 
 const DEMO_USERS = ['admin@example.com', 'staff@example.com', 'secretary@example.com'];
 const DEMO_SESSION_DURATION = 60 * 60 * 1000; // 1 hour
 
 export function useDemoSession() {
   const router = useRouter();
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const user = useUser();
+  const stackApp = useStackApp();
 
   const [isDemoSession, setIsDemoSession] = useState<boolean | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [isEnding, setIsEnding] = useState(false);
 
   const endDemoSession = useCallback(async () => {
-    if (isEnding) return;
+    if (isEnding) {return;}
     setIsEnding(true);
 
     toast.info('Η δοκιμαστική σας περίοδος έληξε. Η βάση δεδομένων θα επαναφερθεί.');
@@ -32,21 +31,22 @@ export function useDemoSession() {
       toast.success('Η βάση δεδομένων επαναφέρθηκε.');
     } catch (error) {
       toast.error('Αποτυχία επαναφοράς της βάσης δεδομένων.');
-      console.error('Error resetting database:', error);
+      logger.error('Error resetting database:', error);
     } finally {
       // Logout user
-      await supabase.auth.signOut();
+      const user = await stackApp.getUser();
+      if (user) {
+        await user.signOut();
+      }
       localStorage.removeItem('demo_session_start_time');
       router.push('/');
       toast.info('Αποσυνδεθήκατε.');
     }
-  }, [router, supabase, isEnding]);
+  }, [router, stackApp, isEnding]);
 
   useEffect(() => {
     async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user?.email && DEMO_USERS.includes(session.user.email)) {
+      if (user?.primaryEmail && DEMO_USERS.includes(user.primaryEmail)) {
         setIsDemoSession(true);
         const startTime = localStorage.getItem('demo_session_start_time');
         if (!startTime) {
@@ -64,7 +64,7 @@ export function useDemoSession() {
     }
 
     checkSession();
-  }, [supabase]);
+  }, [user]);
 
   useEffect(() => {
     if (isDemoSession) {

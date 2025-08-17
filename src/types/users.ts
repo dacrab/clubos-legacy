@@ -1,6 +1,22 @@
-import { Tables } from './supabase';
-import { UserRole } from '@/lib/constants';
+// User types based on Drizzle schema
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  fullName?: string;
+  role: 'admin' | 'staff' | 'user' | 'employee' | 'secretary';
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export type User = Omit<Tables<'users'>, 'role'> & {
-  role: UserRole;
-}; 
+export interface UserInsert extends Omit<User, 'id' | 'createdAt' | 'updatedAt'> {
+  id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export type UserUpdate = Partial<UserInsert>
+
+// Re-export Stack Auth types for consistency
+export type { UserProfile, StackUser, ExtendedUser } from './stack-auth';

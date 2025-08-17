@@ -1,34 +1,34 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { Suspense , useState, useEffect } from "react";
+
+import { ErrorBoundary } from "@/components/error-boundary";
+import { ErrorFallback } from "@/components/error-fallback";
+import { LoadingFallback } from "@/components/loading-fallback";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { useDemoSession } from "@/hooks/useDemoSession";
+import type { UserProfile } from "@/types/stack-auth";
+
+import { DemoTimer } from "./DemoTimer";
 import DesktopSidebar from "./DesktopSidebar";
 import MobileBottomNav from "./MobileBottomNav";
-import { usePathname } from "next/navigation";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { Suspense } from "react";
-import { ErrorBoundary } from "@/components/error-boundary";
-import { LoadingFallback } from "@/components/loading-fallback";
-import { ErrorFallback } from "@/components/error-fallback";
-import { useState, useEffect } from "react";
-import type { User } from '@supabase/supabase-js';
+import { useDashboard } from "../provider/DashboardProvider";
 import SecretariatDashboard from "../views/SecretariatDashboard";
-import { UserProfile } from "@/types/next-auth";
-import { useDemoSession } from "@/hooks/useDemoSession";
-import { DemoTimer } from "./DemoTimer";
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
-  user: User;
   profile: UserProfile;
 }
 
 export default function DashboardLayoutClient({
   children,
-  user,
   profile,
 }: DashboardLayoutClientProps) {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const { isDemoSession, remainingTime } = useDemoSession();
+  const { setSidebarVisible } = useDashboard();
 
   // Loading effect on route change
   useEffect(() => {
@@ -36,6 +36,16 @@ export default function DashboardLayoutClient({
     const timeout = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timeout);
   }, [pathname]);
+
+  // Set sidebar visibility based on user role
+  useEffect(() => {
+    const isAdmin = profile.role === 'admin';
+    setSidebarVisible(isAdmin);
+    
+    return () => {
+      setSidebarVisible(false);
+    };
+  }, [profile.role, setSidebarVisible]);
 
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
@@ -48,7 +58,7 @@ export default function DashboardLayoutClient({
           )}
 
           {profile.role === 'secretary' ? (
-            <SecretariatDashboard user={user} />
+            <SecretariatDashboard />
           ) : (
             <main className="flex flex-col flex-1">
               <div className="flex-1 p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8">

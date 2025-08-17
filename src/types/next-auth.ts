@@ -1,18 +1,18 @@
-import { NextRequest } from 'next/server';
-import { User } from "./users";
+import type { NextRequest } from 'next/server';
 
 export type PageProps = {
   params: { [key: string]: string | string[] | undefined };
   searchParams: { [key:string]: string | string[] | undefined };
 };
 
-export type UserProfile = User;
-
-export type RouteContext<T = any> = {
+export type RouteContext<T = unknown> = {
   params: Promise<T>
 }
 
-export type RouteHandler<T = any> = (
+export type RouteHandler<T = unknown> = (
   request: NextRequest,
   context: RouteContext<T>
-) => Promise<Response> 
+) => Promise<Response>
+
+// Re-export Stack Auth types for backward compatibility
+export type { StackUser, UserProfile, ExtendedUser } from './stack-auth'; 

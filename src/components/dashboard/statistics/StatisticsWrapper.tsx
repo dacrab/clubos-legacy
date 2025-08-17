@@ -1,68 +1,113 @@
 "use client";
 
-import StatsCards from "./StatsCards";
-import SalesChart from "./SalesChart";
-import TopProductsChart from "./TopProductsChart";
-import CategorySalesChart from "./CategorySalesChart";
-import RevenueChart from "./RevenueChart";
-import StatisticsFilter from "./StatisticsFilter";
-import { ChartPie } from "lucide-react";
-import { useStatisticsData } from "@/hooks/features/statistics/useStatisticsData";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { useState, useMemo } from 'react';
+
 import type { SaleWithDetails } from '@/types/sales';
+
+import RevenueChart from './RevenueChart';
+import SalesChart from './SalesChart';
+import StatisticsFilter from './StatisticsFilter';
+import StatsCards from './StatsCards';
+import TopProductsChart from './TopProductsChart';
 
 interface StatisticsWrapperProps {
   initialSales: SaleWithDetails[];
 }
 
 export default function StatisticsWrapper({ initialSales }: StatisticsWrapperProps) {
-  const {
-    setDateRange,
-    filteredSales,
-    categories,
-    subCategories,
-    loading
-  } = useStatisticsData(initialSales);
+  const [filters, setFilters] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: new Date().toISOString(),
+    categoryId: '',
+    subcategoryId: '',
+    productId: ''
+  });
 
-  if (loading) {
-    return <LoadingAnimation />;
-  }
+  // Filter sales based on date range and other filters
+  const filteredSales = useMemo(() => {
+    return initialSales.filter(sale => {
+      const saleDate = new Date(sale.createdAt);
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      // Check date range
+      if (saleDate < startDate || saleDate > endDate) {
+        return false;
+      }
+      
+      // Check category filter
+      if (filters.categoryId && sale.product?.categoryId !== filters.categoryId) {
+        return false;
+      }
+      
+      // Check product filter
+      if (filters.productId && sale.productId !== filters.productId) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [initialSales, filters]);
+
+  const handleFilterChange = (newFilters: Partial<typeof filters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-primary/10 p-3">
-            <ChartPie className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Στατιστικά</h1>
-            <p className="text-muted-foreground">
-              Προβολή στατιστικών και αναλύσεων
-            </p>
-          </div>
+    <div className="space-y-6">
+      <StatisticsFilter
+        onFilterChange={handleFilterChange}
+      />
+      
+      {filteredSales.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          Δεν υπάρχουν δεδομένα πωλήσεων για την επιλεγμένη περίοδο
         </div>
-        <StatisticsFilter onFilterChange={setDateRange} />
-      </div>
-
-      {/* Charts Grid */}
-      <div className="flex-1 grid gap-6">
-        {/* Stats Overview */}
-        <StatsCards sales={filteredSales} />
-
-        {/* Daily Charts */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <SalesChart sales={filteredSales} />
-          <RevenueChart sales={filteredSales} />
-          <CategorySalesChart 
-            sales={filteredSales} 
-            categories={categories}
-            subCategories={subCategories}
-          />
+      ) : (
+        <div className="space-y-6">
+          {/* Statistics Cards */}
+          <StatsCards sales={filteredSales} />
+          
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesChart sales={filteredSales} />
+            <RevenueChart sales={filteredSales} />
+          </div>
+          
+          {/* Top Products Chart */}
           <TopProductsChart sales={filteredSales} />
+          
+          {/* Summary Info */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-primary">
+                  {filteredSales.length}
+                </p>
+                <p className="text-sm text-muted-foreground">Συνολικές Πωλήσεις</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">
+                  {filteredSales.reduce((sum, sale) => sum + sale.quantity, 0)}
+                </p>
+                <p className="text-sm text-muted-foreground">Συνολικά Τεμάχια</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600">
+                  €{filteredSales.reduce((sum, sale) => sum + parseFloat(sale.totalPrice?.toString() || '0'), 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-muted-foreground">Συνολικά Έσοδα</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600">
+                  {filteredSales.filter(sale => sale.isTreat).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Κεράσματα</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
-} 
+}

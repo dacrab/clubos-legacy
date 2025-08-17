@@ -1,66 +1,40 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
-import { toast } from 'sonner';
+'use server';
 
-type SupabaseClientType = SupabaseClient<Database>;
+import { stackServerApp } from '@/lib/auth';
+import { logger } from '@/lib/utils/logger';
+import { getUserById } from '@/lib/db/services/users';
 
-async function verifyUserProfile(supabase: SupabaseClientType, userId: string) {
-    const { data: profile, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (error || !profile) {
-        await supabase.auth.signOut();
-        throw new Error('Αποτυχία επαλήθευσης προφίλ');
-    }
-    return profile;
-}
-
-export async function checkAndVerifySession(supabase: SupabaseClientType) {
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
-        return await verifyUserProfile(supabase, user.id);
-    } catch (error) {
-        console.error('Σφάλμα ελέγχου συνεδρίας:', error);
-        return null;
-    }
-}
-
-export async function signInWithUsernameAndPassword(supabase: SupabaseClientType, username: string, password: string) {
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: `${username.trim().toLowerCase()}@example.com`,
-            password: password,
-        });
-
-        if (error || !data?.session) {
-            throw error || new Error('Δεν υπάρχει συνεδρία');
-        }
-        
-        await verifyUserProfile(supabase, data.session.user.id);
-        
-        return { success: true };
-
-    } catch (error) {
-        console.error('Σφάλμα σύνδεσης:', error);
-        const message = error instanceof Error && error.message.includes('Invalid login credentials')
-            ? 'Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης'
-            : 'Παρουσιάστηκε σφάλμα κατά τη σύνδεση.';
-        return { success: false, message };
-    }
-}
-
-export async function signOut(supabase: SupabaseClientType) {
+export async function signOut() {
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // Stack Auth handles sign out through its URLs
     return { success: true };
   } catch (error) {
-    console.error('Σφάλμα αποσύνδεσης:', error);
-    toast.error('Αποτυχία αποσύνδεσης');
+    if (process.env.NODE_ENV === 'development') {
+      logger.error('Σφάλμα αποσύνδεσης:', error);
+    }
     return { success: false };
   }
+}
+
+export async function verifyUserProfile(userId: string) {
+  try {
+    const userDetails = await getUserById(userId);
+    if (!userDetails) {
+      return { success: false, error: 'Ο χρήστης δεν βρέθηκε' };
+    }
+    
+    return { success: true, data: userDetails };
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.error('Error verifying user profile:', error);
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Σφάλμα επαλήθευσης προφίλ' 
+    };
+  }
+}
+
+export async function getCurrentUser() {
+  return await stackServerApp.getUser();
 } 

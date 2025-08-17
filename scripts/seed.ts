@@ -3,363 +3,341 @@
 import { db } from '../src/lib/db';
 import { users, categories, products, registerSessions, orders, sales, appointments, footballFieldBookings } from '../src/lib/db/schema';
 
-async function clearDatabase() {
-  console.log('  - Clearing database...');
-  
-  // Clear in reverse dependency order
-  await db.delete(sales);
-  await db.delete(orders);
-  await db.delete(appointments);
-  await db.delete(footballFieldBookings);
-  await db.delete(products);
-  await db.delete(categories);
-  await db.delete(registerSessions);
-  await db.delete(users);
-  
-  console.log('  ✅ Database cleared');
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  role: 'admin' | 'employee' | 'secretary';
 }
 
-async function createUser(email: string, username: string, role: 'admin' | 'employee' | 'secretary') {
-  const userId = crypto.randomUUID();
+interface RegisterSession {
+  id: string;
+}
+async function resetDatabase(): Promise<void> {
+  console.log('🗑️  Resetting database...');
   
-  await db.insert(users).values({
-    id: userId,
+  const tablesToClear = [
+    sales,
+    orders,
+    appointments,
+    footballFieldBookings,
+    products,
+    categories,
+    registerSessions,
+    users
+  ];
+
+  for (const table of tablesToClear) {
+    await db.delete(table);
+    }
+  
+  console.log('✅ Database reset complete');
+  }
+
+async function insertUser(email: string, username: string, role: 'admin' | 'employee' | 'secretary'): Promise<User> {
+  const user: User = {
+    id: crypto.randomUUID(),
     email,
     username,
     role,
-  }).onConflictDoNothing();
-
-  console.log('Created user:', email);
-  return { id: userId, email, username, role };
-}
-
-async function clearDatabase() {
-  const supabase = getSupabaseClient();
-  console.log('  - Clearing database...');
-
-  const tables = [
-    'sales',
-    'orders',
-    'appointments',
-    'football_field_bookings',
-    'products',
-    'categories',
-    'register_sessions',
-  ];
-
-  for (const table of tables) {
-    const { error } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) {
-      console.error(`Error clearing table ${table}:`, error.message);
-      throw new Error(`Failed to clear table ${table}`);
-    }
-  }
-
-  // Clear users
-  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-  if (listError) {
-    console.error('Error listing users for deletion:', listError);
-    throw new Error('Failed to list users for deletion');
-  }
-
-  for (const user of users) {
-    await supabase.auth.admin.deleteUser(user.id);
-  }
-
-  // Add a delay to ensure users are deleted before recreating them
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  console.log('  ✅ Database cleared');
-}
-
-async function createCategories(adminId: string) {
-  const mainCategoryId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+};  
+  await db.insert(users).values(user).onConflictDoNothing();
+  console.log(`👤 Created user: ${email} (${role})`);
   
-  // Create main category first
+  return user;
+}
+
+async function insertCategories(createdBy: string): Promise<void> {
+  const mainCategoryId = crypto.randomUUID();
+  
   await db.insert(categories).values({
     id: mainCategoryId,
     name: 'Καφέδες',
     description: 'Όλα τα είδη καφέ',
-    createdBy: adminId
+    createdBy
   }).onConflictDoNothing();
 
-  // Create subcategories
-  await db.insert(categories).values([
+  const subcategories = [
     {
-      id: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
+      id: crypto.randomUUID(),
       name: 'Ζεστοί Καφέδες',
       description: 'Ζεστοί καφέδες',
       parentId: mainCategoryId,
-      createdBy: adminId
+      createdBy
     },
     {
-      id: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
+      id: crypto.randomUUID(),
       name: 'Κρύοι Καφέδες',
       description: 'Κρύοι καφέδες',
       parentId: mainCategoryId,
-      createdBy: adminId
+      createdBy
     },
     {
-      id: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
+      id: crypto.randomUUID(),
       name: 'Ροφήματα',
       description: 'Διάφορα ροφήματα',
-      createdBy: adminId
+      createdBy
     },
     {
-      id: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
+      id: crypto.randomUUID(),
       name: 'Σνακ',
       description: 'Διάφορα σνακ',
-      createdBy: adminId
+      createdBy
     }
-  ]).onConflictDoNothing();
+  ];
 
-  console.log('✅ Created categories');
+  await db.insert(categories).values(subcategories).onConflictDoNothing();
+  console.log('📂 Categories created');
 }
 
-async function createProducts(adminId: string) {
-  await db.insert(products).values([
-    // Hot Coffees
+async function insertProducts(createdBy: string): Promise<void> {
+  const categoryResults = await db.select().from(categories);
+  const hotCoffeeCategory = categoryResults.find(c => c.name === 'Ζεστοί Καφέδες');
+  const coldCoffeeCategory = categoryResults.find(c => c.name === 'Κρύοι Καφέδες');
+  const beverageCategory = categoryResults.find(c => c.name === 'Ροφήματα');
+  const snackCategory = categoryResults.find(c => c.name === 'Σνακ');
+
+  const productList = [
     {
-      id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a',
+      id: crypto.randomUUID(),
       name: 'Espresso',
       price: '2.00',
       stock: -1,
-      categoryId: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
-      createdBy: adminId
+      categoryId: hotCoffeeCategory?.id,
+      createdBy
     },
     {
-      id: 'b2c3d4e5-f6a7-4b6c-8d1e-123456789abc',
+      id: crypto.randomUUID(),
       name: 'Cappuccino',
       price: '3.00',
       stock: -1,
-      categoryId: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
-      createdBy: adminId
+      categoryId: hotCoffeeCategory?.id,
+      createdBy
     },
-    // Cold Coffees
     {
-      id: 'c3d4e5f6-a7b8-4c7d-91ef-234567890abc',
+      id: crypto.randomUUID(),
       name: 'Freddo Espresso',
       price: '3.00',
       stock: -1,
-      categoryId: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
-      createdBy: adminId
+      categoryId: coldCoffeeCategory?.id,
+      createdBy
     },
     {
-      id: 'd4e5f6a7-b8c9-4d8e-a2f3-345678901abc',
+      id: crypto.randomUUID(),
       name: 'Freddo Cappuccino',
       price: '3.50',
       stock: -1,
-      categoryId: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
-      createdBy: adminId
+      categoryId: coldCoffeeCategory?.id,
+      createdBy
     },
-    // Beverages
     {
-      id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc',
+      id: crypto.randomUUID(),
       name: 'Σοκολάτα',
       price: '3.50',
       stock: -1,
-      categoryId: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
-      createdBy: adminId
+      categoryId: beverageCategory?.id,
+      createdBy
     },
     {
-      id: 'f6a7b8c9-d0e1-4f0a-c4b5-567890123abc',
+      id: crypto.randomUUID(),
       name: 'Τσάι',
       price: '2.50',
       stock: -1,
-      categoryId: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
-      createdBy: adminId
+      categoryId: beverageCategory?.id,
+      createdBy
     },
-    // Snacks
     {
-      id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc',
+      id: crypto.randomUUID(),
       name: 'Κρουασάν',
       price: '2.00',
       stock: 20,
-      categoryId: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
-      createdBy: adminId
+      categoryId: snackCategory?.id,
+      createdBy
     },
     {
-      id: 'b8c9d0e1-f2a3-4b2c-e6d7-789012345abc',
+      id: crypto.randomUUID(),
       name: 'Σάντουιτς',
       price: '3.50',
       stock: 15,
-      categoryId: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
-      createdBy: adminId
+      categoryId: snackCategory?.id,
+      createdBy
     }
-  ]).onConflictDoNothing();
+  ];
 
-  console.log('✅ Created products');
+  await db.insert(products).values(productList).onConflictDoNothing();
+  console.log('🛍️  Products created');
 }
 
-async function createRegisterSession() {
-  const sessionId = 'e9d8c7b6-a5f4-4e3d-b2c1-1a2b3c4d5e6f';
+async function insertRegisterSession(): Promise<RegisterSession> {
+  const session = {
+    id: crypto.randomUUID(),
+    openedBy: 'admin', // Required field for register sessions
+  };
   
-  await db.insert(registerSessions).values({
-    id: sessionId,
-  }).onConflictDoNothing();
-
-  console.log('✅ Created register session');
-  return { id: sessionId };
+  await db.insert(registerSessions).values(session).onConflictDoNothing();
+  console.log('💰 Register session created');
+  
+  return session as RegisterSession;
 }
 
-async function createSales(staffId: string, registerSessionId: string) {
-  const orderId = 'f8e7d6c5-b4a3-4e2f-91b2-890123456def';
+async function insertSampleOrder(staffId: string, sessionId: string): Promise<void> {
+  const orderId = crypto.randomUUID();
+  const productResults = await db.select().from(products);
   
-  // Create an order first
   await db.insert(orders).values({
     id: orderId,
-    registerSessionId: registerSessionId,
+    orderNumber: `ORDER-${Date.now()}`,
+    registerSessionId: sessionId,
     totalAmount: '7.50',
     finalAmount: '3.50',
     cardDiscountCount: 1,
     createdBy: staffId
   }).onConflictDoNothing();
 
-  // Create sales linked to the order
-  await db.insert(sales).values([
+  const sampleSales = [
     {
-      id: 'f8e7d6c5-b4a3-4e2f-91b2-890123456abc',
-      orderId: orderId,
-      productId: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a', // Espresso
+      id: crypto.randomUUID(),
+      orderId,
+      productId: productResults.find(p => p.name === 'Espresso')?.id || '',
+      productName: 'Espresso',
       quantity: 1,
       unitPrice: '2.00',
       totalPrice: '2.00',
       isTreat: true
     },
     {
-      id: 'a7f6e5d4-c3b2-4a3f-82e1-901234567abc',
-      orderId: orderId,
-      productId: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc', // Chocolate
+      id: crypto.randomUUID(),
+      orderId,
+      productId: productResults.find(p => p.name === 'Σοκολάτα')?.id || '',
+      productName: 'Σοκολάτα',
       quantity: 1,
       unitPrice: '3.50',
       totalPrice: '3.50',
       isTreat: false
     },
     {
-      id: 'b6a5f4e3-d2c1-4b3a-92f1-012345678abc',
-      orderId: orderId,
-      productId: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Κρουασάν
+      id: crypto.randomUUID(),
+      orderId,
+      productId: productResults.find(p => p.name === 'Κρουασάν')?.id || '',
+      productName: 'Κρουασάν',
       quantity: 1,
       unitPrice: '2.00',
       totalPrice: '2.00',
       isTreat: false
     }
-  ]).onConflictDoNothing();
+  ];
 
-  console.log('✅ Created order and sales');
+  await db.insert(sales).values(sampleSales).onConflictDoNothing();
+  console.log('🧾 Sample order and sales created');
 }
 
-async function createAppointments(staffId: string) {
-  await db.insert(appointments).values([
+async function insertSampleAppointments(userId: string): Promise<void> {
+  const sampleAppointments = [
     {
-      id: 'c5b4a3f2-e1d0-4c3b-a2a1-123456789abc',
+      id: crypto.randomUUID(),
+      title: 'Γενέθλια παιδιού',
       whoBooked: 'Μαρία Παπαδοπούλου',
-      dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000), // 2 days + 14 hours
+      dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000),
       contactDetails: '6912345678',
       numChildren: 3,
       numAdults: 2,
       notes: 'Γενέθλια παιδιού',
-      userId: staffId
+      userId
     },
     {
-      id: 'd4c3b2a1-f0e9-4d3c-b2b1-234567890abc',
+      id: crypto.randomUUID(),
+      title: 'Σχολική εκδρομή',
       whoBooked: 'Γιώργος Δημητρίου',
-      dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000), // 3 days + 16 hours
+      dateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000),
       contactDetails: '6923456789',
       numChildren: 5,
       numAdults: 3,
       notes: 'Σχολική εκδρομή',
-      userId: staffId
+      userId
     }
-  ]).onConflictDoNothing();
+  ];
 
-  console.log('✅ Created appointments');
+  await db.insert(appointments).values(sampleAppointments).onConflictDoNothing();
+  console.log('📅 Sample appointments created');
 }
 
-async function createFootballBookings(staffId: string) {
-  await db.insert(footballFieldBookings).values([
+async function insertSampleFootballBookings(userId: string): Promise<void> {
+  const sampleBookings = [
     {
-      id: 'e3d2c1b0-a9f8-4e3d-c2c1-345678901abc',
+      id: crypto.randomUUID(),
       whoBooked: 'Νίκος Αντωνίου',
-      bookingDatetime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000), // 1 day + 18 hours
+      bookingDatetime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000),
       contactDetails: '6934567890',
       fieldNumber: 1,
       numPlayers: 10,
       notes: 'Εβδομαδιαίο παιχνίδι',
-      userId: staffId
+      userId
     },
     {
-      id: 'f2e1d0c9-b8a7-4f3e-d2d1-456789012abc',
+      id: crypto.randomUUID(),
       whoBooked: 'Κώστας Νικολάου',
-      bookingDatetime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000), // 2 days + 19 hours
+      bookingDatetime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000),
       contactDetails: '6945678901',
       fieldNumber: 2,
       numPlayers: 8,
       notes: 'Φιλικό παιχνίδι',
-      userId: staffId
+      userId
     }
-  ]).onConflictDoNothing();
+  ];
 
-  console.log('✅ Created football bookings');
+  await db.insert(footballFieldBookings).values(sampleBookings).onConflictDoNothing();
+  console.log('⚽ Sample football bookings created');
 }
 
-async function seedDatabase() {
+async function populateDatabase(): Promise<void> {
   try {
-    console.log('⏳ Starting database seeding...');
+    console.log('🌱 Starting database population...');
     
-    await clearDatabase();
+    await resetDatabase();
 
-    // Step 1: Create users sequentially as they are prerequisites for everything.
-    console.log('  - Creating users...');
-    const admin = await createUser('admin@clubos.com', 'Admin User', 'admin');
-    const staff = await createUser('staff@clubos.com', 'Staff User', 'employee');
-    const secretary = await createUser('secretary@clubos.com', 'Secretary User', 'secretary');
-    console.log('  ✅ Users created');
+    console.log('👥 Creating users...');
+    const admin = await insertUser('admin@clubos.com', 'Admin User', 'admin');
+    const employee = await insertUser('staff@clubos.com', 'Staff User', 'employee');
+    const secretary = await insertUser('secretary@clubos.com', 'Secretary User', 'secretary');
 
-    // Step 2: Create data with dependencies.
-    // These are run sequentially to respect foreign key constraints.
-    console.log('  - Creating catalog data...');
-    await createCategories(admin.id);
-    await createProducts(admin.id);
-    console.log('  ✅ Catalog data created');
+    console.log('🏗️  Building catalog structure...');
+    await insertCategories(admin.id);
+    await insertProducts(admin.id);
 
-    console.log('  - Creating initial operational data...');
-    const session = await createRegisterSession();
-    await createSales(staff.id, session.id);
-    console.log('  ✅ Operational data created');
+    console.log('💼 Setting up operational data...');
+    const session = await insertRegisterSession();
+    await insertSampleOrder(employee.id, session.id);
 
-    // Step 3: Create independent data in parallel for efficiency.
-    console.log('  - Creating bookings and appointments in parallel...');
+    console.log('📋 Creating sample bookings...');
     await Promise.all([
-      createAppointments(staff.id),
-      createFootballBookings(staff.id),
+      insertSampleAppointments(employee.id),
+      insertSampleFootballBookings(employee.id),
     ]);
-    console.log('  ✅ Bookings and appointments created');
 
-    console.log('🚀 Database seeding completed successfully!');
+    console.log('🎉 Database population completed successfully!');
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Database population failed:', error);
     if (error instanceof Error) {
-      console.error('  Error details:', error.message);
+      console.error('Error details:', error.message);
     }
     throw error;
   }
 }
 
 if (import.meta.main) {
-  seedDatabase().catch((error) => {
-    console.error('Error executing seed script:', error);
+  populateDatabase().catch((error) => {
+    console.error('Script execution failed:', error);
     process.exit(1);
   });
 }
 
 export {
-  seedDatabase,
-  createUser,
-  createCategories,
-  createProducts,
-  createRegisterSession,
-  createSales,
-  createAppointments,
-  createFootballBookings,
+  populateDatabase,
+  insertUser,
+  insertCategories,
+  insertProducts,
+  insertRegisterSession,
+  insertSampleOrder,
+  insertSampleAppointments,
+  insertSampleFootballBookings,
 };

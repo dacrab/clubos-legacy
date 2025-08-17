@@ -1,52 +1,26 @@
 "use client";
 
-import { memo } from "react";
 import { Menu, Search, X, ShoppingCart } from "lucide-react";
+import { memo } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { ProductCard } from "./ProductCard";
 import type { Product } from "@/types/sales";
+
+import { ProductCard } from "./ProductCard";
 
 interface ProductSectionProps {
     products: Product[];
     title?: string;
     onProductSelect: (product: Product) => void;
     searchQuery: string;
-    onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onSearchChange: (value: string) => void;
     onShowCategories?: () => void;
     onShowCart?: () => void;
     cartItemsCount: number;
     isMobile?: boolean;
-    selectedCategory?: string | null;
-    selectedSubcategory?: string | null;
 }
-
-const ProductGrid = memo(({
-    products,
-    onProductSelect
-}: {
-    products: Product[];
-    onProductSelect: (product: Product) => void;
-}) => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-2">
-        {products.map(product => (
-            <ProductCard
-                key={product.id}
-                product={product}
-                onClick={() => onProductSelect(product)}
-            />
-        ))}
-        {products.length === 0 && (
-            <div className="col-span-full text-center py-10">
-                <div className="text-muted-foreground">Δεν βρέθηκαν προϊόντα</div>
-            </div>
-        )}
-    </div>
-));
-ProductGrid.displayName = 'ProductGrid';
-
 
 const ProductSection = memo(({
     products,
@@ -58,19 +32,15 @@ const ProductSection = memo(({
     onShowCart,
     cartItemsCount,
     isMobile,
-    selectedCategory,
-    selectedSubcategory,
 }: ProductSectionProps) => {
+    const clearSearch = () => onSearchChange('');
+
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            <div className="flex items-center gap-2 p-3 border-b shrink-0">
+        <div className="h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-2 p-3 border-b">
                 {isMobile && onShowCategories && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
-                        onClick={onShowCategories}
-                    >
+                    <Button variant="ghost" size="icon" onClick={onShowCategories}>
                         <Menu className="h-5 w-5" />
                     </Button>
                 )}
@@ -80,51 +50,58 @@ const ProductSection = memo(({
                     <Input
                         placeholder="Αναζήτηση προϊόντων..."
                         value={searchQuery}
-                        onChange={onSearchChange}
-                        className="pl-9 h-10 w-full"
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        className="pl-9"
                     />
                     {searchQuery && (
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-transparent"
-                            onClick={() => onSearchChange({ target: { value: '' } } as any)}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                            onClick={clearSearch}
                         >
-                            <X className="h-4 w-4 text-muted-foreground" />
+                            <X className="h-4 w-4" />
                         </Button>
                     )}
                 </div>
 
                 {isMobile && onShowCart && (
-                    <Button
-                        variant="default"
-                        size="sm"
-                        onClick={onShowCart}
-                        className="flex items-center gap-1.5 h-10"
-                    >
+                    <Button variant="default" size="sm" onClick={onShowCart}>
                         <ShoppingCart className="h-4 w-4" />
-                        <span className="font-medium">{cartItemsCount}</span>
+                        <span>{cartItemsCount}</span>
                     </Button>
                 )}
             </div>
 
+            {/* Title */}
             {title && (
-                <div className="px-4 py-3 flex items-center justify-between">
+                <div className="px-4 py-3">
                     <h2 className="text-lg font-bold">{title}</h2>
-                    {selectedCategory && selectedSubcategory && (
-                        <Badge variant="outline" className="font-normal">
-                            {selectedSubcategory}
-                        </Badge>
-                    )}
                 </div>
             )}
 
+            {/* Products */}
             <ScrollArea className="flex-1">
-                <ProductGrid products={products} onProductSelect={onProductSelect} />
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+                    {products.length > 0 ? (
+                        products.map(product => (
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                onClick={() => onProductSelect(product)}
+                            />
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center py-10 text-muted-foreground">
+                            Δεν βρέθηκαν προϊόντα
+                        </div>
+                    )}
+                </div>
             </ScrollArea>
         </div>
     );
 });
+
 ProductSection.displayName = 'ProductSection';
 
-export { ProductSection }; 
+export { ProductSection };

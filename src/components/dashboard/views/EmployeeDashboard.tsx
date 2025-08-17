@@ -1,30 +1,19 @@
 "use client";
 
 // External Dependencies
-import { ShoppingBag, Calculator, Loader2 } from "lucide-react";
-import type { User } from '@supabase/supabase-js';
-import { createBrowserClient } from "@supabase/ssr";
-import { useState, useEffect } from "react";
+import { ShoppingBag, Calculator } from "lucide-react";
+import { useState } from "react";
 
 // Internal Components
+import { useUser } from "@/lib/auth-client";
+import { REGISTER_DIALOG } from "@/lib/constants";
+import type { SaleWithDetails } from "@/types/sales";
+
 import { CloseRegisterButton } from "../register/CloseRegisterButton";
 import AddSaleButton from "../sales/AddSaleButton";
 import RecentSales from "../sales/RecentSales";
 
-// Types and Constants
-import { Database } from "@/types/supabase";
-import { SaleWithDetails } from "@/types/sales";
-import { UserRole } from "@/lib/constants";
-import { REGISTER_DIALOG } from "@/lib/constants";
-
-interface Profile {
-  username: string | null;
-  role: UserRole;
-  id: string;
-  created_at: string;
-  updated_at: string;
-  [key: string]: any;
-}
+// Types and Constants removed unused _Profile
 
 interface EmployeeDashboardProps {
   recentSales: SaleWithDetails[];
@@ -32,65 +21,13 @@ interface EmployeeDashboardProps {
 
 export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboardProps) {
   // State Management
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [localRecentSales, setLocalRecentSales] = useState<SaleWithDetails[]>(recentSales);
+  
+  // Stack Auth
+  const user = useUser({ or: 'redirect' });
 
-  // Supabase Client
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // Effects
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: userData, error: userDataError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (userDataError) {
-          console.error('User error:', userDataError);
-          setIsLoading(false);
-          return;
-        }
-
-        setUser(user);
-        setProfile(userData as Profile);
-      } catch (error) {
-        console.error('Auth check error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [supabase]);
-
-  // Loading State
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Έλεγχος στοιχείων...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Authorization Check
-  if (!user || !profile || profile.role !== 'employee') {
+  // Authorization Check - Stack Auth handles loading and auth state
+  if (!user) {
     return null;
   }
 

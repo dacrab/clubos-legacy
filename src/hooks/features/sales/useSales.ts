@@ -1,112 +1,82 @@
-import useSWR from 'swr';
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { createClientSupabase } from '@/lib/supabase/client';
-import type { OrderItem, NewSale } from '@/types/sales';
-import { Product, Category } from '@/types/products';
-import { useRegisterSessions } from '../register/useRegisterSessions';
+import useSWR from 'swr';
 
-const supabase = createClientSupabase();
+import { useUser } from '@/lib/auth-client';
+import type { Category } from '@/types/products';
+import type { NewSale } from '@/types/sales';
+
+import { useRegisterSessions } from '../register/useRegisterSessions';
+// Using API calls for all data operations
 
 type CategoriesMap = { [key: string]: Category[] };
 
 export function useSales() {
   const [isCreating, setIsCreating] = useState(false);
-  const { sessions, refreshData: mutateSession } = useRegisterSessions();
+  const { sessions, fetchSessions: mutateSession } = useRegisterSessions();
   const session = sessions?.find(s => !s.closed_at);
   
-  const { data: products, error: productsError, isLoading: isProductsLoading, mutate: mutateProducts } = useSWR(
-    'products', 
+  // Fetch products via API
+  const { data: products, isLoading: isProductsLoading, mutate: mutateProducts } = useSWR(
+    'products',
     async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`*, category:categories(*)`)
-        .order('name');
-      if (error) throw new Error(error.message);
-      return data as Product[];
+      const response = await fetch('/api/products');
+      if (!response.ok) {throw new Error('Failed to fetch products');}
+      return await response.json();
     }
   );
-  
-  const { data: categories, error: categoriesError, isLoading: isCategoriesLoading } = useSWR(
+
+  const { data: categories, isLoading: isCategoriesLoading } = useSWR(
     'categories',
     async () => {
-        const { data, error } = await supabase
-            .from('categories')
-            .select('*')
-            .order('name');
-        if (error) throw new Error(error.message);
-        return data as Category[];
+      const response = await fetch('/api/categories');
+      if (!response.ok) {throw new Error('Failed to fetch categories');}
+      return await response.json();
     }
   );
   
   const categoriesMap = useMemo(() => {
-    if (!categories) return {};
+    if (!categories) {return {};}
     return categories.reduce((acc: CategoriesMap, category: Category) => {
-      if (category.parent_id) {
-        if (!acc[category.parent_id]) {
-          acc[category.parent_id] = [];
+      if (category.parentId) {
+        if (!acc[category.parentId]) {
+          acc[category.parentId] = [];
         }
-        if (!acc[category.parent_id].some(c => c.id === category.id)) {
-          acc[category.parent_id].push(category);
+        if (!acc[category.parentId].some(c => c.id === category.id)) {
+          acc[category.parentId].push(category);
         }
       }
       return acc;
     }, {});
   }, [categories]);
 
+  const user = useUser();
+  
   const createSale = useCallback(async (newSale: NewSale) => {
     setIsCreating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-      if (!session?.id) throw new Error('No active register session found');
+      if (!user) {throw new Error('User not authenticated');}
+      if (!session?.id) {throw new Error('No active register session found');}
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          register_session_id: session.id,
-          total_amount: newSale.totalAmount,
-          final_amount: newSale.finalAmount,
-          card_discount_count: newSale.cardDiscountCount,
-          created_by: user.id,
-        })
-        .select('id')
-        .single();
-
-      if (orderError) throw orderError;
-
-      const saleItems = newSale.items.map((item: OrderItem) => ({
-        order_id: order.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        total_price: item.product.price * item.quantity,
-        is_treat: item.isTreat,
-      }));
-
-      const { error: salesError } = await supabase.from('sales').insert(saleItems);
-      if (salesError) throw salesError;
-      
-      for (const item of newSale.items) {
-        if (item.product.stock !== -1 && !item.isTreat) {
-          const { error } = await supabase
-            .from('products')
-            .update({ stock: item.product.stock - item.quantity })
-            .eq('id', item.product.id);
-          if (error) console.warn(`Could not update stock for product ${item.product.id}: ${error.message}`);
-        }
-      }
+      // Create sale via API
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newSale, userId: user.id, sessionId: session.id })
+      });
+      if (!response.ok) {throw new Error('Failed to create sale');}
 
       toast.success('Sale created successfully');
       mutateProducts();
       mutateSession();
 
-    } catch (error: any) {
-      toast.error(`Error creating sale: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Error creating sale: ${message}`);
     } finally {
       setIsCreating(false);
     }
-  }, [session, mutateProducts, mutateSession]);
+  }, [session, mutateProducts, mutateSession, user]);
 
   return {
     products: products || [],

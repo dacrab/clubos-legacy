@@ -1,7 +1,8 @@
-import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { UserRole, USER_MESSAGES } from '@/lib/constants';
+import useSWR from 'swr';
+
+import { USER_MESSAGES, type UserRole } from '@/lib/constants';
 
 // Define the User type matching the data structure
 export type User = {
@@ -38,7 +39,7 @@ export function useUsers() {
   const apiRequest = async (
     url: string,
     method: 'POST' | 'DELETE' | 'PATCH',
-    body: Record<string, any> | null = null,
+    body: Record<string, unknown> | null = null,
     successMessage: string
   ) => {
     setLoading(true);
@@ -56,14 +57,15 @@ export function useUsers() {
 
       toast.success(successMessage);
       await mutate(); // Revalidate the user list
-    } catch (err: any) {
-      toast.error(err.message || 'An unexpected error occurred.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const addUser = async (userData: Record<string, any>) => {
+  const addUser = async (userData: Record<string, unknown>) => {
     await apiRequest('/api/users', 'POST', userData, USER_MESSAGES.CREATE_SUCCESS);
   };
   

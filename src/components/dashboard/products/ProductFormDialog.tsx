@@ -1,243 +1,344 @@
-"use client";
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { createClientSupabase } from "@/lib/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { X, ImagePlus, Loader2 } from "lucide-react";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { UNLIMITED_STOCK, API_ERROR_MESSAGES } from "@/lib/constants";
-import Image from "next/image";
-import { useCategories } from "@/hooks/data/useCategories";
-import type { Product, Category, GroupedCategory } from "@/types/products";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { FormControl } from "@/components/ui/form";
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import type { Product, Category } from '@/types/products';
 
 interface ProductFormDialogProps {
-  product?: Product;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  product?: Product;
+  categories?: Category[];
+  onProductSaved?: () => void;
 }
 
-interface FormData {
+interface ProductFormData {
   name: string;
+  description: string;
   price: string;
+  costPrice: string;
   stock: string;
-  isUnlimited: boolean;
-  imageUrl: string | null;
-  uploadedImage: File | null;
-  category_id: string | null;
+  minStockLevel: string;
+  categoryId: string;
+  barcode: string;
+  imageUrl: string;
+  imageFile?: File;
+  isActive: boolean;
+  trackInventory: boolean;
 }
 
-const STYLES = {
-  form: { container: "space-y-4 md:space-y-6" },
-  image: {
-    container: "relative flex items-center justify-center w-full h-28 sm:h-32 md:h-40 border-2 border-dashed rounded-lg transition-all",
-    preview: "absolute inset-0 w-full h-full object-contain p-2",
-    placeholder: "flex flex-col items-center justify-center gap-1.5 md:gap-2 text-muted-foreground",
-    remove: "absolute top-1 right-1 md:top-2 md:right-2 p-1 bg-background/80 rounded-full hover:bg-background transition-colors"
-  },
-  select: {
-    group: {
-      label: "px-2 py-1.5 text-xs md:text-sm font-semibold text-muted-foreground",
-      item: "pl-4 md:pl-6 text-sm md:text-base"
-    }
-  },
-  dialog: {
-    content: "w-[95vw] max-w-[425px] p-3 sm:p-4 md:p-6 gap-3 sm:gap-4 md:gap-6 max-h-[90vh] overflow-y-auto"
-  }
+const FORM_LABELS = {
+  NAME: 'Όνομα',
+  DESCRIPTION: 'Περιγραφή',
+  PRICE: 'Τιμή',
+  COST_PRICE: 'Τιμή Κόστους',
+  STOCK: 'Απόθεμα',
+  MIN_STOCK_LEVEL: 'Ελάχιστο Απόθεμα',
+  CATEGORY: 'Κατηγορία',
+  BARCODE: 'Barcode',
+  IMAGE: 'Εικόνα',
+  IS_ACTIVE: 'Ενεργό',
+  TRACK_INVENTORY: 'Παρακολούθηση Αποθέματος'
+} as const;
+
+const initialFormData: ProductFormData = {
+  name: '',
+  description: '',
+  price: '',
+  costPrice: '',
+  stock: '0',
+  minStockLevel: '0',
+  categoryId: '',
+  barcode: '',
+  imageUrl: '',
+  isActive: true,
+  trackInventory: true,
 };
 
-export default function ProductFormDialog({ product: productToEdit, open, onOpenChange }: ProductFormDialogProps) {
-  const router = useRouter();
-  const supabase = createClientSupabase();
-  const isEditMode = useMemo(() => !!productToEdit, [productToEdit]);
+const uploadImage = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
 
-  const getInitialFormState = useCallback((): FormData => ({
-    name: productToEdit?.name ?? "",
-    price: productToEdit?.price?.toString() ?? "",
-    stock: productToEdit?.stock === UNLIMITED_STOCK ? "" : productToEdit?.stock?.toString() ?? "",
-    isUnlimited: productToEdit?.stock === UNLIMITED_STOCK,
-    imageUrl: productToEdit?.image_url ?? null,
-    uploadedImage: null,
-    category_id: productToEdit?.category_id ?? null,
-  }), [productToEdit]);
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData,
+  });
 
-  const [formData, setFormData] = useState<FormData>(getInitialFormState());
-  const { categories, groupedCategories, isLoading: isLoadingCategories } = useCategories();
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Upload failed');
+  }
+
+  const data = await response.json();
+  return data.url;
+};
+
+export default function ProductFormDialog({ 
+  open, 
+  onOpenChange, 
+  product, 
+  categories = [], 
+  onProductSaved 
+}: ProductFormDialogProps) {
+  const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
-  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const isEditMode = Boolean(product);
+
+  // Reset form when dialog opens/closes or product changes
   useEffect(() => {
     if (open) {
-      setFormData(getInitialFormState());
+      if (product) {
+        setFormData({
+          name: product.name,
+          description: product.description || '',
+          price: product.price.toString(),
+          costPrice: product.costPrice?.toString() || '',
+          stock: product.stock.toString(),
+          minStockLevel: product.minStockLevel.toString(),
+          categoryId: product.categoryId || '',
+          barcode: product.barcode || '',
+          imageUrl: product.imageUrl || '',
+          isActive: product.isActive,
+          trackInventory: product.trackInventory,
+        });
+      } else {
+        setFormData(initialFormData);
+      }
+      setImageFile(null);
     }
-  }, [open, getInitialFormState]);
+  }, [open, product]);
 
-  const handleImageUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) throw new Error('Παρακαλώ επιλέξτε μια έγκυρη εικόνα');
-    if (file.size > 5 * 1024 * 1024) throw new Error('Η εικόνα πρέπει να είναι μικρότερη από 5MB');
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `product-images/${fileName}`;
-
-    const { data, error } = await supabase.storage.from('products').upload(filePath, file);
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(data.path);
-    return publicUrl;
+  const handleInputChange = (field: keyof ProductFormData, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setFormData(prev => ({ ...prev, uploadedImage: file, imageUrl: URL.createObjectURL(file) }));
-    toast.success('Η εικόνα προστέθηκε επιτυχώς');
-  };
-
-  const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      category_id: value
-    }));
+    if (file) {
+      setImageFile(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) {return;}
+
     setLoading(true);
-
     try {
-      const { name, price, stock, isUnlimited, uploadedImage } = formData;
-      if (!name.trim()) throw new Error('Το όνομα είναι υποχρεωτικό');
-      
-      const priceValue = parseFloat(price);
-      if (isNaN(priceValue) || priceValue < 0) throw new Error('Η τιμή πρέπει να είναι θετικός αριθμός');
-      
-      const stockValue = isUnlimited ? UNLIMITED_STOCK : parseInt(stock, 10);
-      if (!isUnlimited && (isNaN(stockValue) || stockValue < 0)) throw new Error('Το απόθεμα πρέπει να είναι θετικός αριθμός');
-      
-      let finalImageUrl = formData.imageUrl;
-      if (uploadedImage) finalImageUrl = await handleImageUpload(uploadedImage);
-      
-      const productData = {
-        name: name.trim(),
-        price: priceValue,
-        stock: stockValue,
-        category_id: formData.category_id,
-        image_url: finalImageUrl,
-        updated_at: new Date().toISOString(),
-      };
+      let imageUrl = formData.imageUrl;
 
-      if (productToEdit) {
-        const { error } = await supabase.from('products').update(productData).eq('id', productToEdit.id);
-        if (error) throw error;
-        toast.success('Product updated successfully');
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Σφάλμα ταυτοποίησης');
-        const { error } = await supabase.from('products').insert({ ...productData, created_by: user.id });
-        if (error) throw error;
-        toast.success('Product created successfully');
+      // Upload image if a new one was selected
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
       }
 
-      router.refresh();
+      const productData = {
+        ...formData,
+        imageUrl,
+        price: parseFloat(formData.price),
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
+        stock: parseInt(formData.stock),
+        minStockLevel: parseInt(formData.minStockLevel),
+      };
+
+      const endpoint = isEditMode && product ? `/api/products/${product.id}` : '/api/products';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save product');
+      }
+
+      toast.success(isEditMode ? 'Το προϊόν ενημερώθηκε επιτυχώς' : 'Το προϊόν δημιουργήθηκε επιτυχώς');
+      onProductSaved?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Submit error:', error);
-      toast.error(error instanceof Error ? error.message : API_ERROR_MESSAGES.SERVER_ERROR);
+      (await import('@/lib/utils/logger')).logger.error('Error saving product:', error);
+      toast.error(error instanceof Error ? error.message : 'Αποτυχία αποθήκευσης προϊόντος');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderCategoryOptions = (cats: GroupedCategory[]) => cats.map(({ main, subcategories }) => (
-    <SelectGroup key={main.id}>
-      <SelectLabel className={STYLES.select.group.label}>{main.name}</SelectLabel>
-      <SelectItem value={main.id} className={STYLES.select.group.item}>{main.name}</SelectItem>
-      {subcategories.map((sub: Category) => (
-        <SelectItem key={sub.id} value={sub.id} className="pl-8">{sub.name}</SelectItem>
-      ))}
-    </SelectGroup>
-  ));
-  
-  const selectedCategory = useMemo(() => (
-    formData.category_id ? categories.find(cat => cat.id === formData.category_id) : null
-  ), [formData.category_id, categories]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={STYLES.dialog.content}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "Επεξεργασία Προϊόντος" : "Προσθήκη Νέου Προϊόντος"}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? "Ενημερώστε τις λεπτομέρειες παρακάτω." : "Συμπληρώστε τις λεπτομέρειες του προϊόντος."}
-          </DialogDescription>
+          <DialogTitle>
+            {isEditMode ? 'Επεξεργασία Προϊόντος' : 'Νέο Προϊόν'}
+          </DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className={STYLES.form.container}>
-          <div className="space-y-1.5 md:space-y-2">
-            <Label htmlFor="name">Όνομα Προϊόντος</Label>
-            <Input id="name" value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 md:space-y-2">
-              <Label htmlFor="price">Τιμή (€)</Label>
-              <Input id="price" type="number" step="0.01" min="0" value={formData.price} onChange={e => setFormData(p => ({...p, price: e.target.value}))} required />
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">{FORM_LABELS.NAME} *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                required
+                disabled={loading}
+              />
             </div>
-            <div className="space-y-1.5 md:space-y-2">
-              <Label htmlFor="stock">Απόθεμα</Label>
-              <Input id="stock" type="number" min="0" value={formData.stock} onChange={e => setFormData(p => ({...p, stock: e.target.value}))} disabled={formData.isUnlimited} required={!formData.isUnlimited} />
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox id="unlimited" checked={formData.isUnlimited} onCheckedChange={checked => setFormData(p => ({...p, isUnlimited: !!checked, stock: checked ? "" : p.stock, category_id: p.category_id}))} />
-            <Label htmlFor="unlimited">Απεριόριστο απόθεμα</Label>
-          </div>
-          
-          <div className="space-y-1.5 md:space-y-2">
-            <Label>Κατηγορία</Label>
-            <Select onValueChange={handleCategoryChange} value={formData.category_id ?? ""}>
-              <SelectTrigger><SelectValue placeholder="Επιλέξτε κατηγορία" /></SelectTrigger>
-              <SelectContent>
-                {isLoadingCategories ? <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div> : renderCategoryOptions(groupedCategories)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5 md:space-y-2">
-            <Label>Εικόνα Προϊόντος</Label>
-            <div className={cn(STYLES.image.container, formData.imageUrl && "border-primary")}>
-              {formData.imageUrl ? (
-                <>
-                  <Image src={formData.imageUrl} alt="Preview" width={200} height={200} className={STYLES.image.preview} />
-                  <button type="button" onClick={() => setFormData(p => ({...p, imageUrl: null, uploadedImage: null}))} className={STYLES.image.remove}>
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
-              ) : (
-                <label htmlFor="image" className={STYLES.image.placeholder}>
-                  <ImagePlus className="h-8 w-8 opacity-50" />
-                  <span className="text-sm">Μεταφόρτωση εικόνας</span>
-                  <input id="image" type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
-                </label>
-              )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="category">{FORM_LABELS.CATEGORY}</Label>
+              <Select
+                value={formData.categoryId}
+                onValueChange={(value) => handleInputChange('categoryId', value)}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Επιλέξτε κατηγορία" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <LoadingButton type="submit" loading={loading} disabled={isLoadingCategories}>Αποθήκευση</LoadingButton>
+          <div className="space-y-2">
+            <Label htmlFor="description">{FORM_LABELS.DESCRIPTION}</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">{FORM_LABELS.PRICE} *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => handleInputChange('price', e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="costPrice">{FORM_LABELS.COST_PRICE}</Label>
+              <Input
+                id="costPrice"
+                type="number"
+                step="0.01"
+                value={formData.costPrice}
+                onChange={(e) => handleInputChange('costPrice', e.target.value)}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock">{FORM_LABELS.STOCK}</Label>
+              <Input
+                id="stock"
+                type="number"
+                value={formData.stock}
+                onChange={(e) => handleInputChange('stock', e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="minStockLevel">{FORM_LABELS.MIN_STOCK_LEVEL}</Label>
+              <Input
+                id="minStockLevel"
+                type="number"
+                value={formData.minStockLevel}
+                onChange={(e) => handleInputChange('minStockLevel', e.target.value)}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="barcode">{FORM_LABELS.BARCODE}</Label>
+            <Input
+              id="barcode"
+              value={formData.barcode}
+              onChange={(e) => handleInputChange('barcode', e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="image">{FORM_LABELS.IMAGE}</Label>
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={loading}
+            />
+            {formData.imageUrl && (
+              <p className="text-sm text-muted-foreground">
+                Τρέχουσα εικόνα: {formData.imageUrl}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) => handleInputChange('isActive', checked === true)}
+                disabled={loading}
+              />
+              <Label htmlFor="isActive">{FORM_LABELS.IS_ACTIVE}</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="trackInventory"
+                checked={formData.trackInventory}
+                onCheckedChange={(checked) => handleInputChange('trackInventory', checked === true)}
+                disabled={loading}
+              />
+              <Label htmlFor="trackInventory">{FORM_LABELS.TRACK_INVENTORY}</Label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Ακύρωση
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Αποθήκευση...' : 'Αποθήκευση'}
+            </Button>
           </div>
         </form>
       </DialogContent>

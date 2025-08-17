@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { transitions } from "@/lib/animations";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,18 +37,14 @@ export default function ResetPasswordDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPassword || loading) return;
+    if (!newPassword || loading) {return;}
     await onSubmit(newPassword);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onInteractOutside={(e) => loading && e.preventDefault()}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={transitions.smooth}
-        >
+        <div className="animate-fade-in">
           <DialogHeader>
             <DialogTitle>Επαναφορά Κωδικού</DialogTitle>
             <DialogDescription>
@@ -86,7 +81,7 @@ export default function ResetPasswordDialog({
               </Button>
             </DialogFooter>
           </form>
-        </motion.div>
+        </div>
       </DialogContent>
     </Dialog>
   );

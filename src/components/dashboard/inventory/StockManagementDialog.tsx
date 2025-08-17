@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { useStockManagement } from "@/hooks/features/inventory/useStockManagement";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useStockManagement } from "@/hooks/features/inventory/useStockManagement";
+import { DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
 
 type StockManagementDialogProps = {
   code: {
@@ -27,11 +28,15 @@ type StockManagementDialogContentProps = {
 
 function StockManagementDialogContent({ code, onOpenChange }: StockManagementDialogContentProps) {
   const [stock, setStock] = useState(code.stock.toString());
-  const { isLoading, handleStockUpdate } = useStockManagement(code as any);
+  const { isLoading, updateStock } = useStockManagement();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleStockUpdate(parseInt(stock));
+    await updateStock({
+      productId: code.id,
+      newStock: parseInt(stock),
+      reason: 'Manual adjustment'
+    });
     onOpenChange(false);
   };
 

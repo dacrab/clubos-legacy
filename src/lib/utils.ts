@@ -1,8 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
  
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return clsx(inputs)
 }
 
 interface DateInterval {
@@ -12,7 +11,7 @@ interface DateInterval {
 
 export function eachDayOfInterval({ start, end }: DateInterval): Date[] {
   const days: Date[] = []
-  let currentDate = new Date(start)
+  const currentDate = new Date(start)
 
   while (currentDate <= end) {
     days.push(new Date(currentDate))

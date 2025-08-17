@@ -1,22 +1,19 @@
 "use client";
 
+import { PieChart as PieChartIcon } from "lucide-react";
 import { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import type { SaleWithDetails } from "@/types/sales";
-import { STATISTICS } from "@/lib/constants";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart as PieChartIcon, Medal } from "lucide-react";
-import { aggregateSalesByProduct, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils";
+import type { SaleWithDetails } from "@/types/sales";
 
 interface TopProductsChartProps {
   sales: SaleWithDetails[];
 }
 
-// Using colors from chart-utils for consistency
 const COLORS = [
   'hsl(var(--primary))',
   'hsl(142.1 76.2% 36.3%)', 
@@ -25,59 +22,23 @@ const COLORS = [
   'hsl(217.2 91.2% 59.8%)'
 ];
 
-const CHART_CONFIG = {
-  pieConfig: {
-    cx: "50%",
-    cy: "45%",
-    outerRadius: 100,
-    labelRadius: 60,
-    minPercentForLabel: 0.05
-  },
-  styles: {
-    tooltip: {
-      background: 'hsl(var(--background))',
-      border: '1px solid hsl(var(--border))',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      color: 'hsl(var(--foreground))'
-    },
-    legend: {
-      fontSize: '11px',
-      padding: '4px 8px',
-      borderRadius: '9999px',
-      background: 'hsl(var(--muted)/0.5)'
-    }
-  }
-};
-
 export default function TopProductsChart({ sales }: TopProductsChartProps) {
-  const [topCount, setTopCount] = useState<number>(STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT);
+  const [topCount, setTopCount] = useState(5);
   const [showAll, setShowAll] = useState(false);
 
   const data = useMemo(() => {
-    return aggregateSalesByProduct(sales, topCount, showAll);
+    const productSales = sales.reduce((acc, sale) => {
+      const key = sale.product?.name || 'Unknown Product';
+      acc[key] = (acc[key] || 0) + sale.quantity;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const sorted = Object.entries(productSales)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => (b.value as number) - (a.value as number));
+
+    return showAll ? sorted : sorted.slice(0, topCount);
   }, [sales, topCount, showAll]);
-
-  const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
-    if (percent <= CHART_CONFIG.pieConfig.minPercentForLabel) return null;
-
-    const radian = Math.PI / 180;
-    const x = cx + CHART_CONFIG.pieConfig.labelRadius * Math.cos(-midAngle * radian);
-    const y = cy + CHART_CONFIG.pieConfig.labelRadius * Math.sin(-midAngle * radian);
-  
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="hsl(var(--background))"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        className="text-xs font-medium"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
 
   if (!data.length) {
     return (
@@ -101,7 +62,7 @@ export default function TopProductsChart({ sales }: TopProductsChartProps) {
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <Label htmlFor="topCount" className="text-sm text-muted-foreground">
-              Αριθμός προϊόντων ({STATISTICS.MIN_TOP_PRODUCTS_COUNT}-{STATISTICS.MAX_TOP_PRODUCTS_COUNT})
+              Αριθμός προϊόντων (3-10)
             </Label>
             <div className="flex items-center gap-4">
               <Input
@@ -110,14 +71,14 @@ export default function TopProductsChart({ sales }: TopProductsChartProps) {
                 value={topCount}
                 onChange={e => {
                   const value = parseInt(e.target.value);
-                  if (value >= STATISTICS.MIN_TOP_PRODUCTS_COUNT && value <= STATISTICS.MAX_TOP_PRODUCTS_COUNT) {
+                  if (value >= 3 && value <= 10) {
                     setTopCount(value);
                   }
                 }}
                 className="w-24"
                 disabled={showAll}
-                min={STATISTICS.MIN_TOP_PRODUCTS_COUNT}
-                max={STATISTICS.MAX_TOP_PRODUCTS_COUNT}
+                min={3}
+                max={10}
               />
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -133,16 +94,14 @@ export default function TopProductsChart({ sales }: TopProductsChartProps) {
           </div>
         </div>
 
-        <div className="h-[300px] md:h-[350px]">
+        <div className="h-[300px]">
           <ResponsiveContainer>
             <PieChart>
               <Pie
                 data={data}
-                cx={CHART_CONFIG.pieConfig.cx}
-                cy={CHART_CONFIG.pieConfig.cy}
-                labelLine={false}
-                label={renderLabel}
-                outerRadius={CHART_CONFIG.pieConfig.outerRadius}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
                 dataKey="value"
                 paddingAngle={2}
               >
@@ -150,31 +109,13 @@ export default function TopProductsChart({ sales }: TopProductsChartProps) {
                   <Cell 
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}
-                    strokeWidth={1}
-                    stroke="hsl(var(--background))"
                   />
                 ))}
               </Pie>
               <Tooltip
                 formatter={(value: number, name: string) => [`${value} τεμ.`, name]}
-                contentStyle={CHART_CONFIG.styles.tooltip}
               />
-              <Legend
-                verticalAlign="bottom"
-                align="center"
-                iconType="circle"
-                formatter={(_, entry: any, index: number) => (
-                  <span 
-                    className="text-[11px] md:text-xs"
-                    style={{ 
-                      ...CHART_CONFIG.styles.legend,
-                      color: COLORS[index % COLORS.length]
-                    }}
-                  >
-                    {entry.payload.name} ({entry.payload.value} τεμ.)
-                  </span>
-                )}
-              />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>

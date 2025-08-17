@@ -131,11 +131,12 @@ Before you begin, ensure you have the following installed:
 
    ```env
    # Database
-   DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
 
-   # Better Auth
-   BETTER_AUTH_SECRET=your-super-secret-key-here-min-32-chars
-   BETTER_AUTH_URL=http://localhost:3000
+# Stack Auth (Neon Auth)
+NEXT_PUBLIC_STACK_PROJECT_ID=your-stack-project-id
+NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=your-publishable-client-key
+STACK_SECRET_SERVER_KEY=your-secret-server-key
 
    # App
    NEXT_PUBLIC_APP_URL=http://localhost:3000

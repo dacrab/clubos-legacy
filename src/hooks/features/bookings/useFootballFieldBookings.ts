@@ -1,40 +1,47 @@
-import useSWR, { useSWRConfig } from 'swr';
 import { toast } from 'sonner';
-import { createClientSupabase } from '@/lib/supabase/client';
-import { Database } from '@/types/supabase';
-import type { FootballFieldBooking, FootballFieldBookingFormData } from '@/types/bookings';
+import useSWR, { useSWRConfig } from 'swr';
+
+import { useUser } from '@/lib/auth-client';
 import { FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
+import type { FootballFieldBooking, FootballFieldBookingFormData } from '@/types/bookings';
 
-const bookingsFetcher = (supabase: ReturnType<typeof createClientSupabase>) => async (): Promise<FootballFieldBooking[]> => {
-  const { data, error } = await supabase
-    .from('football_field_bookings')
-    .select('*')
-    .order('booking_datetime', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data || [];
+const bookingsFetcher = async (): Promise<FootballFieldBooking[]> => {
+  const response = await fetch('/api/bookings');
+  if (!response.ok) {
+    throw new Error('Failed to fetch bookings');
+  }
+  return response.json();
 }
 
 export function useFootballFieldBookings() {
-  const supabase = createClientSupabase();
-  const { data: bookings, error, isLoading } = useSWR<FootballFieldBooking[]>('football_field_bookings', bookingsFetcher(supabase));
+  const user = useUser();
+  const { data: bookings, error, isLoading } = useSWR<FootballFieldBooking[]>('football_field_bookings', bookingsFetcher);
   const { mutate } = useSWRConfig();
 
   const revalidate = () => mutate('football_field_bookings');
 
   const addBooking = async (formData: FootballFieldBookingFormData) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      if (!user) {throw new Error("User not authenticated");}
 
-      const { error } = await supabase.from('football_field_bookings').insert([{ ...formData, user_id: user.id }]);
-      if (error) throw error;
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create booking');
+      }
       
       toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
       revalidate();
       return { success: true };
     } catch (error) {
-      console.error('Error adding booking:', error);
+      (await import('@/lib/utils/logger')).logger.error('Error adding booking:', error);
       toast.error(error instanceof Error ? error.message : FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
       return { success: false };
     }
@@ -42,13 +49,24 @@ export function useFootballFieldBookings() {
 
   const updateBooking = async (id: string, formData: Partial<FootballFieldBooking>) => {
     try {
-      const { error } = await supabase.from('football_field_bookings').update(formData).eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update booking');
+      }
+      
       toast.success(FOOTBALL_BOOKING_MESSAGES.UPDATE_SUCCESS);
       revalidate();
       return { success: true };
     } catch (error) {
-      console.error('Error updating booking:', error);
+      (await import('@/lib/utils/logger')).logger.error('Error updating booking:', error);
       toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
       return { success: false };
     }
@@ -56,18 +74,25 @@ export function useFootballFieldBookings() {
 
   const deleteBooking = async (id: string) => {
     try {
-      const { error } = await supabase.from('football_field_bookings').delete().eq('id', id);
-      if (error) throw error;
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete booking');
+      }
+      
       toast.success(FOOTBALL_BOOKING_MESSAGES.DELETE_SUCCESS);
       revalidate();
     } catch (error) {
-      console.error('Error deleting booking:', error);
+      (await import('@/lib/utils/logger')).logger.error('Error deleting booking:', error);
       toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
     }
   };
 
   return {
-    bookings,
+    bookings: bookings || [],
     error,
     isLoading,
     addBooking,

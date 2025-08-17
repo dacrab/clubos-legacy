@@ -1,31 +1,24 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+
+import { stackServerApp } from './auth';
 import { API_ERROR_MESSAGES } from './constants';
-import { Database } from '@/types/supabase';
-import { createServerSupabase } from './supabase/server';
+import { getUserById } from './db/services/users';
+import { logger } from './utils/logger';
 
 /**
  * Checks if current user is admin and returns user info
  * @returns Object containing currentUser and user if admin, or null if not
  */
 export async function checkAdminAccess() {
-  const supabase = await createServerSupabase();
-  
   // Check if user is authenticated
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
+  const user = await stackServerApp.getUser();
+  if (!user) {
     return null;
   }
 
   // Check if user has admin role
-  const { data: currentUser, error: currentUserError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (currentUserError || !currentUser || currentUser.role !== 'admin') {
+  const currentUser = await getUserById(user.id);
+  if (!currentUser || currentUser.role !== 'admin') {
     return null;
   }
 
@@ -35,8 +28,10 @@ export async function checkAdminAccess() {
 /**
  * Standard API error response helper
  */
-export function errorResponse(message: string, status: number = 500, details?: any) {
-  console.error(`API Error: ${message}`, details || '');
+export function errorResponse(message: string, status: number = 500, details?: unknown) {
+  if (process.env.NODE_ENV === 'development') {
+    logger.error(`API Error: ${message}`, details || '');
+  }
   return NextResponse.json(
     { error: message, ...(details ? { details } : {}) },
     { status }
@@ -46,7 +41,7 @@ export function errorResponse(message: string, status: number = 500, details?: a
 /**
  * Standard API success response helper
  */
-export function successResponse(data: any, message?: string) {
+export function successResponse<T>(data: T, message?: string) {
   return NextResponse.json({
     success: true,
     ...(message ? { message } : {}),
@@ -58,7 +53,9 @@ export function successResponse(data: any, message?: string) {
  * Catch-all error handler for API routes
  */
 export function handleApiError(error: unknown) {
-  console.error('Critical API error:', error);
+  if (process.env.NODE_ENV === 'development') {
+    logger.error('Critical API error:', error);
+  }
   return errorResponse(
     API_ERROR_MESSAGES.SERVER_ERROR,
     500,

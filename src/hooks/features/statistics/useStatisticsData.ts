@@ -1,67 +1,60 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { createClientSupabase } from '@/lib/supabase/client';
-import { SaleWithDetails, Category } from '@/types/sales';
-import { filterSalesByDateRange } from '@/lib/utils/chart-utils';
-import { toast } from 'sonner';
-import { API_ERROR_MESSAGES } from '@/lib/constants';
+import { useState, useEffect } from 'react';
 
-interface UseStatisticsDataReturn {
-  dateRange: { startDate: string; endDate: string; } | null;
-  setDateRange: React.Dispatch<React.SetStateAction<{ startDate: string; endDate: string; } | null>>;
-  filteredSales: SaleWithDetails[];
+import type { Category } from '@/types/products';
+
+interface StatisticsData {
   categories: Category[];
-  subCategories: Record<string, Category[]>;
-  loading: boolean;
+  totalSales: number;
+  totalRevenue: number;
+  averageOrderValue: number;
 }
 
-export function useStatisticsData(initialSales: SaleWithDetails[]): UseStatisticsDataReturn {
-  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string; } | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Record<string, Category[]>>({});
+export function useStatisticsData() {
+  const [data, setData] = useState<StatisticsData>({
+    categories: [],
+    totalSales: 0,
+    totalRevenue: 0,
+    averageOrderValue: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const supabase = createClientSupabase();
-
-  const filteredSales = useMemo(() => {
-    return filterSalesByDateRange(initialSales, dateRange);
-  }, [initialSales, dateRange]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchStatisticsData() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
+      try {
+        // Fetch categories
+        const categoriesResponse = await fetch('/api/categories');
+        if (!categoriesResponse.ok) {throw new Error('Failed to fetch categories');}
+        const categories = await categoriesResponse.json();
+
+        // Fetch sales for statistics
+        const salesResponse = await fetch('/api/sales');
+        if (!salesResponse.ok) {throw new Error('Failed to fetch sales');}
+        const sales = await salesResponse.json();
+
+        // Calculate statistics
+        const totalSales = sales.length;
+        const totalRevenue = sales.reduce((sum: number, sale: { totalPrice?: string | number }) =>
+          sum + parseFloat(String(sale.totalPrice || '0')), 0
+        );
+        const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
+        
+        setData({
+          categories,
+          totalSales,
+          totalRevenue,
+          averageOrderValue,
+        });
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load statistics');
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const mainCategories = data.filter(cat => !cat.parent_id);
-      const subCategoriesMap = data.reduce((acc, cat) => {
-        if (cat.parent_id) {
-          if (!acc[cat.parent_id]) acc[cat.parent_id] = [];
-          acc[cat.parent_id].push(cat);
-        }
-        return acc;
-      }, {} as Record<string, Category[]>);
-
-      setCategories(mainCategories);
-      setSubCategories(subCategoriesMap);
-      setLoading(false);
     }
 
-    fetchCategories();
-  }, [supabase]);
+    fetchStatisticsData();
+  }, []);
 
-  return {
-    dateRange,
-    setDateRange,
-    filteredSales,
-    categories,
-    subCategories,
-    loading
-  };
-} 
+  return { data, loading, error };
+}

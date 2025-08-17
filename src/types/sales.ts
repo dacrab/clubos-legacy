@@ -1,11 +1,44 @@
-import { Tables } from "./supabase";
-import { Product, Category } from "./products";
+import type { Product, Category } from "./products";
+// Removed Supabase Tables import - migrated to Drizzle
 
 export type { Product, Category };
 
-// Base types from Database, re-exported for convenience
-export type Sale = Tables<'sales'>;
-export type Order = Tables<'orders'>;
+// Define Sale and Order types based on Drizzle schema
+export interface Sale {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName: string; // Snapshot for historical data
+  quantity: number;
+  unitPrice: string; // Decimal as string
+  totalPrice: string; // Decimal as string
+  isTreat: boolean;
+  isVoided: boolean;
+  voidReason?: string | null;
+  createdAt: Date;
+  voidedAt?: Date | null;
+  voidedBy?: string | null;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  registerSessionId: string;
+  customerName?: string | null;
+  subtotal: string; // Decimal as string
+  taxAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+  finalAmount: string;
+  paymentMethod: 'cash' | 'card' | 'treat';
+  cardDiscountCount: number;
+  isVoided: boolean;
+  voidReason?: string | null;
+  createdAt: Date;
+  createdBy: string;
+  voidedAt?: Date | null;
+  voidedBy?: string | null;
+}
 
 // Organization Types
 export type CategoriesMap = {

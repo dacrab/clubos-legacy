@@ -1,8 +1,10 @@
-import { Product } from "@/types/sales";
+import Image from "next/image";
+import * as React from "react";
+
 import { SALES_ICONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import * as React from "react";
-import Image from "next/image";
+import type { Product } from "@/types/sales";
+
 
 interface ProductCardProps {
   product: Product;
@@ -11,8 +13,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onClick, className }: ProductCardProps) {
-  const { image_url, name, price, category } = product;
-  const hasImage = !!image_url;
+  const { imageUrl, name, price, category } = product;
+  const hasImage = !!imageUrl;
 
   return (
     <button
@@ -28,7 +30,7 @@ export function ProductCard({ product, onClick, className }: ProductCardProps) {
       <div className="absolute top-2 right-2 z-10">
         <div className="flex items-center gap-0.5 px-2 py-1 rounded-full bg-primary text-primary-foreground text-sm font-medium">
           <SALES_ICONS.EURO className="h-3.5 w-3.5" />
-          {price.toFixed(2)}
+          {parseFloat(price).toFixed(2)}
         </div>
       </div>
 
@@ -37,7 +39,7 @@ export function ProductCard({ product, onClick, className }: ProductCardProps) {
         {hasImage ? (
           <div className="relative h-24 w-24 md:h-28 md:w-28">
             <Image
-              src={image_url}
+              src={imageUrl}
               alt={name}
               fill
               sizes="(max-width: 768px) 96px, 112px"

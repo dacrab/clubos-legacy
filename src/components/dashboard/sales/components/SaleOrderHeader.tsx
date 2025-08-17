@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
-import { Gift, ChevronDown, ChevronUp, CreditCard } from "lucide-react";
+import { Gift, ChevronDown, CreditCard } from "lucide-react";
+import { memo } from "react";
+
+
 import { cn, formatPrice, formatDateWithGreekAmPm } from "@/lib/utils";
-import type { GroupedSale } from "@/types/sales";
 import { calculateGroupTotals } from "@/lib/utils/salesUtils";
-import { Badge } from "@/components/ui/badge";
+import type { GroupedSale } from "@/types/sales";
 
 interface SaleOrderHeaderProps {
   group: GroupedSale;
@@ -16,26 +17,6 @@ interface SaleOrderHeaderProps {
 
 const SaleOrderHeader = memo(({ group, isExpanded, onToggle, className }: SaleOrderHeaderProps) => {
   const { calculatedFinalAmount } = calculateGroupTotals(group);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return (
-      <div className="w-full flex items-start justify-between group/item py-2 px-1 rounded-md">
-        <div className="space-y-1.5 animate-pulse">
-          <div className="h-4 bg-muted rounded w-24"></div>
-          <div className="h-5 bg-muted rounded w-16"></div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 animate-pulse">
-          <div className="h-5 bg-muted rounded w-12"></div>
-          <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <button 

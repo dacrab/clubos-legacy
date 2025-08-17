@@ -1,94 +1,94 @@
-import useSWR from 'swr';
-import { useCallback, useMemo } from 'react';
-import { createClientSupabase } from "@/lib/supabase/client";
-import type { SaleWithDetails } from "@/types/sales";
-import { getSalesQuery } from "@/lib/utils/salesUtils";
+import { useState, useEffect, useMemo } from 'react';
 
-export interface SalesDateRange {
-  startDate: string;
-  endDate: string;
-}
-
-export interface TimeRange {
-  startTime: string;
-  endTime: string;
-}
+import type { SaleWithDetails } from '@/types/sales';
 
 export interface SalesFilters {
-  dateRange?: SalesDateRange;
-  timeRange?: TimeRange;
-  limit?: number;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  category?: string;
+  paymentMethod?: string;
   searchQuery?: string;
+  limit?: number;
 }
 
-const generateSalesKey = (filters?: SalesFilters) => {
-  if (!filters) return 'sales';
-  
-  const parts = [
-    filters.dateRange && `${filters.dateRange.startDate}-${filters.dateRange.endDate}`,
-    filters.timeRange && `${filters.timeRange.startTime || '00:00'}-${filters.timeRange.endTime || '23:59'}`,
-    filters.limit && `limit-${filters.limit}`,
-    filters.searchQuery && `search-${filters.searchQuery}`
-  ].filter(Boolean);
-
-  return parts.length ? `sales-${parts.join('-')}` : 'sales';
-};
-
-const buildDateTimeString = (date: string, time?: string) => 
-  `${date}T${time ? `${time}:00` : '00:00:00'}`;
-
 const fetchSalesData = async (filters?: SalesFilters): Promise<SaleWithDetails[]> => {
-  const supabase = createClientSupabase();
-  let query = supabase
-    .from('sales')
-    .select(getSalesQuery())
-    .order('created_at', { ascending: false });
-
-  if (filters?.dateRange) {
-    const { startDate, endDate } = filters.dateRange;
-    const startTime = filters.timeRange?.startTime;
-    const endTime = filters.timeRange?.endTime;
-
-    query = query
-      .gte('created_at', buildDateTimeString(startDate, startTime))
-      .lte('created_at', buildDateTimeString(endDate, endTime || '23:59'));
+  try {
+    const params = new URLSearchParams();
+    if (filters?.startDate) {params.append('startDate', filters.startDate);}
+    if (filters?.endDate) {params.append('endDate', filters.endDate);}
+    if (filters?.category) {params.append('category', filters.category);}
+    if (filters?.paymentMethod) {params.append('paymentMethod', filters.paymentMethod);}
+    if (filters?.limit) {params.append('limit', filters.limit.toString());}
+    
+    const response = await fetch(`/api/sales?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch sales data');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      (await import('@/lib/utils/logger')).logger.error('Error fetching sales data:', error);
+    }
+    return [];
   }
-
-  if (filters?.limit) {
-    query = query.limit(filters.limit);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as unknown as SaleWithDetails[];
 };
 
 export function useSalesData(filters?: SalesFilters, initialData?: SaleWithDetails[]) {
-  const key = useMemo(() => generateSalesKey(filters), [filters]);
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
-    key, 
-    () => fetchSalesData(filters),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
-      fallbackData: initialData
-    }
-  );
+  const [sales, setSales] = useState<SaleWithDetails[]>(initialData || []);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchSalesData(filters);
+        setSales(data);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [filters]);
 
   const filteredSales = useMemo(() => {
-    if (!data || !filters?.searchQuery) return data;
-    const query = filters.searchQuery.toLowerCase();
-    return data.filter(sale => 
-      sale.product.name.toLowerCase().includes(query) ||
-      sale.product.category?.name?.toLowerCase().includes(query)
-    );
-  }, [data, filters?.searchQuery]);
+    let filtered = sales;
+
+    if (filters?.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter(sale => 
+        sale.productName?.toLowerCase().includes(query) ||
+        sale.id.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [sales, filters?.searchQuery]);
+
+  const refreshData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchSalesData(filters);
+      setSales(data);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
-    sales: filteredSales || data || [],
+    sales: filteredSales,
     isLoading,
-    isValidating,
     error,
-    refreshData: () => mutate(),
+    refreshData,
   };
 }

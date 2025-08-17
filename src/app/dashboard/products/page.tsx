@@ -1,32 +1,39 @@
-import { createServerSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import ProductsTable from "@/components/dashboard/products/ProductsTable";
+
 import AddProductButton from "@/components/dashboard/products/AddProductButton";
 import ManageCategoriesButton from "@/components/dashboard/products/ManageCategoriesButton";
+import ProductsTable from "@/components/dashboard/products/ProductsTable";
+import { stackServerApp } from '@/lib/auth';
+import { getProducts } from '@/lib/db/services/products';
+
 
 export default async function ProductsPage() {
-  const supabase = await createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await stackServerApp.getUser();
 
   if (!user) {
     return notFound();
   }
   
-  const { data: products } = await supabase.from('products').select('*, category:categories(*, parent:categories!parent_id(*))');
+  // Fetch products with categories using Drizzle service
+  await getProducts();
 
   return (
-    <PageWrapper>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">Προϊόντα</h1>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <AddProductButton />
-            <ManageCategoriesButton />
-          </div>
+    <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
+      <div className="space-y-6">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Προϊόντα</h1>
+          <p className="text-muted-foreground">
+            Διαχείριση καταλόγου προϊόντων και κατηγοριών
+          </p>
         </div>
-        <ProductsTable products={products as any || []} isAdmin={true} />
+        
+        <div className="flex items-center gap-2">
+          <AddProductButton />
+          <ManageCategoriesButton />
+        </div>
+        
+        <ProductsTable />
       </div>
-    </PageWrapper>
+    </div>
   );
 } 

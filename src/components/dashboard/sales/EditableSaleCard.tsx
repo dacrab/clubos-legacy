@@ -1,268 +1,259 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Trash2, Edit3, Save, X } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
-import { SaleWithDetails, Product } from "@/types/sales";
-import { createClientSupabase } from "@/lib/supabase/client";
-import { useSaleActions } from '@/hooks/features/sales/useSaleActions';
-import { Gift, Pencil, Trash2, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import type { Sale, Product } from "@/types/sales";
+import { logger } from "@/lib/utils/logger";
 
-// Constants
-const EDIT_WINDOW_MINUTES = 5;
-
-// Custom type for the editable sale card's state
-type EditableSaleState = SaleWithDetails & {
-  original_product_name?: string | null;
-  original_quantity?: number | null;
-};
-
-// Types
-interface EditSaleFormProps {
-  sale: SaleWithDetails;
-  onSave: (updatedSale: Partial<SaleWithDetails>) => Promise<void>;
-  onCancel: () => void;
+interface EditableSaleCardProps {
+  sale: Sale;
+  onEdit: (id: string, updatedSale: Partial<Sale>) => void;
+  onDelete: (id: string) => void;
 }
 
-export interface EditableSaleCardProps {
-  sale: SaleWithDetails;
-  onDeleteClick?: (id: string) => void;
-}
-
-/**
- * Badge component for displaying sale status
- */
-function SaleStatusBadge({ 
-  isDeleted, 
-  isTreat, 
-  isEdited, 
-  originalProductCode, 
-  originalQuantity 
-}: { 
-  isDeleted: boolean; 
-  isTreat: boolean; 
-  isEdited: boolean; 
-  originalProductCode?: string; 
-  originalQuantity?: number;
-}) {
-  if (isDeleted) {
-    return <Badge variant="destructive">Διαγράφηκε</Badge>;
-  }
-  if (isEdited) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="secondary">Επεξεργασμένο</Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Αρχικό: {originalProductCode} (x{originalQuantity})</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-  return null;
-}
-
-/**
- * Form component for editing a sale
- */
-function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
-  const [quantity, setQuantity] = useState(sale.quantity);
-  const [selectedProductId, setSelectedProductId] = useState(sale.product_id);
-  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTreat, setIsTreat] = useState(sale.is_treat);
-  const supabase = createClientSupabase();
+export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSaleCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editedSale, setEditedSale] = useState({
+    quantity: sale.quantity,
+    productId: sale.productId,
+    isTreat: sale.isTreat,
+  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function fetchProducts() {
-      setIsLoading(true);
-      const { data, error } = await supabase.from('products').select('*, category:categories(*)').order('name');
-      if (data) {
-        setAvailableProducts(data as Product[]);
-        setSelectedProduct(data.find(p => p.id === selectedProductId) || null);
-      }
-      setIsLoading(false);
+    if (isEditing && products.length === 0) {
+      loadProducts();
     }
-    fetchProducts();
-  }, [selectedProductId, supabase]);
+  }, [isEditing, products.length]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct) return;
-    await onSave({
-      ...sale,
-      quantity,
-      product_id: selectedProduct.id,
-      total_price: selectedProduct.price * quantity,
-      unit_price: selectedProduct.price,
-      is_treat: isTreat,
-      product: selectedProduct,
-    });
+  const loadProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      logger.error('Error loading products:', error);
+      toast.error('Αποτυχία φόρτωσης προϊόντων');
+    }
   };
 
-  return (
-    <Card>
-      <CardContent className="p-4 space-y-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Select onValueChange={setSelectedProductId} defaultValue={selectedProductId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {availableProducts.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input type="number" value={quantity} onChange={e => setQuantity(parseInt(e.target.value))} />
-          <Checkbox checked={isTreat} onCheckedChange={c => setIsTreat(Boolean(c))} />
-          <Button type="submit">Αποθήκευση</Button>
-          <Button variant="ghost" onClick={onCancel}>Ακύρωση</Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/sales/${sale.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedSale),
+      });
 
-/**
- * EditableSaleCard component for displaying and editing sales
- */
-export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCardProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEdited, setIsEdited] = useState(sale.is_edited || false);
-  const [isDeleted, setIsDeleted] = useState(sale.is_deleted || false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentSale, setCurrentSale] = useState<EditableSaleState>(sale);
-  const [canEdit, setCanEdit] = useState(true);
-  const [timeLeft, setTimeLeft] = useState('');
-  
-  const router = useRouter();
-  const { isLoading, deleteSale, editSale } = useSaleActions({ onSuccess: () => router.refresh() });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const diffInMinutes = (new Date().getTime() - new Date(currentSale.created_at).getTime()) / 60000;
-      if (diffInMinutes < EDIT_WINDOW_MINUTES) {
-        setCanEdit(true);
-        const remainingMinutes = Math.floor(EDIT_WINDOW_MINUTES - diffInMinutes);
-        const remainingSeconds = Math.floor(((EDIT_WINDOW_MINUTES - diffInMinutes) * 60) % 60);
-        setTimeLeft(`${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`);
-      } else {
-        setCanEdit(false);
-        clearInterval(interval);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update sale');
       }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [currentSale.created_at]);
+
+      toast.success('Η πώληση ενημερώθηκε επιτυχώς');
+      onEdit(sale.id, editedSale);
+      setIsEditing(false);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Αποτυχία ενημέρωσης πώλησης: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
-    await deleteSale(currentSale.id);
-  };
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/sales/${sale.id}`, {
+        method: 'DELETE',
+      });
 
-  const handleEdit = async (updatedSale: Partial<SaleWithDetails>) => {
-    if (!updatedSale.product_id || !updatedSale.quantity || !updatedSale.unit_price || typeof updatedSale.total_price !== 'number') return;
-    
-    const success = await editSale(currentSale.id, currentSale, {
-      product_id: updatedSale.product_id,
-      quantity: updatedSale.quantity,
-      unit_price: updatedSale.unit_price,
-      total_price: updatedSale.total_price,
-      is_treat: updatedSale.is_treat
-    });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete sale');
+      }
 
-    if (success) {
-      setIsEditing(false);
-      // The parent component will receive the refreshed data
+      toast.success('Η πώληση διαγράφηκε επιτυχώς');
+      onDelete(sale.id);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Αποτυχία διαγραφής πώλησης: ${message}`);
+    } finally {
+      setLoading(false);
+      setShowDeleteDialog(false);
     }
   };
 
-  if (currentSale.is_deleted) {
-    return null;
-  }
+  const selectedProduct = products.find(p => p.id === editedSale.productId);
+  const calculatedTotal = selectedProduct ? parseFloat(selectedProduct.price) * editedSale.quantity : 0;
 
   return (
-    <div className="p-2 border-b">
-      {isEditing ? (
-        <EditSaleForm sale={currentSale} onSave={handleEdit} onCancel={() => setIsEditing(false)} />
-      ) : (
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {currentSale.is_treat && (
-              <Gift className="h-4 w-4 text-amber-500 shrink-0" />
-            )}
-            <div>
-              <p>{currentSale.product.name} x{currentSale.quantity} - {formatPrice(currentSale.total_price)}</p>
-              <SaleStatusBadge 
-                isDeleted={currentSale.is_deleted} 
-                isTreat={false} // Handled by the icon now
-                isEdited={currentSale.is_edited}
-                originalProductCode={currentSale.original_product_name || undefined}
-                originalQuantity={currentSale.original_quantity || undefined}
-              />
+    <>
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              {sale.productName || 'Προϊόν'}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {!isEditing ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    disabled={loading}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                    disabled={loading}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={loading}
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    disabled={loading}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {canEdit && !isLoading && !currentSale.is_deleted && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-                <Clock className="h-3 w-3" />
-                <span>{timeLeft}</span>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          {!isEditing ? (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Ποσότητα:</span>
+                <span>{sale.quantity}</span>
               </div>
-            )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsEditing(true)}
-                    disabled={!canEdit || isLoading || currentSale.is_deleted}
+              <div className="flex justify-between text-sm">
+                <span>Τιμή μονάδας:</span>
+                <span>{formatPrice(parseFloat(sale.unitPrice))}</span>
+              </div>
+              <div className="flex justify-between text-sm font-medium">
+                <span>Σύνολο:</span>
+                <span>{formatPrice(parseFloat(sale.totalPrice))}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Τύπος:</span>
+                <Badge variant={sale.isTreat ? "secondary" : "default"}>
+                  {sale.isTreat ? "Κέρασμα" : "Κανονική πώληση"}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="productId">Προϊόν</Label>
+                  <Select
+                    value={editedSale.productId}
+                    onValueChange={(value) => setEditedSale(prev => ({ ...prev, productId: value }))}
+                    disabled={loading}
                   >
-                    <Pencil className="w-4 h-4" />
-                    <span className="sr-only">Επεξεργασία</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {currentSale.is_deleted
-                    ? 'Το προϊόν έχει διαγραφεί'
-                    : canEdit
-                    ? `Επεξεργασία`
-                    : 'Ο χρόνος για επεξεργασία έχει λήξει'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={handleDelete}
-                    disabled={!canEdit || isLoading || currentSale.is_deleted}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="sr-only">Διαγραφή</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                   {currentSale.is_deleted
-                    ? 'Το προϊόν έχει διαγραφεί'
-                    : canEdit
-                    ? 'Διαγραφή'
-                    : 'Ο χρόνος για διαγραφή έχει λήξει'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-      )}
-    </div>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Επιλέξτε προϊόν" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name} - €{parseFloat(product.price).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Ποσότητα</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={editedSale.quantity}
+                    onChange={(e) => setEditedSale(prev => ({ 
+                      ...prev, 
+                      quantity: parseInt(e.target.value) || 1 
+                    }))}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isTreat"
+                  checked={editedSale.isTreat}
+                  onCheckedChange={(checked) => setEditedSale(prev => ({ 
+                    ...prev, 
+                    isTreat: checked === true 
+                  }))}
+                  disabled={loading}
+                />
+                <Label htmlFor="isTreat">Κέρασμα</Label>
+              </div>
+
+              {selectedProduct && (
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Υπολογισμένο Σύνολο:</span>
+                    <span className="font-semibold">€{calculatedTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Διαγραφή Πώλησης"
+        description="Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την πώληση; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+        onConfirm={handleDelete}
+        loading={loading}
+      />
+    </>
   );
 }

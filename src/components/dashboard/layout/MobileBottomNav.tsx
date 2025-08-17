@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { getVisibleNavItems } from "./navigation.config";
-import { mobileNavVariants } from "@/lib/animations";
 import { useRef, useEffect } from "react";
+
+import { cn } from "@/lib/utils";
+
+import { getVisibleNavItems } from "./navigation.config";
 
 // Types
 interface MobileSidebarProps {
@@ -41,21 +41,16 @@ export default function MobileSidebar({ role }: MobileSidebarProps) {
                 : "text-muted-foreground hover:text-foreground hover:bg-background/80"
             )}
           >
-            <motion.div
-              variants={mobileNavVariants.icon}
-              animate={isActive ? "active" : undefined}
-              className="relative"
-            >
+            <div className={cn("relative", isActive && "animate-bounce")}>
               <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-            </motion.div>
+            </div>
 
-            <motion.span 
-              variants={mobileNavVariants.text}
-              animate={isActive ? "active" : "inactive"}
-              className="text-[10px] xs:text-[11px] sm:text-sm font-medium text-center line-clamp-1"
-            >
+            <span className={cn(
+              "text-[10px] xs:text-[11px] sm:text-sm font-medium text-center line-clamp-1 transition-all duration-200",
+              isActive ? "animate-fade-in" : "opacity-70"
+            )}>
               {item.name}
-            </motion.span>
+            </span>
           </Link>
         );
       })}

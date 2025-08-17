@@ -1,16 +1,16 @@
 "use client";
 
+import { Calculator, AlertCircle } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
-import { Calculator } from "lucide-react";
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import { RegisterClosingsList } from "@/components/dashboard/register/RegisterClosingsList";
+
+
 import RegisterClosingsFilter from "@/components/dashboard/register/RegisterClosingsFilter";
-import type { DateRange } from "@/types/register";
-import { useAuthorization } from "@/hooks/auth/useAuthorization";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { RegisterClosingsList } from "@/components/dashboard/register/RegisterClosingsList";
 import { EmptyState } from "@/components/ui/empty-state";
-import { AlertCircle } from "lucide-react";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { useAuthorization } from "@/hooks/auth/useAuthorization";
 import { REGISTER_MESSAGES } from "@/lib/constants";
+import type { DateRange } from "@/types/register";
 
 export default function RegisterClosingsPage() {
   const authorizationStatus = useAuthorization();
@@ -73,13 +73,12 @@ export default function RegisterClosingsPage() {
   }
 
   return (
-    <PageWrapper>
-      <div className="w-full max-w-screen px-2 sm:px-4 space-y-4">
+    <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
+      <div className="space-y-6">
         {pageHeader}
         {filterComponent}
-        {/* No extra card container to reduce nesting and maximize space */}
         {listComponent}
       </div>
-    </PageWrapper>
+    </div>
   );
 }

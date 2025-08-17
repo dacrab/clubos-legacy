@@ -1,4 +1,4 @@
-"use client";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -8,13 +8,11 @@ export function ErrorFallback() {
       <div className="text-destructive">
         Παρουσιάστηκε σφάλμα κατά τη φόρτωση της εφαρμογής
       </div>
-      <Button 
-        onClick={() => window.location.reload()}
-        variant="outline"
-        size="sm"
-      >
-        Ανανέωση
-      </Button>
+      <Link href="/">
+        <Button variant="outline" size="sm">
+          Επιστροφή στην αρχική
+        </Button>
+      </Link>
     </div>
   );
 } 

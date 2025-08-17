@@ -1,14 +1,10 @@
-"use client";
-
 import { memo } from "react";
-import { formatPrice } from "@/lib/utils";
-import { calculateGroupTotals, getActiveItemsCount } from "@/lib/utils/salesUtils";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { GroupedSale } from "@/types/sales";
 
-interface SaleOrderDetailsProps {
-  group: GroupedSale;
-}
+import { formatPrice } from "@/lib/utils";
+import { calculateGroupTotals } from "@/lib/utils/salesUtils";
+import type { GroupedSale } from "@/types/sales";
+
+// removed unused _SaleOrderDetailsProps
 
 const SaleOrderDetails = memo(({ group }: { group: GroupedSale }) => {
   const { nonTreatSubtotal, treatsValue, discountAmount, calculatedFinalAmount } = calculateGroupTotals(group);

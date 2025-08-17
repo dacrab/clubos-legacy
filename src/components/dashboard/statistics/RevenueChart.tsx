@@ -1,32 +1,34 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { SaleWithDetails } from "@/types/sales";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
-import { aggregateSalesByDate, CHART_STYLES, calculateNetSales } from "@/lib/utils/chart-utils";
-import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { SaleWithDetails } from "@/types/sales";
 
 interface RevenueChartProps {
   sales: SaleWithDetails[];
 }
 
-// Simplified chart configuration
-const CHART_CONFIG = {
-  margins: { top: 10, right: 20, left: 0, bottom: 5 },
-  bar: {
-    fill: CHART_STYLES.colors.primary,
-    radius: [4, 4, 0, 0] as [number, number, number, number]
-  }
-};
-
 export default function RevenueChart({ sales }: RevenueChartProps) {
-  // Use the new utility function to calculate net sales
-  const netSales = useMemo(() => calculateNetSales(sales), [sales]);
+  // Group sales by date and calculate daily revenue
+  const chartData = sales.reduce((acc, sale) => {
+    const date = new Date(sale.createdAt).toLocaleDateString();
+    const revenue = parseFloat(sale.totalPrice) || 0;
+    
+    if (!acc[date]) {
+      acc[date] = 0;
+    }
+    acc[date] += revenue;
+    
+    return acc;
+  }, {} as Record<string, number>);
 
-  // Use the adjusted sales for the chart
-  const data = aggregateSalesByDate(netSales, 'total_price');
-
+  // Convert to array format for chart
+  const data = Object.entries(chartData).map(([date, revenue]) => ({
+    date,
+    revenue
+  }));
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -38,41 +40,12 @@ export default function RevenueChart({ sales }: RevenueChartProps) {
       <CardContent>
         <div className="h-[350px]">
           <ResponsiveContainer>
-            <BarChart data={data} margin={CHART_CONFIG.margins}>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="hsl(var(--border))"
-                vertical={false}
-              />
-              <XAxis 
-                dataKey="date" 
-                stroke="hsl(var(--muted-foreground))" 
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="hsl(var(--muted-foreground))" 
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `${value}€`}
-              />
-              <Tooltip 
-                formatter={(value: number) => `${value.toFixed(2)}€`}
-                contentStyle={{
-                  backgroundColor: CHART_STYLES.tooltip.background,
-                  border: `1px solid ${CHART_STYLES.tooltip.border}`,
-                  borderRadius: '6px',
-                  padding: '8px 12px'
-                }}
-                cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
-              />
-              <Bar 
-                dataKey="revenue" 
-                fill={CHART_CONFIG.bar.fill}
-                radius={CHART_CONFIG.bar.radius}
-              />
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis tickFormatter={(value) => `${value}€`} />
+              <Tooltip formatter={(value: number) => `${value.toFixed(2)}€`} />
+              <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

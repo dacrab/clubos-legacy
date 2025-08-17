@@ -1,43 +1,33 @@
 "use server";
 
-import { Database } from '@/types/supabase';
-import { cookies } from 'next/headers';
-import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { revalidatePath } from 'next/cache';
-import { API_ERROR_MESSAGES } from '@/lib/constants';
-import { ActionResponse, handleActionError, actionSuccess } from '@/lib/action-utils';
+
+import { handleActionError, actionSuccess, type ActionResponse } from '@/lib/action-utils';
+import { stackServerApp } from '@/lib/auth';
 
 export async function deleteSale(saleId: string): Promise<ActionResponse> {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set(name: string, value: string, options: CookieOptions) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name: string, options: CookieOptions) {
-            cookieStore.set({ name, value: '', ...options });
-          },
-        },
-      }
-    );
+    const user = await stackServerApp.getUser();
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
 
-    const { error } = await supabase.from('sales').delete().eq('id', saleId);
+    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/sales/${saleId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-    if (error) {
-      return await handleActionError(error, API_ERROR_MESSAGES.DELETE_ERROR);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete sale');
     }
 
     revalidatePath('/dashboard/history');
     return actionSuccess('Sale deleted successfully');
 
   } catch (error) {
-    return await handleActionError(error, API_ERROR_MESSAGES.DELETE_ERROR);
+    return handleActionError(error);
   }
 }

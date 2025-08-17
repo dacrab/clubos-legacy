@@ -14,7 +14,6 @@ export const ROLE_TRANSLATIONS: Record<UserRole, string> = {
 
 // UI Components & Icons
 import { Search, Euro } from "lucide-react";
-import { LucideIcon } from "lucide-react";
 
 // Sales Interface Icons
 export const SALES_ICONS = {

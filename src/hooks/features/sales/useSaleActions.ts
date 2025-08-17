@@ -1,80 +1,33 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { createClientSupabase } from "@/lib/supabase/client";
-import { Sale, SaleWithDetails } from "@/types/sales";
+import { useState } from 'react';
+import { toast } from 'sonner';
 
-interface UseSaleActionsProps {
-  onSuccess?: () => void;
-}
+export function useSaleActions() {
+  const [isLoading, setIsLoading] = useState(false);
 
-/**
- * Hook for handling common sale actions (edit, delete)
- */
-export function useSaleActions({ onSuccess }: UseSaleActionsProps = {}) {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const supabase = createClientSupabase();
-
-  /**
-   * Delete a sale by marking it as deleted
-   */
-  const deleteSale = async (saleId: string): Promise<boolean> => {
+  const deleteSale = async (saleId: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('sales')
-        .update({ is_deleted: true })
-        .eq('id', saleId);
-
-      if (error) throw error;
-
-      toast.success('Η πώληση αφαιρέθηκε επιτυχώς');
-      if (onSuccess) onSuccess();
-      return true;
-    } catch (error) {
-      console.error('Error deleting sale:', error);
-      toast.error('Αποτυχία διαγραφής πώλησης');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Edit a sale with updated information
-   */
-  const editSale = async (saleId: string, originalSale: SaleWithDetails, updatedData: Partial<Sale>): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Store original values for reference
-      const updateData = {
-        ...updatedData,
-        is_edited: true,
-        original_product_name: originalSale.product.name,
-        original_quantity: originalSale.quantity
-      };
-
-      const { error } = await supabase
-        .from('sales')
-        .update(updateData)
-        .eq('id', saleId);
-
-      if (error) throw error;
-
-      toast.success('Η πώληση ενημερώθηκε επιτυχώς');
-      if (onSuccess) onSuccess();
-      return true;
-    } catch (error) {
-      console.error('Error updating sale:', error);
-      toast.error('Αποτυχία ενημέρωσης πώλησης');
-      return false;
+      const response = await fetch(`/api/sales/${saleId}`, { 
+        method: 'DELETE' 
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete sale');
+      }
+      
+      toast.success('Η πώληση διαγράφηκε επιτυχώς');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
+      toast.error(`Σφάλμα κατά τη διαγραφή: ${message}`);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
   return {
-    isLoading,
     deleteSale,
-    editSale
+    isLoading,
   };
-} 
+}

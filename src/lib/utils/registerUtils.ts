@@ -1,16 +1,13 @@
+import { CARD_DISCOUNT } from "@/lib/constants";
 import type { 
-  DatabaseRegisterSession,
-  RegisterSessionWithClosings, 
   ListItem, 
   SessionStats, 
   ActiveSessionTotals,
   Order,
   ProductSummary,
   TransactionTotals,
-  ExtendedSale,
-  Sale
+  ExtendedSale
 } from '@/types/register';
-import { CARD_DISCOUNT } from "@/lib/constants";
 
 /**
  * UTILITY FUNCTIONS
@@ -26,26 +23,26 @@ export const calculateStats = (sessions: ListItem[]): SessionStats => sessions.r
     
     if (session.orders) {
       session.orders.forEach(order => {
-        const isCardPayment = order.card_discount_count > 0;
+        const isCardPayment = Number((order as unknown as { card_discount_count?: number }).card_discount_count) > 0;
         if (isCardPayment) {
-          acc.totalCard += order.final_amount;
+          acc.totalCard += Number((order as unknown as { final_amount?: number }).final_amount || 0);
         } else {
-          acc.totalCash += order.final_amount;
+          acc.totalCash += Number((order as unknown as { final_amount?: number }).final_amount || 0);
         }
       });
     }
   } else if (session.orders) {
     session.orders.forEach(order => {
-      const isCardPayment = order.card_discount_count > 0;
+      const isCardPayment = Number((order as unknown as { card_discount_count?: number }).card_discount_count) > 0;
       if (isCardPayment) {
-        acc.totalCard += order.final_amount;
-        acc.cardCount += order.card_discount_count;
+        acc.totalCard += Number((order as unknown as { final_amount?: number }).final_amount || 0);
+        acc.cardCount += Number((order as unknown as { card_discount_count?: number }).card_discount_count || 0);
       } else {
-        acc.totalCash += order.final_amount;
+        acc.totalCash += Number((order as unknown as { final_amount?: number }).final_amount || 0);
       }
       
       order.sales?.forEach(sale => {
-        if (sale.is_treat) {
+        if (sale.isTreat) {
           acc.treatsCount++;
         }
       });
@@ -63,26 +60,26 @@ export const calculateStats = (sessions: ListItem[]): SessionStats => sessions.r
  * Calculate totals for active sessions
  */
 export const calculateActiveSessionTotals = (orders?: Order[]): ActiveSessionTotals => {
-  if (!orders) return {
+  if (!orders) {return {
     totalBeforeDiscounts: 0,
     cardDiscounts: 0,
     treats: 0,
     treatsAmount: 0
-  };
+  };}
 
   return orders.reduce((acc, order) => {
     order.sales?.forEach(sale => {
-      if ((sale as ExtendedSale).is_deleted) return;
+      // No need to check is_deleted - Drizzle only returns active records
       
-      if (!sale.is_treat) {
-        acc.totalBeforeDiscounts += sale.total_price;
+      if (!sale.isTreat) {
+        acc.totalBeforeDiscounts += parseFloat(sale.totalPrice);
       } else {
         acc.treats += sale.quantity;
-        acc.treatsAmount += +(sale.unit_price * sale.quantity).toFixed(2);
+        acc.treatsAmount += +(parseFloat(sale.unitPrice) * sale.quantity).toFixed(2);
       }
     });
     
-    acc.cardDiscounts += order.card_discount_count;
+    acc.cardDiscounts += order.cardDiscountCount;
     
     return acc;
   }, {
@@ -102,7 +99,7 @@ export const calculateFinalAmount = (subtotal: number, cardDiscountCount: number
 };
 
 export const calculateProductSummary = (orders?: Order[]): Record<string, ProductSummary> => {
-  if (!orders?.length) return {};
+  if (!orders?.length) {return {};}
 
   const summary = {} as Record<string, ProductSummary>;
   const deletedItems = {} as Record<string, ProductSummary>;
@@ -110,12 +107,12 @@ export const calculateProductSummary = (orders?: Order[]): Record<string, Produc
   orders.forEach(({ sales = [] }) => {
     sales.forEach((sale) => {
       if (!sale || !sale.product) {
-        console.warn('Skipping sale with no product:', sale);
+        // Skip invalid sale entries silently in production
         return;
       }
 
       const extendedSale = sale as ExtendedSale;
-      const { product: { id, name }, quantity, total_price, is_treat } = sale;
+      const { product: { id, name }, quantity, totalPrice, isTreat } = sale;
       
       if (extendedSale.is_deleted) {
         const deletedId = `deleted-${id}-${extendedSale.id}`;
@@ -125,8 +122,8 @@ export const calculateProductSummary = (orders?: Order[]): Record<string, Produc
           name,
           originalId: id,
           quantity,
-          totalAmount: total_price,
-          treatCount: is_treat ? quantity : 0,
+          totalAmount: parseFloat(totalPrice),
+          treatCount: isTreat ? quantity : 0,
           isEdited: extendedSale.is_edited || false,
           isDeleted: true,
           originalCode: extendedSale.original_code,
@@ -151,8 +148,8 @@ export const calculateProductSummary = (orders?: Order[]): Record<string, Produc
       }
       
       summary[id].quantity += quantity;
-      summary[id].totalAmount += total_price;
-      if (is_treat) summary[id].treatCount += quantity;
+      summary[id].totalAmount += parseFloat(totalPrice);
+      if (isTreat) {summary[id].treatCount += quantity;}
       
       if (extendedSale.is_edited) {
         summary[id].isEdited = true;
@@ -174,21 +171,23 @@ export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals 
     treatsAmount: 0
   };
 
-  if (!orders?.length) return defaultTotals;
+  if (!orders?.length) {return defaultTotals;}
 
-  return orders.reduce((acc, { sales = [], card_discount_count = 0 }) => {
+  return orders.reduce((acc, order) => {
+    const { sales = [] } = order;
+    const cardDiscountCount = order.cardDiscountCount || 0;
     sales.forEach(sale => {
-      if (!sale || (sale as ExtendedSale)?.is_deleted) return;
+      if (!sale || (sale as ExtendedSale)?.is_deleted) {return;}
       
-      if (!sale.is_treat) {
-        acc.totalBeforeDiscounts += sale.total_price;
+      if (!sale.isTreat) {
+        acc.totalBeforeDiscounts += parseFloat(sale.totalPrice);
       } else {
         acc.treats += sale.quantity;
-        acc.treatsAmount += +(sale.unit_price * sale.quantity).toFixed(2);
+        acc.treatsAmount += +(parseFloat(sale.unitPrice) * sale.quantity).toFixed(2);
       }
     });
     
-    acc.cardDiscounts += card_discount_count;
+    acc.cardDiscounts += cardDiscountCount;
     acc.discount = +(acc.cardDiscounts * CARD_DISCOUNT).toFixed(2);
     
     return acc;

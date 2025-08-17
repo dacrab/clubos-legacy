@@ -1,20 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { toast } from 'sonner';
 import { format } from "date-fns";
 import { el } from 'date-fns/locale';
 import { CalendarIcon } from "lucide-react";
-import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-
-// Constants
+import { Textarea } from "@/components/ui/textarea";
+import { useFootballFieldBookings } from '@/hooks/features/bookings/useFootballFieldBookings';
 import { 
   FOOTBALL_BOOKING_MESSAGES, 
   FORM_LABELS, 
@@ -23,90 +23,87 @@ import {
   DIALOG_MESSAGES,
   DATE_FORMAT
 } from '@/lib/constants';
+import { cn } from "@/lib/utils";
 
-// UI Components
-import { LoadingButton } from "@/components/ui/loading-button";
-import { Calendar } from "@/components/ui/calendar";
-
-// Types
-type FootballFieldBookingFormData = {
-  who_booked: string;
-  booking_datetime: string;
-  contact_details: string;
-  field_number: number;
-  num_players: number;
-  notes: string | null;
-};
-
-interface FootballFieldBookingFormProps {
+interface FormProps {
   onSuccess?: () => void;
 }
 
-const initialFormData = {
-  who_booked: '',
-  date: undefined as Date | undefined,
-  time: '',
-  contact_details: '',
-  field_number: '1',
-  num_players: '',
-  notes: ''
-};
-
-export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBookingFormProps) {
-    const [formData, setFormData] = useState(initialFormData);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+export default function FootballFieldBookingForm({ onSuccess }: FormProps) {
+    const [formData, setFormData] = useState({
+        who_booked: '',
+        date: undefined as Date | undefined,
+        time: '',
+        contact_details: '',
+        field_number: '1',
+        num_players: '',
+        notes: ''
+    });
+    const [loading, setLoading] = useState(false);
     const { addBooking } = useFootballFieldBookings();
 
-    const validateForm = () => {
-      if (!formData.who_booked || !formData.date || !formData.time || !formData.contact_details || !formData.field_number) {
-        throw new Error(FOOTBALL_BOOKING_MESSAGES.REQUIRED_FIELDS);
-      }
-
-      const playersNum = parseInt(formData.num_players);
-      const fieldNum = parseInt(formData.field_number);
-
-      if (playersNum < 2 || playersNum > 12) {
-        throw new Error(FOOTBALL_BOOKING_MESSAGES.MIN_PLAYERS);
-      }
-
-      if (fieldNum < 1 || fieldNum > 5) {
-        throw new Error(FOOTBALL_BOOKING_MESSAGES.INVALID_FIELD);
-      }
+    const handleChange = (field: string, value: string | number | Date | undefined) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const prepareBookingData = (): FootballFieldBookingFormData => {
-      const dateTime = new Date(formData.date!);
-      const [hours, minutes] = formData.time.split(':');
-      dateTime.setHours(parseInt(hours), parseInt(minutes));
-
-      return {
-        who_booked: formData.who_booked.trim(),
-        booking_datetime: dateTime.toISOString(),
-        contact_details: formData.contact_details.trim(),
-        field_number: parseInt(formData.field_number),
-        num_players: parseInt(formData.num_players),
-        notes: formData.notes.trim() || null,
-      };
+    const resetForm = () => {
+        setFormData({
+            who_booked: '',
+            date: undefined,
+            time: '',
+            contact_details: '',
+            field_number: '1',
+            num_players: '',
+            notes: ''
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
-        setIsSubmitting(true);
+        if (loading) {return;}
+
+        // Basic validation
+        if (!formData.who_booked || !formData.date || !formData.time || 
+            !formData.contact_details || !formData.num_players) {
+            toast.error(FOOTBALL_BOOKING_MESSAGES.REQUIRED_FIELDS);
+            return;
+        }
+
+        const playerCount = parseInt(formData.num_players);
+        if (playerCount < 2 || playerCount > 12) {
+            toast.error(FOOTBALL_BOOKING_MESSAGES.MIN_PLAYERS);
+            return;
+        }
+
+        setLoading(true);
 
         try {
-            validateForm();
-            const bookingData = prepareBookingData();
-            const { success } = await addBooking(bookingData);
+            // Create booking datetime
+            const bookingDate = new Date(formData.date);
+            const [hours, minutes] = formData.time.split(':').map(Number);
+            bookingDate.setHours(hours, minutes, 0, 0);
 
-            if (success) {
-              setFormData(initialFormData);
-              onSuccess?.();
+            const bookingData = {
+                whoBooked: formData.who_booked.trim(),
+                bookingDatetime: bookingDate,
+                contactDetails: formData.contact_details.trim(),
+                fieldNumber: parseInt(formData.field_number),
+                numPlayers: playerCount,
+                durationMinutes: 90, // Default duration
+                status: 'pending' as const,
+                notes: formData.notes.trim() || undefined,
+            };
+
+            const result = await addBooking(bookingData);
+
+            if (result.success) {
+                resetForm();
+                onSuccess?.();
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
         } finally {
-            setIsSubmitting(false);
+            setLoading(false);
         }
     };
 
@@ -120,13 +117,14 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                     <Input
                         id="who_booked"
                         value={formData.who_booked}
-                        onChange={(e) => setFormData(prev => ({ ...prev, who_booked: e.target.value }))}
+                        onChange={(e) => handleChange('who_booked', e.target.value)}
                         placeholder={PLACEHOLDERS.WHO_BOOKED}
-                        disabled={isSubmitting}
+                        disabled={loading}
                         required
                         className="h-10"
                     />
                 </div>
+
                 <div className="space-y-2">
                     <Label>
                         {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
@@ -140,12 +138,12 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                                         "justify-start text-left font-normal w-full h-10 truncate",
                                         !formData.date && "text-muted-foreground"
                                     )}
-                                    disabled={isSubmitting}
+                                    disabled={loading}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                                     {formData.date ? 
-                                      format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) :
-                                      "Επιλέξτε ημερομηνία"
+                                        format(formData.date, DATE_FORMAT.DISPLAY, { locale: el }) :
+                                        "Επιλέξτε ημερομηνία"
                                     }
                                 </Button>
                             </PopoverTrigger>
@@ -153,7 +151,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                                 <Calendar
                                     mode="single"
                                     selected={formData.date}
-                                    onSelect={(date: Date | undefined) => setFormData(prev => ({ ...prev, date }))}
+                                    onSelect={(date: Date | undefined) => handleChange('date', date)}
                                     initialFocus
                                     className="rounded-md border shadow-sm p-3"
                                 />
@@ -162,10 +160,10 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                         <Input
                             type="time"
                             value={formData.time}
-                            onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                            onChange={(e) => handleChange('time', e.target.value)}
                             className="text-center h-10"
                             required
-                            disabled={isSubmitting}
+                            disabled={loading}
                             step="300"
                         />
                     </div>
@@ -178,10 +176,10 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                     <Input
                         id="contact_details"
                         value={formData.contact_details}
-                        onChange={(e) => setFormData(prev => ({ ...prev, contact_details: e.target.value }))}
+                        onChange={(e) => handleChange('contact_details', e.target.value)}
                         placeholder={PLACEHOLDERS.CONTACT_DETAILS}
                         required
-                        disabled={isSubmitting}
+                        disabled={loading}
                         className="h-10"
                     />
                 </div>
@@ -193,16 +191,16 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                         </Label>
                         <Select
                             value={formData.field_number}
-                            onValueChange={(value) => setFormData(prev => ({ ...prev, field_number: value }))}
-                            disabled={isSubmitting}
+                            onValueChange={(value) => handleChange('field_number', value)}
+                            disabled={loading}
                         >
                             <SelectTrigger id="field_number" className="h-10">
                                 <SelectValue placeholder="Επιλέξτε γήπεδο" />
                             </SelectTrigger>
                             <SelectContent>
-                                {[1,2,3,4,5].map(num => (
-                                    <SelectItem key={num} value={num.toString()}>
-                                        Γήπεδο {num}
+                                {[1, 2, 3, 4, 5].map(fieldNum => (
+                                    <SelectItem key={fieldNum} value={fieldNum.toString()}>
+                                        Γήπεδο {fieldNum}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -216,12 +214,12 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                             id="num_players"
                             type="number"
                             value={formData.num_players}
-                            onChange={(e) => setFormData(prev => ({ ...prev, num_players: e.target.value }))}
+                            onChange={(e) => handleChange('num_players', e.target.value)}
                             min="2"
                             max="12"
                             required
                             placeholder={PLACEHOLDERS.NUM_PLAYERS}
-                            disabled={isSubmitting}
+                            disabled={loading}
                             className="h-10"
                         />
                     </div>
@@ -232,10 +230,10 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                     <Textarea
                         id="notes"
                         value={formData.notes}
-                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        onChange={(e) => handleChange('notes', e.target.value)}
                         rows={3}
                         placeholder={PLACEHOLDERS.NOTES}
-                        disabled={isSubmitting}
+                        disabled={loading}
                         className="resize-none min-h-[80px]"
                     />
                 </div>
@@ -243,7 +241,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                 <LoadingButton 
                     type="submit" 
                     className="w-full h-10"
-                    loading={isSubmitting}
+                    loading={loading}
                     loadingText={DIALOG_MESSAGES.SAVE_LOADING}
                 >
                     {BUTTON_LABELS.BOOK_FIELD}

@@ -1,40 +1,34 @@
 "use server"
 
 import { revalidatePath } from 'next/cache'
-import { createServerSupabase } from '@/lib/supabase/server'
+
+import { handleActionError, actionSuccess, type ActionResponse } from '@/lib/action-utils'
 import { PRODUCT_MESSAGES } from '@/lib/constants'
-import { ActionResponse, handleActionError, actionSuccess } from '@/lib/action-utils'
+import { checkProductHasSales } from '@/lib/db/services/products'
 
 export async function deleteProduct(productId: string): Promise<ActionResponse> {
   try {
-    const supabase = await createServerSupabase()
-
-    const { data: sales, error: salesError } = await supabase
-      .from('sales')
-      .select('id')
-      .eq('product_id', productId)
-      .limit(1)
-
-    if (salesError) {
-      return handleActionError(salesError, PRODUCT_MESSAGES.ERROR_CHECKING_SALES)
+    // Check for sales using this product before deleting
+    const hasSales = await checkProductHasSales(productId);
+    if (hasSales) {
+      throw new Error('Δεν μπορεί να διαγραφεί το προϊόν διότι έχει σχετικές πωλήσεις.');
     }
+    
+    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/products/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-    if (sales && sales.length > 0) {
-      return { success: false, message: PRODUCT_MESSAGES.PRODUCT_IN_USE_ERROR }
-    }
-
-    const { error: deleteError } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', productId)
-
-    if (deleteError) {
-      return handleActionError(deleteError, PRODUCT_MESSAGES.ERROR_DELETING_PRODUCT)
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete product');
     }
 
     revalidatePath('/dashboard/products')
     return actionSuccess(PRODUCT_MESSAGES.DELETE_SUCCESS)
   } catch (error) {
-    return handleActionError(error, PRODUCT_MESSAGES.GENERIC_ERROR)
+    return handleActionError(error)
   }
 } 

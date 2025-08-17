@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+
 import { API_ERROR_MESSAGES } from '@/lib/constants';
+import { logger } from '@/lib/utils/logger';
 
 interface PollingConfig<T = void> {
   enabled?: boolean;
@@ -28,7 +30,7 @@ export function usePolling<T = void>({
   maxBackoff = 30000, // 30 seconds
   errorMessage
 }: PollingConfig<T>) {
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const errorCountRef = useRef(0);
   const isActiveRef = useRef(true);
   const isPollingRef = useRef(false);
@@ -36,7 +38,7 @@ export function usePolling<T = void>({
   // Safe polling function that prevents re-entrancy
   const pollFn = useCallback(async () => {
     // Prevent re-entrancy - don't start a new poll if one is already running
-    if (isPollingRef.current || !isActiveRef.current) return;
+    if (isPollingRef.current || !isActiveRef.current) {return;}
     
     isPollingRef.current = true;
     
@@ -47,7 +49,7 @@ export function usePolling<T = void>({
       errorCountRef.current = 0;
       
       // Only proceed if still active
-      if (!isActiveRef.current) return;
+      if (!isActiveRef.current) {return;}
       
       // Call success callback if provided
       if (onSuccess && result !== undefined) {
@@ -55,7 +57,7 @@ export function usePolling<T = void>({
       }
     } catch (error) {
       // Only proceed if still active
-      if (!isActiveRef.current) return;
+      if (!isActiveRef.current) {return;}
       
       errorCountRef.current++;
       
@@ -68,7 +70,8 @@ export function usePolling<T = void>({
           );
             
       // Log error but prevent empty error logs
-      console.error('Polling error:', errorObj.message || API_ERROR_MESSAGES.SERVER_ERROR, {
+      logger.error('Polling error:', {
+        message: errorObj.message || API_ERROR_MESSAGES.SERVER_ERROR,
         errorCount: errorCountRef.current,
         originalError: error
       });
@@ -123,7 +126,7 @@ export function usePolling<T = void>({
       timeoutRef.current = undefined;
     }
     
-    if (!enabled) return;
+    if (!enabled) {return;}
 
     // Initial poll with optional delay
     if (initialDelay > 0) {

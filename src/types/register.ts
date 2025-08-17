@@ -1,15 +1,12 @@
-import type { Database } from './supabase';
-import type { Json } from './supabase';
-import { CARD_DISCOUNT } from "@/lib/constants";
-import { UserRole } from '@/lib/constants';
-import { User } from './users';
-
-// Import types from other modules
 import type { 
   Sale as SalesTypeSale, 
-  Order as SalesOrder,
   SaleWithDetails
 } from './sales';
+// Removed Supabase imports - migrated to Drizzle
+type Json = unknown; // Simple type replacement for Json
+import type { User } from './users';
+
+// Import types from other modules
 
 // Re-export the Sale type for convenience, and extend it
 export type { User };
@@ -21,8 +18,7 @@ export interface ExtendedSale extends Omit<Sale, 'is_edited' | 'is_deleted' | 'o
   original_quantity?: number;
 }
 
-// Base types from database
-type Tables = Database['public']['Tables'];
+// Removed Database['public']['Tables'] - migrated to Drizzle types
 
 /**
  * PRODUCT RELATED TYPES
@@ -52,8 +48,25 @@ export interface ProductSummary {
 /**
  * ORDER RELATED TYPES
  */
-// Re-export Order type to avoid duplication
-export interface Order extends SalesOrder {
+// Define Order type based on Drizzle schema
+export interface Order {
+  id: string;
+  orderNumber: string;
+  registerSessionId: string;
+  customerName?: string | null;
+  subtotal: string; // Decimal as string
+  taxAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+  finalAmount: string;
+  paymentMethod: 'cash' | 'card' | 'mobile';
+  cardDiscountCount: number;
+  isVoided: boolean;
+  voidReason?: string | null;
+  createdAt: Date;
+  createdBy: string;
+  voidedAt?: Date | null;
+  voidedBy?: string | null;
   sales: SaleWithDetails[];
 }
 
@@ -96,14 +109,14 @@ export interface DatabaseRegisterSession {
   opened_by: string | null;
   closed_at: string | null;
   closed_by_name: string | null;
-  notes: Record<string, any> | null;
+  notes: Record<string, unknown> | null;
   register_closings: Array<{
     id: string;
     register_session_id: string;
     closed_by_name: string;
     treats_count: number;
     card_count: number;
-    notes: Record<string, any> | null;
+    notes: Record<string, unknown> | null;
     created_at: string;
   }> | null;
   orders: Array<{

@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { User } from '@supabase/supabase-js';
-import { createBrowserClient } from "@supabase/ssr";
 import { LogOut, Loader2, UserIcon} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/mode-toggle";
-import type { Database } from "@/types/supabase";
-import { PUBLIC_ROUTES } from "@/lib/constants";
-import { signOut } from "@/lib/auth-actions";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { logger } from "@/lib/utils/logger";
 import { toast } from "sonner";
 
-// Minimal HeaderProps
+import { ModeToggle } from "@/components/mode-toggle";
+import { Button } from "@/components/ui/button";
+import { useStackApp } from "@/lib/auth-client";
+import { PUBLIC_ROUTES } from "@/lib/constants";
+
+
+
+// Minimal HeaderProps  
 interface HeaderProps {
-  user: User;
+  user: { primaryEmail?: string | null; displayName?: string | null };
   profile: {
     username: string | null;
   };
@@ -22,22 +23,26 @@ interface HeaderProps {
 
 export default function Header({ user, profile }: HeaderProps) {
   const router = useRouter();
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const stackApp = useStackApp();
   const [isLoading, setIsLoading] = useState(false);
 
-  const displayName = profile?.username || user?.email?.split('@')[0] || 'Χρήστης';
+  const displayName = profile?.username || user?.primaryEmail?.split('@')[0] || user?.displayName || 'Χρήστης';
 
   const handleSignOut = async () => {
     setIsLoading(true);
-    const { success } = await signOut(supabase);
-    if (success) {
+    try {
+      const currentUser = await stackApp.getUser();
+      if (currentUser) {
+        await currentUser.signOut();
+      }
       router.push(PUBLIC_ROUTES[0]);
       router.refresh();
+    } catch (error) {
+      toast.error('Αποτυχία αποσύνδεσης');
+      logger.error('Sign out error:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (

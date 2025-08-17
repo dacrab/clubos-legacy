@@ -1,4 +1,5 @@
 import { Package } from "lucide-react";
+
 import { ProductImage } from "./product-image";
 
 interface CodeImageProps {

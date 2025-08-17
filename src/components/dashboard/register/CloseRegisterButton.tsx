@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClientSupabase } from "@/lib/supabase/client";
-import { REGISTER_MESSAGES, REGISTER_DIALOG, API_ERROR_MESSAGES } from "@/lib/constants";
-import { useRegisterSessions } from "@/hooks/features/register/useRegisterSessions";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Textarea } from "@/components/ui/textarea";
+import { useUser } from "@/lib/auth-client";
+import { logger } from "@/lib/utils/logger";
 
 interface CloseRegisterButtonProps {
   onRegisterClosed?: () => void;
@@ -20,84 +20,95 @@ interface CloseRegisterButtonProps {
 export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [closingCash, setClosingCash] = useState("");
   const [notes, setNotes] = useState("");
-  const [closedByName, setClosedByName] = useState("");
+  const [activeSession, setActiveSession] = useState<{ id: string; openedAt: string; openedBy?: { username?: string } } | null>(null);
+  const [expectedCash, setExpectedCash] = useState(0);
   const router = useRouter();
-  const supabase = createClientSupabase();
+  useUser();
 
-  const getActiveRegisterSession = useCallback(async () => {
+  const fetchActiveSession = useCallback(async () => {
     try {
-      const { data: session, error } = await supabase
-        .from('register_sessions')
-        .select('*')
-        .is('closed_at', null)
-        .order('opened_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        console.error('Error fetching active register session:', error.message);
-        toast.error('Error fetching active register session: ' + error.message);
-        return null;
+      const response = await fetch('/api/register-sessions/active');
+      if (response.ok) {
+        const session = await response.json();
+        setActiveSession(session);
+        // Calculate expected cash from sales in this session
+        await calculateExpectedCash(session.id);
       }
-
-      if (!session) {
-        toast.error('No active register session found. Please open a register session first.');
-        return null;
-      }
-
-      return session;
     } catch (error) {
-      console.error('Unexpected error in getActiveRegisterSession:', error);
-      toast.error(API_ERROR_MESSAGES.GENERIC_ERROR);
-      return null;
+      logger.error('Error fetching active session:', error);
     }
-  }, [supabase]);
+  }, []);
 
+  // Fetch active register session when dialog opens
   useEffect(() => {
-    if (!open) {
-      setNotes("");
-      setClosedByName("");
-      setLoading(false);
+    if (open) {
+      fetchActiveSession();
     }
-  }, [open]);
+  }, [open, fetchActiveSession]);
 
-  const handleSubmit = async () => {
+  const calculateExpectedCash = async (sessionId: string) => {
     try {
-      if (!closedByName.trim()) {
-        toast.error("Παρακαλώ εισάγετε το όνομά σας");
-        return;
+      const response = await fetch(`/api/register-sessions/${sessionId}/summary`);
+      if (response.ok) {
+        const summary = await response.json();
+        setExpectedCash(summary.expectedCash || 0);
+      }
+    } catch (error) {
+      logger.error('Error calculating expected cash:', error);
+    }
+  };
+
+  const handleClose = async () => {
+    if (!activeSession) {
+      toast.error("Δεν υπάρχει ενεργή συνεδρία ταμείου");
+      return;
+    }
+
+    if (!closingCash.trim()) {
+      toast.error("Παρακαλώ εισάγετε το ποσό κλεισίματος");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const closingAmount = parseFloat(closingCash);
+      const cashDifference = closingAmount - expectedCash;
+
+      const response = await fetch(`/api/register-sessions/${activeSession.id}/close`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          closingCash: closingAmount,
+          expectedCash,
+          cashDifference,
+          notes: notes.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to close register');
       }
 
-      setLoading(true);
-
-      const activeSession = await getActiveRegisterSession();
-      if (!activeSession) {
-        setLoading(false);
-        toast.error(API_ERROR_MESSAGES.GENERIC_ERROR);
-        return;
-      }
-
-      const { error } = await supabase
-        .rpc('close_register', { 
-          p_register_session_id: activeSession.id,
-          p_closed_by_name: closedByName,
-          p_notes: notes ? { text: notes } : null
-        });
-
-      if (error) {
-        toast.error(error.message || REGISTER_MESSAGES.CLOSE_ERROR);
-        return;
-      }
-
-      toast.success(REGISTER_MESSAGES.CLOSE_SUCCESS);
-      router.refresh();
+      toast.success("Το ταμείο έκλεισε επιτυχώς");
       setOpen(false);
       onRegisterClosed?.();
-
+      
+      // Reset form
+      setClosingCash("");
+      setNotes("");
+      setActiveSession(null);
+      
+      // Redirect to register closings page
+      router.push('/dashboard/register-closings');
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast.error(API_ERROR_MESSAGES.GENERIC_ERROR);
+      logger.error('Error closing register:', error);
+      toast.error(error instanceof Error ? error.message : "Σφάλμα κατά το κλείσιμο του ταμείου");
     } finally {
       setLoading(false);
     }
@@ -109,8 +120,6 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
         onClick={() => setOpen(true)} 
         variant="destructive"
         className="w-full"
-        aria-label="Κλείσιμο Ταμείου"
-        aria-haspopup="dialog"
       >
         Κλείσιμο Ταμείου
       </Button>
@@ -120,24 +129,65 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
           <DialogHeader>
             <DialogTitle>Κλείσιμο Ταμείου</DialogTitle>
           </DialogHeader>
+          
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="closedByName" className="font-medium">
-                Όνομα <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="closedByName"
-                placeholder="Εισάγετε το όνομά σας..."
-                value={closedByName}
-                onChange={(e) => setClosedByName(e.target.value)}
-                required
-              />
+            {activeSession && (
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm font-medium">Ενεργή Συνεδρία:</p>
+                <p className="text-sm text-muted-foreground">
+                  Άνοιξε: {new Date(activeSession.openedAt).toLocaleString('el-GR')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Από: {activeSession.openedBy?.username || 'Άγνωστος'}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Αναμενόμενο Ποσό</Label>
+                <Input
+                  value={`€${expectedCash.toFixed(2)}`}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="closingCash">
+                  Ποσό Κλεισίματος <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="closingCash"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={closingCash}
+                  onChange={(e) => setClosingCash(e.target.value)}
+                />
+              </div>
             </div>
+
+            {closingCash && expectedCash > 0 && (
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm font-medium">
+                  Διαφορά: 
+                  <span className={`ml-1 ${
+                    (parseFloat(closingCash) - expectedCash) >= 0 
+                      ? 'text-green-600' 
+                      : 'text-red-600'
+                  }`}>
+                    €{(parseFloat(closingCash) - expectedCash).toFixed(2)}
+                  </span>
+                </p>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="notes">Σημειώσεις</Label>
               <Textarea
                 id="notes"
-                placeholder="Προαιρετικές σημειώσεις για το κλείσιμο..."
+                placeholder="Προαιρετικές σημειώσεις..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -146,7 +196,7 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
 
           <LoadingButton 
             loading={loading}
-            onClick={handleSubmit}
+            onClick={handleClose}
             className="w-full mt-4"
           >
             Κλείσιμο Ταμείου

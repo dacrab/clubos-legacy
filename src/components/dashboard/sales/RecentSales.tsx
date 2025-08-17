@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useCallback, memo, useMemo } from 'react';
 import { History } from "lucide-react";
 import Link from "next/link";
+import { useState, useCallback, memo, useMemo } from 'react';
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import type { SaleWithDetails } from "@/types/sales";
-import EditableSaleCard from "./EditableSaleCard";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { useSalesData } from "@/hooks/features/sales/useSalesData";
 import { 
   groupSalesIntoOrders,
 } from "@/lib/utils/salesUtils";
-import { useSalesData } from "@/hooks/features/sales/useSalesData";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { SaleOrderHeader } from './components/SaleOrderHeader';
+import type { SaleWithDetails } from "@/types/sales";
+
 import { SaleOrderDetails } from './components/SaleOrderDetails';
+import { SaleOrderHeader } from './components/SaleOrderHeader';
+import EditableSaleCard from "./EditableSaleCard";
 
 // Types
 interface RecentSalesProps {
@@ -95,7 +97,8 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
                       <EditableSaleCard
                         key={sale.id}
                         sale={sale}
-                        onDeleteClick={() => onDeleteClick(sale.id)}
+                        onEdit={() => {}}
+                        onDelete={() => onDeleteClick(sale.id)}
                       />
                     ))}
                     <SaleOrderDetails group={group} />

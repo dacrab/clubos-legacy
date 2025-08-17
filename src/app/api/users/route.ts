@@ -1,75 +1,59 @@
 import { NextResponse } from 'next/server';
-import { 
-  API_ERROR_MESSAGES, 
-  USER_MESSAGES, 
-  DEFAULT_USER_ROLE, 
-  ALLOWED_USER_ROLES 
-} from '@/lib/constants';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@supabase/supabase-js';
 
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Λείπει το Supabase URL ή το service key');
-  }
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
+import { stackServerApp } from '@/lib/auth';
+import { createUser, getUsers } from '@/lib/db/services/users';
 
 export async function POST(request: Request) {
   try {
-    const { username, password, role = DEFAULT_USER_ROLE } = await request.json();
+    // Check if user is authenticated and is admin
+    const user = await stackServerApp.getUser();
 
-    if (!password || !username) {
-      return new NextResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, { status: 400 });
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!ALLOWED_USER_ROLES.includes(role)) {
-      return new NextResponse(API_ERROR_MESSAGES.INVALID_ROLE, { status: 400 });
+    const { username, password, role = 'employee', email } = await request.json();
+
+    if (!username || !password || !email) {
+      return NextResponse.json({ error: 'Username, email and password required' }, { status: 400 });
     }
 
-    const email = `${username.toLowerCase().replace(/\s+/g, '_')}@example.com`;
-
-    const { data, error } = await getSupabaseAdmin().auth.admin.createUser({
-      email,
+    // Create user with Stack Auth
+    const newStackUser = await stackServerApp.createUser({
+      primaryEmail: email,
+      displayName: username,
       password,
-      email_confirm: true,
-      user_metadata: { username, role }
     });
 
-    if (error) {
-      if (error.message.includes('already exists')) {
-        return new NextResponse(USER_MESSAGES.USER_ALREADY_EXISTS, { status: 409 });
-      }
-      return new NextResponse(`Αποτυχία δημιουργίας χρήστη: ${error.message}`, { status: 500 });
-    }
-    
-    return NextResponse.json(data.user);
-  } catch (error: any) {
-    return new NextResponse(`Εσωτερικό σφάλμα διακομιστή: ${error.message}`, { status: 500 });
+    // Create user record in our database
+    const newUser = await createUser({
+      id: newStackUser.id,
+      email,
+      username,
+      role: role as 'admin' | 'employee' | 'secretary',
+    });
+
+    return NextResponse.json(newUser);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    const status = message.includes('already exists') ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function GET() {
   try {
-    const { data: users, error } = await createAdminClient()
-      .from('users')
-      .select('id, username, role, created_at, updated_at')
-      .order('created_at', { ascending: false });
+    // Check if user is authenticated
+    const user = await stackServerApp.getUser();
 
-    if (error) {
-      return new NextResponse(
-        JSON.stringify({ error: `Σφάλμα κατά την ανάκτηση χρηστών: ${error.message}` }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const users = await getUsers();
     return NextResponse.json({ users });
-  } catch (error: any) {
-    return new NextResponse(
-      JSON.stringify({ error: `Εσωτερικό σφάλμα διακομιστή: ${error.message}` }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
