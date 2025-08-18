@@ -1,15 +1,20 @@
-"use client";
+'use client';
 
-import { AlertCircle, ClipboardList } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
+import { AlertCircle, ClipboardList } from 'lucide-react';
 
-import { EmptyState } from "@/components/ui/empty-state";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
+import type {
+  ActiveSession,
+  ClosedSession,
+  ListItem,
+  RegisterSessionWithClosings,
+} from '@/types/register';
+import { cn } from '@/lib/utils';
 import { useRegisterSessions } from '@/hooks/features/register/useRegisterSessions';
-import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
-import { cn } from "@/lib/utils";
-import type { ListItem, ActiveSession, ClosedSession, RegisterSessionWithClosings } from "@/types/register";
+import { useMediaQuery } from '@/hooks/utils/useMediaQuery';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { VirtualizedMobileList } from '@/components/ui/virtualized-mobile-list';
 
 import RegisterItemCard from './RegisterItemCard';
 
@@ -17,17 +22,12 @@ export function RegisterClosingsList({}: {
   dateRange?: {
     startDate: string;
     endDate: string;
-  }
+  };
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
-  const {
-    sessions,
-    loading: isLoading,
-    error,
-    fetchSessions: refreshData
-  } = useRegisterSessions();
+  const { sessions, loading: isLoading, error, fetchSessions: refreshData } = useRegisterSessions();
 
   // Transform RegisterSessionWithClosings[] to ListItem[]
   const transformToListItems = (sessions: RegisterSessionWithClosings[]): ListItem[] => {
@@ -40,18 +40,18 @@ export function RegisterClosingsList({}: {
           register_session_id: session.id,
           closed_by_name: session.closed_by_name || '',
           treats_count: 0, // These would come from the calculation logic
-          card_count: 0,   // These would come from the calculation logic
+          card_count: 0, // These would come from the calculation logic
           notes: session.notes,
           created_at: session.created_at,
           session,
-          orders: session.orders
+          orders: session.orders,
         } as ClosedSession;
       } else {
         // This is an active session - create ActiveSession
         return {
           ...session,
           type: 'active',
-          orders: session.orders
+          orders: session.orders,
         } as ActiveSession;
       }
     });
@@ -64,7 +64,7 @@ export function RegisterClosingsList({}: {
   }, [refreshData]);
 
   const toggleExpand = (id: string) => {
-    setExpandedId(prev => prev === id ? null : id);
+    setExpandedId(prev => (prev === id ? null : id));
   };
 
   const getItemId = (item: ListItem) => {
@@ -76,13 +76,7 @@ export function RegisterClosingsList({}: {
   }
 
   if (error) {
-    return (
-      <EmptyState
-        icon={AlertCircle}
-        title="Σφάλμα φόρτωσης δεδομένων"
-        description={error}
-      />
-    );
+    return <EmptyState icon={AlertCircle} title="Σφάλμα φόρτωσης δεδομένων" description={error} />;
   }
 
   if (!allItems.length) {
@@ -104,16 +98,12 @@ export function RegisterClosingsList({}: {
       <div
         key={itemId}
         className={cn(
-          "w-full mb-4",
-          isMobile && "px-1 mb-3",
-          isActive && "bg-primary/5 rounded-lg"
+          'mb-4 w-full',
+          isMobile && 'mb-3 px-1',
+          isActive && 'bg-primary/5 rounded-lg'
         )}
       >
-        <RegisterItemCard
-          item={item}
-          isExpanded={isExpanded}
-          onToggle={toggleExpand}
-        />
+        <RegisterItemCard item={item} isExpanded={isExpanded} onToggle={toggleExpand} />
       </div>
     );
   };
@@ -123,7 +113,7 @@ export function RegisterClosingsList({}: {
       <div className="h-[70vh]">
         <VirtualizedMobileList
           items={allItems}
-          className="rounded-lg overflow-hidden h-full"
+          className="h-full overflow-hidden rounded-lg"
           estimateSize={() => 160}
           renderItem={renderItem}
         />
@@ -132,10 +122,8 @@ export function RegisterClosingsList({}: {
   }
 
   return (
-    <div className="h-[70vh] overflow-auto rounded-lg border bg-card">
-      <div className="p-4">
-        {allItems.map((item) => renderItem(item))}
-      </div>
+    <div className="bg-card h-[70vh] overflow-auto rounded-lg border">
+      <div className="p-4">{allItems.map(item => renderItem(item))}</div>
     </div>
   );
 }

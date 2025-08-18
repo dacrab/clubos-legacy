@@ -1,26 +1,22 @@
 import type { Metadata } from 'next';
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import DashboardLayoutClient from '@/components/dashboard/layout/DashboardLayoutClient';
-import Header from '@/components/dashboard/layout/Header';
-import { DashboardProvider } from "@/components/dashboard/provider/DashboardProvider";
+import type { UserProfile } from '@/types/users';
 import { stackServerApp } from '@/lib/auth';
-import { logger } from '@/lib/utils/logger';
 import { getUserById } from '@/lib/db/services/users';
 import { cn } from '@/lib/utils';
-import type { UserProfile } from '@/types/users';
+import { logger } from '@/lib/utils/logger';
+import DashboardLayoutClient from '@/components/dashboard/layout/DashboardLayoutClient';
+import Header from '@/components/dashboard/layout/Header';
+import { DashboardProvider } from '@/components/dashboard/provider/DashboardProvider';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
 };
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await stackServerApp.getUser();
 
   if (!user) {
@@ -54,13 +50,10 @@ export default async function DashboardLayout({
 
   return (
     <DashboardProvider>
-      <div className={cn("flex flex-1 flex-col", isAdmin && "lg:pl-72")}>
+      <div className={cn('flex flex-1 flex-col', isAdmin && 'lg:pl-72')}>
         <Header user={user} profile={headerProfile} />
-        <DashboardLayoutClient profile={userProfile}>
-          {children}
-        </DashboardLayoutClient>
+        <DashboardLayoutClient profile={userProfile}>{children}</DashboardLayoutClient>
       </div>
     </DashboardProvider>
   );
 }
-

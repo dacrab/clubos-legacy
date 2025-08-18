@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import { createAppointment, getAppointments } from '@/lib/db/services/appointments';
 import { logger } from '@/lib/utils/logger';
-import { getAppointments, createAppointment } from '@/lib/db/services/appointments';
 
 export async function GET() {
   try {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating appointment:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create appointment' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create appointment' },
       { status: 500 }
     );
   }

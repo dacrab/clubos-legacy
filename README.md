@@ -32,6 +32,7 @@ A comprehensive warehouse management system designed specifically for sports fac
 Custom NextJS POS System is a comprehensive warehouse management system designed specifically for sports facility operations. It streamlines multiple aspects of business management through an intuitive web interface with role-based access control. The system caters to three distinct user roles:
 
 ### 👨‍💼 Admin Features
+
 - **💰 Sales Management:** Track and manage all sales transactions with detailed product information
 - **📦 Inventory Control:** Monitor stock levels with automatic low-stock alerts and inventory management
 - **🏦 Register Closings:** Record and view daily register closings with detailed financial reporting
@@ -43,16 +44,19 @@ Custom NextJS POS System is a comprehensive warehouse management system designed
 - **📈 Sales History:** Access detailed historical sales data with advanced date and time filtering
 
 ### 👩‍💼 Secretary Features
+
 - **🎉 Children's Party Management:** Create, view, and manage upcoming children's birthday party bookings
 - **⚽ Football Field Reservations:** Schedule and track football field bookings
 - **📞 Customer Management:** Maintain contact information and booking details for clients
 
 ### 👨‍💼 Staff Features
+
 - **🛒 Point of Sale System:** Process sales transactions for products and services
 - **ℹ️ Basic Inventory Access:** View product availability and stock information
 - **🧾 Daily Sales Reporting:** Access reports for sales processed through their account
 
 ### ✨ Core Functionality
+
 - **🎭 Multi-role Support:** Tailored interfaces and permissions for administrators, secretaries, and staff
 - **🔄 Real-time Inventory Tracking:** Automatic updates to stock levels when sales are processed
 - **📅 Reservation System:** Comprehensive booking management for facilities and services
@@ -73,29 +77,31 @@ Proteas provides a centralized solution for sports facility management, helping 
 - **🌙 Dark Mode:** Elegant dark theme support
 - **🚀 SSR:** Server-side rendering for optimal performance
 - **📱 Responsive:** Mobile-first responsive design
-- **⚡ Real-time:** Live updates through Supabase real-time subscriptions
+- **🤖 Automation:** Comprehensive GitHub Actions for CI/CD, security, and maintenance
+- **🛡️ Security:** Automated vulnerability scanning and dependency management
+- **💅 Code Quality:** Auto-formatting with Prettier and ESLint integration
 
 ## ⚙️ Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | Next.js 15.2.4 |
-| **Language** | TypeScript 5.7.2 |
-| **Database** | NeonDB (PostgreSQL) |
-| **ORM** | Drizzle ORM 0.36.4 |
-| **Authentication** | Better Auth 1.1.1 |
-| **Package Manager** | Bun 1.1.38 |
-| **UI Library** | React 19.0.0 |
-| **Styling** | Tailwind CSS 3.4.17 |
-| **UI Components** | shadcn/ui, Radix UI |
-| **Charts** | Recharts 2.13.3 |
-| **Form Handling** | React Hook Form 7.51.0 |
-| **Validation** | Zod 3.22.4 |
-| **Date Management** | date-fns 4.1.0 |
-| **Notifications** | Sonner 1.7.0 |
-| **Animation** | Framer Motion 11.15.0 |
-| **Data Fetching** | SWR 2.3.0 |
-| **Code Quality** | Enhanced ESLint with unused imports detection |
+| Category            | Technology                                    |
+| ------------------- | --------------------------------------------- |
+| **Framework**       | Next.js 15.2.4                                |
+| **Language**        | TypeScript 5.7.2                              |
+| **Database**        | NeonDB (PostgreSQL)                           |
+| **ORM**             | Drizzle ORM 0.36.4                            |
+| **Authentication**  | Better Auth 1.1.1                             |
+| **Package Manager** | Bun 1.1.38                                    |
+| **UI Library**      | React 19.0.0                                  |
+| **Styling**         | Tailwind CSS 3.4.17                           |
+| **UI Components**   | shadcn/ui, Radix UI                           |
+| **Charts**          | Recharts 2.13.3                               |
+| **Form Handling**   | React Hook Form 7.51.0                        |
+| **Validation**      | Zod 3.22.4                                    |
+| **Date Management** | date-fns 4.1.0                                |
+| **Notifications**   | Sonner 1.7.0                                  |
+| **Animation**       | Framer Motion 11.15.0                         |
+| **Data Fetching**   | SWR 2.3.0                                     |
+| **Code Quality**    | Enhanced ESLint with unused imports detection |
 
 ## 🔍 Prerequisites
 
@@ -131,29 +137,33 @@ Before you begin, ensure you have the following installed:
 
    ```env
    # Database
-DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+   DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+   ```
 
 # Stack Auth (Neon Auth)
+
 NEXT_PUBLIC_STACK_PROJECT_ID=your-stack-project-id
 NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=your-publishable-client-key
 STACK_SECRET_SERVER_KEY=your-secret-server-key
 
-   # App
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
+# App
+
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+````
 
 4. **Set up the database:**
 
-   ```bash
-   # Generate migration files
-   bun run db:generate
-   
-   # Run migrations
-   bun run db:migrate
-   
-   # Seed with sample data
-   bun run db:seed
-   ```
+```bash
+# Generate migration files
+bun run db:generate
+
+# Run migrations
+bun run db:migrate
+
+# Seed with sample data
+bun run db:seed
+````
 
 5. **Start the development server:**
 
@@ -167,8 +177,8 @@ STACK_SECRET_SERVER_KEY=your-secret-server-key
 
 After seeding, you can log in with:
 
-- **Admin:** admin@clubos.com / password123
-- **Staff:** staff@clubos.com / password123  
+- **Admin:** vkavouras@proton.me / password123
+- **Staff:** staff@clubos.com / password123
 - **Secretary:** secretary@clubos.com / password123
 
 ## 📁 Project Structure
@@ -231,11 +241,12 @@ bun run build
 # Start production server
 bun run start
 
-# Lint check
-bun run lint
-
-# Auto-fix lint issues
-bun run lint:fix
+# Code quality
+bun run lint          # Lint check
+bun run lint:fix      # Auto-fix lint issues
+bun run format        # Format with Prettier
+bun run format:check  # Check formatting
+bun run type-check    # TypeScript validation
 
 # Database commands
 bun run db:generate  # Generate migrations
@@ -252,6 +263,19 @@ bun run db:seed      # Seed database
 - Add loading states for async operations
 - Keep components small and focused
 - Follow accessibility best practices (WCAG 2.1)
+
+### 🤖 Automated Workflows
+
+Our GitHub Actions setup provides:
+
+- **🚀 CI/CD Pipeline** - Automated testing, building, and deployment checks
+- **🛡️ Security Scanning** - CodeQL analysis and dependency vulnerability detection
+- **💅 Code Formatting** - Automated Prettier and ESLint formatting
+- **📦 Dependency Management** - Smart Dependabot configuration with auto-merge
+- **📊 Performance Monitoring** - Bundle size and build time tracking
+- **🧹 Weekly Maintenance** - Automated health checks and reporting
+
+For detailed information, see [`.github/README.md`](.github/README.md)
 
 ## 🎨 UI Components
 

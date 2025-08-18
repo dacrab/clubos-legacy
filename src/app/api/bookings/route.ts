@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import { createFootballFieldBooking, getFootballFieldBookings } from '@/lib/db/services/bookings';
 import { logger } from '@/lib/utils/logger';
-import { getFootballFieldBookings, createFootballFieldBooking } from '@/lib/db/services/bookings';
 
 export async function GET() {
   try {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating booking:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create booking' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create booking' },
       { status: 500 }
     );
   }

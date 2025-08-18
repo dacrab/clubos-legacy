@@ -1,8 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import {
+  deleteFootballFieldBooking,
+  getFootballFieldBookingById,
+  updateFootballFieldBooking,
+} from '@/lib/db/services/bookings';
 import { logger } from '@/lib/utils/logger';
-import { getFootballFieldBookingById, updateFootballFieldBooking, deleteFootballFieldBooking } from '@/lib/db/services/bookings';
 
 export async function GET(
   request: NextRequest,
@@ -49,7 +53,7 @@ export async function PUT(
   } catch (error) {
     logger.error('Error updating booking:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update booking' }, 
+      { error: error instanceof Error ? error.message : 'Failed to update booking' },
       { status: 500 }
     );
   }
@@ -67,7 +71,7 @@ export async function DELETE(
     }
 
     const success = await deleteFootballFieldBooking(bookingId);
-    
+
     if (!success) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
@@ -76,7 +80,7 @@ export async function DELETE(
   } catch (error) {
     logger.error('Error deleting booking:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete booking' }, 
+      { error: error instanceof Error ? error.message : 'Failed to delete booking' },
       { status: 500 }
     );
   }

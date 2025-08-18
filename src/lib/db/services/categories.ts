@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 
+import type { Category, GroupedCategory } from '@/types/products';
 import { db } from '@/lib/db';
 import { categories } from '@/lib/db/schema';
-import type { Category, GroupedCategory } from '@/types/products';
 
 export async function getCategories() {
   const result = await db.select().from(categories).orderBy(categories.name);
@@ -21,7 +21,7 @@ export async function getCategoriesWithParent() {
 
 export async function getGroupedCategories(): Promise<GroupedCategory[]> {
   const allCategories = await getCategoriesWithParent();
-  
+
   const mainCategories = allCategories.filter(cat => !cat.parentId);
   const subCategoriesMap = allCategories.reduce((acc: Record<string, Category[]>, cat) => {
     if (cat.parentId) {
@@ -32,7 +32,7 @@ export async function getGroupedCategories(): Promise<GroupedCategory[]> {
 
   return mainCategories.map(main => ({
     main: main as Category,
-    subcategories: subCategoriesMap[main.id] || []
+    subcategories: subCategoriesMap[main.id] || [],
   }));
 }
 
@@ -47,7 +47,11 @@ export async function createCategory(categoryData: {
 }
 
 export async function updateCategory(id: string, updates: Partial<typeof categories.$inferInsert>) {
-  const [result] = await db.update(categories).set(updates).where(eq(categories.id, id)).returning();
+  const [result] = await db
+    .update(categories)
+    .set(updates)
+    .where(eq(categories.id, id))
+    .returning();
   return result;
 }
 

@@ -22,6 +22,6 @@ export interface AppointmentInsert extends Omit<Appointment, 'id' | 'createdAt' 
   updatedAt?: Date;
 }
 
-export type AppointmentUpdate = Partial<AppointmentInsert>
+export type AppointmentUpdate = Partial<AppointmentInsert>;
 
-export type AppointmentFormData = Omit<AppointmentInsert, 'userId'>
+export type AppointmentFormData = Omit<AppointmentInsert, 'userId'>;

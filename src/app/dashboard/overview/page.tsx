@@ -1,14 +1,13 @@
-
-import { deleteSale } from '@/app/actions/deleteSale';
-import { getRecentSalesData } from '@/app/actions/fetchSalesData';
-import LowStockCard from "@/components/dashboard/overview/LowStockCard";
+import type { Product } from '@/types/products';
+import { stackServerApp } from '@/lib/auth';
+import { logger } from '@/lib/utils/logger';
+import { hasUnlimitedStock } from '@/lib/utils/product';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import LowStockCard from '@/components/dashboard/overview/LowStockCard';
 import RecentSales from '@/components/dashboard/sales/RecentSales';
 import StatsCards from '@/components/dashboard/statistics/StatsCards';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { stackServerApp } from '@/lib/auth';
-import { hasUnlimitedStock } from '@/lib/utils/product';
-import type { Product } from '@/types/products'; 
-import { logger } from '@/lib/utils/logger';
+import { deleteSale } from '@/app/actions/deleteSale';
+import { getRecentSalesData } from '@/app/actions/fetchSalesData';
 
 export default async function OverviewPage() {
   // Check authentication
@@ -19,12 +18,12 @@ export default async function OverviewPage() {
 
   // Fetch data using server actions
   const { sales, error: salesError } = await getRecentSalesData(20);
-  
+
   // Fetch products using Drizzle service
   const { getProducts } = await import('@/lib/db/services/products');
   let products: Product[] = [];
   let productsError = null;
-  
+
   try {
     products = await getProducts();
   } catch (error) {
@@ -38,22 +37,20 @@ export default async function OverviewPage() {
   if (salesError && process.env.NODE_ENV === 'development') {
     logger.error('Error fetching sales:', salesError);
   }
-  
+
   const lowStockProducts = products?.filter(p => !hasUnlimitedStock(p.categoryId)) || [];
-  
+
   return (
-    <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
+    <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
       <div className="space-y-6">
         <div className="flex flex-col space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">Επισκόπηση</h1>
-          <p className="text-muted-foreground">
-            Γενική εικόνα των πωλήσεων και αποθεμάτων
-          </p>
+          <p className="text-muted-foreground">Γενική εικόνα των πωλήσεων και αποθεμάτων</p>
         </div>
-        
+
         <StatsCards sales={sales} />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <RecentSales initialSales={sales} onDeleteClick={deleteSale} />
           </div>
@@ -61,9 +58,7 @@ export default async function OverviewPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Χαμηλό Απόθεμα</CardTitle>
-                <CardDescription>
-                  Προϊόντα που τελειώνουν σύντομα.
-                </CardDescription>
+                <CardDescription>Προϊόντα που τελειώνουν σύντομα.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {lowStockProducts.length > 0 ? (
@@ -80,4 +75,4 @@ export default async function OverviewPage() {
       </div>
     </div>
   );
-} 
+}

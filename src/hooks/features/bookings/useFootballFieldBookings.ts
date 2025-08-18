@@ -1,9 +1,9 @@
 import { toast } from 'sonner';
 import useSWR, { useSWRConfig } from 'swr';
 
+import type { FootballFieldBooking, FootballFieldBookingFormData } from '@/types/bookings';
 import { useUser } from '@/lib/auth-client';
 import { FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
-import type { FootballFieldBooking, FootballFieldBookingFormData } from '@/types/bookings';
 
 const bookingsFetcher = async (): Promise<FootballFieldBooking[]> => {
   const response = await fetch('/api/bookings');
@@ -11,18 +11,24 @@ const bookingsFetcher = async (): Promise<FootballFieldBooking[]> => {
     throw new Error('Failed to fetch bookings');
   }
   return response.json();
-}
+};
 
 export function useFootballFieldBookings() {
   const user = useUser();
-  const { data: bookings, error, isLoading } = useSWR<FootballFieldBooking[]>('football_field_bookings', bookingsFetcher);
+  const {
+    data: bookings,
+    error,
+    isLoading,
+  } = useSWR<FootballFieldBooking[]>('football_field_bookings', bookingsFetcher);
   const { mutate } = useSWRConfig();
 
   const revalidate = () => mutate('football_field_bookings');
 
   const addBooking = async (formData: FootballFieldBookingFormData) => {
     try {
-      if (!user) {throw new Error("User not authenticated");}
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
@@ -36,7 +42,7 @@ export function useFootballFieldBookings() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create booking');
       }
-      
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
       revalidate();
       return { success: true };
@@ -61,7 +67,7 @@ export function useFootballFieldBookings() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update booking');
       }
-      
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.UPDATE_SUCCESS);
       revalidate();
       return { success: true };
@@ -82,7 +88,7 @@ export function useFootballFieldBookings() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete booking');
       }
-      
+
       toast.success(FOOTBALL_BOOKING_MESSAGES.DELETE_SUCCESS);
       revalidate();
     } catch (error) {
@@ -99,4 +105,4 @@ export function useFootballFieldBookings() {
     updateBooking,
     deleteBooking,
   };
-} 
+}

@@ -1,7 +1,15 @@
 #!/usr/bin/env bun
-
 import { db } from '../src/lib/db';
-import { users, categories, products, registerSessions, orders, sales, appointments, footballFieldBookings } from '../src/lib/db/schema';
+import {
+  appointments,
+  categories,
+  footballFieldBookings,
+  orders,
+  products,
+  registerSessions,
+  sales,
+  users,
+} from '../src/lib/db/schema';
 
 interface User {
   id: string;
@@ -15,7 +23,7 @@ interface RegisterSession {
 }
 async function resetDatabase(): Promise<void> {
   console.log('🗑️  Resetting database...');
-  
+
   const tablesToClear = [
     sales,
     orders,
@@ -24,38 +32,45 @@ async function resetDatabase(): Promise<void> {
     products,
     categories,
     registerSessions,
-    users
+    users,
   ];
 
   for (const table of tablesToClear) {
     await db.delete(table);
-    }
-  
-  console.log('✅ Database reset complete');
   }
 
-async function insertUser(email: string, username: string, role: 'admin' | 'employee' | 'secretary'): Promise<User> {
+  console.log('✅ Database reset complete');
+}
+
+async function insertUser(
+  email: string,
+  username: string,
+  role: 'admin' | 'employee' | 'secretary'
+): Promise<User> {
   const user: User = {
     id: crypto.randomUUID(),
     email,
     username,
     role,
-};  
+  };
   await db.insert(users).values(user).onConflictDoNothing();
   console.log(`👤 Created user: ${email} (${role})`);
-  
+
   return user;
 }
 
 async function insertCategories(createdBy: string): Promise<void> {
   const mainCategoryId = crypto.randomUUID();
-  
-  await db.insert(categories).values({
-    id: mainCategoryId,
-    name: 'Καφέδες',
-    description: 'Όλα τα είδη καφέ',
-    createdBy
-  }).onConflictDoNothing();
+
+  await db
+    .insert(categories)
+    .values({
+      id: mainCategoryId,
+      name: 'Καφέδες',
+      description: 'Όλα τα είδη καφέ',
+      createdBy,
+    })
+    .onConflictDoNothing();
 
   const subcategories = [
     {
@@ -63,27 +78,27 @@ async function insertCategories(createdBy: string): Promise<void> {
       name: 'Ζεστοί Καφέδες',
       description: 'Ζεστοί καφέδες',
       parentId: mainCategoryId,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
       name: 'Κρύοι Καφέδες',
       description: 'Κρύοι καφέδες',
       parentId: mainCategoryId,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
       name: 'Ροφήματα',
       description: 'Διάφορα ροφήματα',
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
       name: 'Σνακ',
       description: 'Διάφορα σνακ',
-      createdBy
-    }
+      createdBy,
+    },
   ];
 
   await db.insert(categories).values(subcategories).onConflictDoNothing();
@@ -104,7 +119,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '2.00',
       stock: -1,
       categoryId: hotCoffeeCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -112,7 +127,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '3.00',
       stock: -1,
       categoryId: hotCoffeeCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -120,7 +135,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '3.00',
       stock: -1,
       categoryId: coldCoffeeCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -128,7 +143,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '3.50',
       stock: -1,
       categoryId: coldCoffeeCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -136,7 +151,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '3.50',
       stock: -1,
       categoryId: beverageCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -144,7 +159,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '2.50',
       stock: -1,
       categoryId: beverageCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -152,7 +167,7 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '2.00',
       stock: 20,
       categoryId: snackCategory?.id,
-      createdBy
+      createdBy,
     },
     {
       id: crypto.randomUUID(),
@@ -160,8 +175,8 @@ async function insertProducts(createdBy: string): Promise<void> {
       price: '3.50',
       stock: 15,
       categoryId: snackCategory?.id,
-      createdBy
-    }
+      createdBy,
+    },
   ];
 
   await db.insert(products).values(productList).onConflictDoNothing();
@@ -173,26 +188,29 @@ async function insertRegisterSession(): Promise<RegisterSession> {
     id: crypto.randomUUID(),
     openedBy: 'admin', // Required field for register sessions
   };
-  
+
   await db.insert(registerSessions).values(session).onConflictDoNothing();
   console.log('💰 Register session created');
-  
+
   return session as RegisterSession;
 }
 
 async function insertSampleOrder(staffId: string, sessionId: string): Promise<void> {
   const orderId = crypto.randomUUID();
   const productResults = await db.select().from(products);
-  
-  await db.insert(orders).values({
-    id: orderId,
-    orderNumber: `ORDER-${Date.now()}`,
-    registerSessionId: sessionId,
-    totalAmount: '7.50',
-    finalAmount: '3.50',
-    cardDiscountCount: 1,
-    createdBy: staffId
-  }).onConflictDoNothing();
+
+  await db
+    .insert(orders)
+    .values({
+      id: orderId,
+      orderNumber: `ORDER-${Date.now()}`,
+      registerSessionId: sessionId,
+      totalAmount: '7.50',
+      finalAmount: '3.50',
+      cardDiscountCount: 1,
+      createdBy: staffId,
+    })
+    .onConflictDoNothing();
 
   const sampleSales = [
     {
@@ -203,7 +221,7 @@ async function insertSampleOrder(staffId: string, sessionId: string): Promise<vo
       quantity: 1,
       unitPrice: '2.00',
       totalPrice: '2.00',
-      isTreat: true
+      isTreat: true,
     },
     {
       id: crypto.randomUUID(),
@@ -213,7 +231,7 @@ async function insertSampleOrder(staffId: string, sessionId: string): Promise<vo
       quantity: 1,
       unitPrice: '3.50',
       totalPrice: '3.50',
-      isTreat: false
+      isTreat: false,
     },
     {
       id: crypto.randomUUID(),
@@ -223,8 +241,8 @@ async function insertSampleOrder(staffId: string, sessionId: string): Promise<vo
       quantity: 1,
       unitPrice: '2.00',
       totalPrice: '2.00',
-      isTreat: false
-    }
+      isTreat: false,
+    },
   ];
 
   await db.insert(sales).values(sampleSales).onConflictDoNothing();
@@ -242,7 +260,7 @@ async function insertSampleAppointments(userId: string): Promise<void> {
       numChildren: 3,
       numAdults: 2,
       notes: 'Γενέθλια παιδιού',
-      userId
+      userId,
     },
     {
       id: crypto.randomUUID(),
@@ -253,8 +271,8 @@ async function insertSampleAppointments(userId: string): Promise<void> {
       numChildren: 5,
       numAdults: 3,
       notes: 'Σχολική εκδρομή',
-      userId
-    }
+      userId,
+    },
   ];
 
   await db.insert(appointments).values(sampleAppointments).onConflictDoNothing();
@@ -271,7 +289,7 @@ async function insertSampleFootballBookings(userId: string): Promise<void> {
       fieldNumber: 1,
       numPlayers: 10,
       notes: 'Εβδομαδιαίο παιχνίδι',
-      userId
+      userId,
     },
     {
       id: crypto.randomUUID(),
@@ -281,8 +299,8 @@ async function insertSampleFootballBookings(userId: string): Promise<void> {
       fieldNumber: 2,
       numPlayers: 8,
       notes: 'Φιλικό παιχνίδι',
-      userId
-    }
+      userId,
+    },
   ];
 
   await db.insert(footballFieldBookings).values(sampleBookings).onConflictDoNothing();
@@ -292,11 +310,11 @@ async function insertSampleFootballBookings(userId: string): Promise<void> {
 async function populateDatabase(): Promise<void> {
   try {
     console.log('🌱 Starting database population...');
-    
+
     await resetDatabase();
 
     console.log('👥 Creating users...');
-    const admin = await insertUser('admin@clubos.com', 'Admin User', 'admin');
+    const admin = await insertUser('vkavouras@proton.me', 'Admin User', 'admin');
     const employee = await insertUser('staff@clubos.com', 'Staff User', 'employee');
     const secretary = await insertUser('secretary@clubos.com', 'Secretary User', 'secretary');
 
@@ -325,7 +343,7 @@ async function populateDatabase(): Promise<void> {
 }
 
 if (import.meta.main) {
-  populateDatabase().catch((error) => {
+  populateDatabase().catch(error => {
     console.error('Script execution failed:', error);
     process.exit(1);
   });

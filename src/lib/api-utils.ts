@@ -32,10 +32,7 @@ export function errorResponse(message: string, status: number = 500, details?: u
   if (process.env.NODE_ENV === 'development') {
     logger.error(`API Error: ${message}`, details || '');
   }
-  return NextResponse.json(
-    { error: message, ...(details ? { details } : {}) },
-    { status }
-  );
+  return NextResponse.json({ error: message, ...(details ? { details } : {}) }, { status });
 }
 
 /**
@@ -45,7 +42,7 @@ export function successResponse<T>(data: T, message?: string) {
   return NextResponse.json({
     success: true,
     ...(message ? { message } : {}),
-    ...(data ? { data } : {})
+    ...(data ? { data } : {}),
   });
 }
 
@@ -61,4 +58,4 @@ export function handleApiError(error: unknown) {
     500,
     error instanceof Error ? { message: error.message } : undefined
   );
-} 
+}

@@ -2,8 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/action-utils';
 import { stackServerApp } from '@/lib/auth';
+import {
+  checkProductHasSales,
+  deleteProduct,
+  getProductById,
+  updateProduct,
+} from '@/lib/db/services/products';
 import { logger } from '@/lib/utils/logger';
-import { getProductById, updateProduct, deleteProduct, checkProductHasSales } from '@/lib/db/services/products';
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +57,7 @@ export async function PUT(
   } catch (error) {
     logger.error('Error updating product:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update product' }, 
+      { error: error instanceof Error ? error.message : 'Failed to update product' },
       { status: 500 }
     );
   }
@@ -75,13 +80,13 @@ export async function DELETE(
     const hasSales = await checkProductHasSales(productId);
     if (hasSales) {
       return NextResponse.json(
-        { error: 'Δεν μπορεί να διαγραφεί το προϊόν διότι έχει σχετικές πωλήσεις.' }, 
+        { error: 'Δεν μπορεί να διαγραφεί το προϊόν διότι έχει σχετικές πωλήσεις.' },
         { status: 400 }
       );
     }
 
     const success = await deleteProduct(productId);
-    
+
     if (!success) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
@@ -90,7 +95,7 @@ export async function DELETE(
   } catch (error) {
     logger.error('Error deleting product:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete product' }, 
+      { error: error instanceof Error ? error.message : 'Failed to delete product' },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { SaleWithDetails } from '@/types/sales';
 
@@ -16,12 +16,22 @@ export interface SalesFilters {
 const fetchSalesData = async (filters?: SalesFilters): Promise<SaleWithDetails[]> => {
   try {
     const params = new URLSearchParams();
-    if (filters?.startDate) {params.append('startDate', filters.startDate);}
-    if (filters?.endDate) {params.append('endDate', filters.endDate);}
-    if (filters?.category) {params.append('category', filters.category);}
-    if (filters?.paymentMethod) {params.append('paymentMethod', filters.paymentMethod);}
-    if (filters?.limit) {params.append('limit', filters.limit.toString());}
-    
+    if (filters?.startDate) {
+      params.append('startDate', filters.startDate);
+    }
+    if (filters?.endDate) {
+      params.append('endDate', filters.endDate);
+    }
+    if (filters?.category) {
+      params.append('category', filters.category);
+    }
+    if (filters?.paymentMethod) {
+      params.append('paymentMethod', filters.paymentMethod);
+    }
+    if (filters?.limit) {
+      params.append('limit', filters.limit.toString());
+    }
+
     const response = await fetch(`/api/sales?${params.toString()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch sales data');
@@ -63,9 +73,9 @@ export function useSalesData(filters?: SalesFilters, initialData?: SaleWithDetai
 
     if (filters?.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(sale => 
-        sale.productName?.toLowerCase().includes(query) ||
-        sale.id.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        sale =>
+          sale.productName?.toLowerCase().includes(query) || sale.id.toLowerCase().includes(query)
       );
     }
 

@@ -1,8 +1,8 @@
-import { eq, desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
-import { db } from '@/lib/db';
-import { orders, sales, products } from '@/lib/db/schema';
 import type { NewSale, OrderItem, SaleWithDetails } from '@/types/sales';
+import { db } from '@/lib/db';
+import { orders, products, sales } from '@/lib/db/schema';
 import { logger } from '@/lib/utils/logger';
 
 export async function getRecentOrders(limit: number = 5) {
@@ -22,16 +22,19 @@ export async function getRecentOrders(limit: number = 5) {
 }
 
 export async function createSaleWithOrder(newSale: NewSale, userId: string, sessionId: string) {
-  return await db.transaction(async (tx) => {
+  return await db.transaction(async tx => {
     // Create the order
-    const [order] = await tx.insert(orders).values({
-      orderNumber: `ORD-${Date.now()}`,
-      registerSessionId: sessionId,
-      totalAmount: newSale.totalAmount.toString(),
-      finalAmount: newSale.finalAmount.toString(),
-      cardDiscountCount: newSale.cardDiscountCount,
-      createdBy: userId,
-    }).returning();
+    const [order] = await tx
+      .insert(orders)
+      .values({
+        orderNumber: `ORD-${Date.now()}`,
+        registerSessionId: sessionId,
+        totalAmount: newSale.totalAmount.toString(),
+        finalAmount: newSale.finalAmount.toString(),
+        cardDiscountCount: newSale.cardDiscountCount,
+        createdBy: userId,
+      })
+      .returning();
 
     // Create the sales items
     const saleItems = newSale.items.map((item: OrderItem) => ({
@@ -49,7 +52,8 @@ export async function createSaleWithOrder(newSale: NewSale, userId: string, sess
     // Update stock for non-treat items
     for (const item of newSale.items) {
       if (item.product.stock !== -1 && !item.isTreat) {
-        await tx.update(products)
+        await tx
+          .update(products)
           .set({ stock: item.product.stock - item.quantity })
           .where(eq(products.id, item.product.id));
       }
@@ -75,12 +79,14 @@ export async function getSalesWithDetails() {
 }
 
 // Additional sales functions for API
-export async function getSales(_filters: {
-  startDate?: Date;
-  endDate?: Date;
-  category?: string;
-  paymentMethod?: string;
-} = {}) {
+export async function getSales(
+  _filters: {
+    startDate?: Date;
+    endDate?: Date;
+    category?: string;
+    paymentMethod?: string;
+  } = {}
+) {
   try {
     // mark as intentionally unused for future filtering logic
     void _filters;
@@ -105,7 +111,7 @@ export async function getSaleById(id: string) {
         product: true,
       },
     });
-    
+
     return result || null;
   } catch (error) {
     logger.error('Error fetching sale by id:', error);
@@ -131,7 +137,7 @@ export async function updateSale(id: string, updateData: Partial<SaleWithDetails
       })
       .where(eq(sales.id, id))
       .returning();
-    
+
     return result || null;
   } catch (error) {
     logger.error('Error updating sale:', error);
@@ -141,11 +147,8 @@ export async function updateSale(id: string, updateData: Partial<SaleWithDetails
 
 export async function deleteSale(id: string): Promise<boolean> {
   try {
-    const result = await db
-      .delete(sales)
-      .where(eq(sales.id, id))
-      .returning();
-    
+    const result = await db.delete(sales).where(eq(sales.id, id)).returning();
+
     return result.length > 0;
   } catch (error) {
     logger.error('Error deleting sale:', error);

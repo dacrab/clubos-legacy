@@ -1,19 +1,22 @@
-"use client";
+'use client';
 
-import { 
-  MoreHorizontal, 
-  Key, 
-  UserX,
-  ChevronDown, 
-  Shield, 
-  User as UserIcon, 
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ChevronDown,
+  Key,
+  MoreHorizontal,
+  Shield,
+  UserCircle,
   UserCog,
-  UserCircle 
-} from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+  User as UserIcon,
+  UserX,
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ALLOWED_USER_ROLES, ROLE_TRANSLATIONS, type UserRole } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import type { User } from '@/hooks/data/useUsers';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,9 +25,9 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/ui/empty-state";
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Table,
   TableBody,
@@ -32,14 +35,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import type { User } from "@/hooks/data/useUsers";
-import { 
-  ALLOWED_USER_ROLES,
-  ROLE_TRANSLATIONS,
-  type UserRole
-} from "@/lib/constants";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/table';
 
 interface UsersTableProps {
   users: User[];
@@ -51,9 +47,9 @@ interface UsersTableProps {
 }
 
 const roleColors: Record<UserRole, string> = {
-  admin: "bg-green-500/10 text-green-700 dark:text-green-400",
-  employee: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  secretary: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  admin: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  employee: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  secretary: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
 };
 
 const roleIcons: Record<UserRole, typeof Shield> = {
@@ -62,7 +58,13 @@ const roleIcons: Record<UserRole, typeof Shield> = {
   secretary: UserCog,
 };
 
-function UserActions({ user, loading, onResetPassword, onUpdateRole, onDelete }: {
+function UserActions({
+  user,
+  loading,
+  onResetPassword,
+  onUpdateRole,
+  onDelete,
+}: {
   user: User;
   loading: boolean;
   onResetPassword: (userId: string) => void;
@@ -87,7 +89,7 @@ function UserActions({ user, loading, onResetPassword, onUpdateRole, onDelete }:
             Αλλαγή ρόλου
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {ALLOWED_USER_ROLES.map((role) => {
+            {ALLOWED_USER_ROLES.map(role => {
               const RoleIcon = roleIcons[role];
               return (
                 <DropdownMenuItem
@@ -95,7 +97,7 @@ function UserActions({ user, loading, onResetPassword, onUpdateRole, onDelete }:
                   onClick={() => onUpdateRole(user.id, role)}
                   disabled={user.role === role || loading}
                 >
-                  <div className={cn("flex items-center rounded-md px-2 py-1", roleColors[role])}>
+                  <div className={cn('flex items-center rounded-md px-2 py-1', roleColors[role])}>
                     <RoleIcon className="mr-2 h-4 w-4" />
                     {ROLE_TRANSLATIONS[role]}
                   </div>
@@ -105,7 +107,7 @@ function UserActions({ user, loading, onResetPassword, onUpdateRole, onDelete }:
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={() => onDelete(user.id)}
           className="text-red-600 dark:text-red-400"
         >
@@ -117,7 +119,13 @@ function UserActions({ user, loading, onResetPassword, onUpdateRole, onDelete }:
   );
 }
 
-function MobileUserCard({ user, loading, onResetPassword, onUpdateRole, onDelete }: {
+function MobileUserCard({
+  user,
+  loading,
+  onResetPassword,
+  onUpdateRole,
+  onDelete,
+}: {
   user: User;
   loading: boolean;
   onResetPassword: (userId: string) => void;
@@ -125,17 +133,17 @@ function MobileUserCard({ user, loading, onResetPassword, onUpdateRole, onDelete
   onDelete: (userId: string) => void;
 }) {
   const Icon = roleIcons[user.role];
-  
+
   return (
-    <div className="border-b p-4 space-y-3">
+    <div className="space-y-3 border-b p-4">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-            <UserCircle className="h-6 w-6 text-muted-foreground" />
+          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+            <UserCircle className="text-muted-foreground h-6 w-6" />
           </div>
           <div>
             <h3 className="font-medium">{user.username}</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {new Date(user.created_at).toLocaleDateString('el-GR')}
             </p>
           </div>
@@ -148,26 +156,26 @@ function MobileUserCard({ user, loading, onResetPassword, onUpdateRole, onDelete
           onDelete={onDelete}
         />
       </div>
-      <Badge variant="secondary" className={cn("text-sm", roleColors[user.role])}>
+      <Badge variant="secondary" className={cn('text-sm', roleColors[user.role])}>
         <Icon className="mr-1 h-4 w-4" />
-          {ROLE_TRANSLATIONS[user.role]}
-        </Badge>
-      </div>
+        {ROLE_TRANSLATIONS[user.role]}
+      </Badge>
+    </div>
   );
 }
-export default function UsersTable({ 
-  users, 
-  isMobile, 
+export default function UsersTable({
+  users,
+  isMobile,
   loading,
-  onDeleteUser, 
-  onUpdateRole, 
-  onResetPassword 
+  onDeleteUser,
+  onUpdateRole,
+  onResetPassword,
 }: UsersTableProps) {
   const [sortConfig, setSortConfig] = useState<{ key: keyof User; direction: 'asc' | 'desc' }>({
     key: 'created_at',
     direction: 'desc',
   });
-  
+
   const handleSort = useCallback((key: keyof User) => {
     setSortConfig(prev => ({
       key,
@@ -179,28 +187,27 @@ export default function UsersTable({
     return [...users].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
-      if (aValue < bValue) {return sortConfig.direction === 'asc' ? -1 : 1;}
-      if (aValue > bValue) {return sortConfig.direction === 'asc' ? 1 : -1;}
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
       return 0;
     });
   }, [users, sortConfig]);
 
   const SortButton = ({ label, sortKey }: { label: string; sortKey: keyof User }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-      className="-ml-3 h-8"
-      onClick={() => handleSort(sortKey)}
-      >
-        {label}
-        <ChevronDown
+    <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort(sortKey)}>
+      {label}
+      <ChevronDown
         className={cn(
-          "ml-2 h-4 w-4 transition-transform",
-          sortConfig.key === sortKey && sortConfig.direction === 'desc' && "rotate-180"
+          'ml-2 h-4 w-4 transition-transform',
+          sortConfig.key === sortKey && sortConfig.direction === 'desc' && 'rotate-180'
         )}
-        />
-      </Button>
-    );
+      />
+    </Button>
+  );
   if (users.length === 0) {
     return (
       <EmptyState
@@ -213,22 +220,22 @@ export default function UsersTable({
 
   if (isMobile) {
     return (
-      <div className="space-y-0 border rounded-md">
-        {sortedUsers.map((user) => (
+      <div className="space-y-0 rounded-md border">
+        {sortedUsers.map(user => (
           <MobileUserCard
             key={user.id}
             user={user}
-                loading={loading}
-              onResetPassword={onResetPassword}
-              onUpdateRole={onUpdateRole}
-              onDelete={onDeleteUser}
-            />
-          ))}
+            loading={loading}
+            onResetPassword={onResetPassword}
+            onUpdateRole={onUpdateRole}
+            onDelete={onDeleteUser}
+          />
+        ))}
       </div>
-  );
-}
+    );
+  }
   return (
-    <div className="border rounded-md">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -245,13 +252,13 @@ export default function UsersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedUsers.map((user) => {
+          {sortedUsers.map(user => {
             const Icon = roleIcons[user.role];
             return (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.username}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={cn("text-sm", roleColors[user.role])}>
+                  <Badge variant="secondary" className={cn('text-sm', roleColors[user.role])}>
                     <Icon className="mr-1 h-4 w-4" />
                     {ROLE_TRANSLATIONS[user.role]}
                   </Badge>

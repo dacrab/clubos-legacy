@@ -16,12 +16,13 @@ export interface FootballFieldBooking {
   updatedAt: Date;
 }
 
-export interface FootballFieldBookingInsert extends Omit<FootballFieldBooking, 'id' | 'createdAt' | 'updatedAt'> {
+export interface FootballFieldBookingInsert
+  extends Omit<FootballFieldBooking, 'id' | 'createdAt' | 'updatedAt'> {
   id?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export type FootballFieldBookingUpdate = Partial<FootballFieldBookingInsert>
+export type FootballFieldBookingUpdate = Partial<FootballFieldBookingInsert>;
 
-export type FootballFieldBookingFormData = Omit<FootballFieldBookingInsert, 'userId'>
+export type FootballFieldBookingFormData = Omit<FootballFieldBookingInsert, 'userId'>;

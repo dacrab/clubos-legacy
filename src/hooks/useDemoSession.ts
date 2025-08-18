@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
-import { logger } from '@/lib/utils/logger';
 import { toast } from 'sonner';
 
-import { useUser, useStackApp } from '@/lib/auth-client';
+import { useStackApp, useUser } from '@/lib/auth-client';
+import { logger } from '@/lib/utils/logger';
 
 const DEMO_USERS = ['admin@example.com', 'staff@example.com', 'secretary@example.com'];
 const DEMO_SESSION_DURATION = 60 * 60 * 1000; // 1 hour
@@ -20,11 +20,13 @@ export function useDemoSession() {
   const [isEnding, setIsEnding] = useState(false);
 
   const endDemoSession = useCallback(async () => {
-    if (isEnding) {return;}
+    if (isEnding) {
+      return;
+    }
     setIsEnding(true);
 
     toast.info('Η δοκιμαστική σας περίοδος έληξε. Η βάση δεδομένων θα επαναφερθεί.');
-    
+
     try {
       // Call API to reset database
       await fetch('/api/reset-db', { method: 'POST' });
@@ -73,7 +75,7 @@ export function useDemoSession() {
         if (startTime) {
           const elapsed = Date.now() - parseInt(startTime, 10);
           const newRemainingTime = DEMO_SESSION_DURATION - elapsed;
-          
+
           if (newRemainingTime <= 0) {
             setRemainingTime(0);
             endDemoSession();
@@ -88,4 +90,4 @@ export function useDemoSession() {
   }, [isDemoSession, endDemoSession]);
 
   return { isDemoSession, remainingTime };
-} 
+}

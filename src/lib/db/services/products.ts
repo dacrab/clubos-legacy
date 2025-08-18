@@ -25,11 +25,10 @@ export async function getProductById(id: string) {
 }
 
 export async function getLowStockProducts() {
-  const result = await db.select()
+  const result = await db
+    .select()
     .from(products)
-    .where(
-      lte(products.stock, 10) && ne(products.stock, -1)
-    );
+    .where(lte(products.stock, 10) && ne(products.stock, -1));
   return result;
 }
 
@@ -44,7 +43,8 @@ export async function updateProduct(id: string, updates: Partial<typeof products
 }
 
 export async function updateProductStock(id: string, newStock: number) {
-  const [result] = await db.update(products)
+  const [result] = await db
+    .update(products)
     .set({ stock: newStock })
     .where(eq(products.id, id))
     .returning();
@@ -63,7 +63,7 @@ export async function checkProductHasSales(id: string): Promise<boolean> {
       .from(sales)
       .where(eq(sales.productId, id))
       .limit(1);
-    
+
     return result.length > 0;
   } catch (error) {
     logger.error('Error checking product sales:', error);

@@ -1,5 +1,5 @@
-import { CARD_DISCOUNT } from "@/lib/constants";
-import type { Sale, SaleWithDetails, GroupedSale } from "@/types/sales";
+import type { GroupedSale, Sale, SaleWithDetails } from '@/types/sales';
+import { CARD_DISCOUNT } from '@/lib/constants';
 
 export type { GroupedSale };
 
@@ -38,19 +38,12 @@ export interface OrderData {
 // --- Calculation Utilities ---
 
 export function calculateNonTreatSubtotal(items: Sale[]): number {
-  return items.reduce(
-    (sum, item) =>
-      !item.isTreat ? sum + parseFloat(item.totalPrice) : sum,
-    0
-  );
+  return items.reduce((sum, item) => (!item.isTreat ? sum + parseFloat(item.totalPrice) : sum), 0);
 }
 
 export function calculateTreatsValue(items: Sale[]): number {
   return items.reduce(
-    (sum, item) =>
-      item.isTreat
-        ? sum + parseFloat(item.unitPrice) * item.quantity
-        : sum,
+    (sum, item) => (item.isTreat ? sum + parseFloat(item.unitPrice) * item.quantity : sum),
     0
   );
 }
@@ -59,10 +52,7 @@ export function calculateDiscountAmount(cardDiscountCount: number): number {
   return +(cardDiscountCount * CARD_DISCOUNT).toFixed(2);
 }
 
-export function calculateFinalAmount(
-  nonTreatSubtotal: number,
-  discountAmount: number
-): number {
+export function calculateFinalAmount(nonTreatSubtotal: number, discountAmount: number): number {
   return Math.max(0, +(nonTreatSubtotal - discountAmount).toFixed(2));
 }
 
@@ -70,10 +60,7 @@ export function calculateGroupTotals(group: GroupedSale) {
   const nonTreatSubtotal = calculateNonTreatSubtotal(group.items);
   const treatsValue = calculateTreatsValue(group.items);
   const discountAmount = calculateDiscountAmount(group.card_discount_count);
-  const calculatedFinalAmount = calculateFinalAmount(
-    nonTreatSubtotal,
-    discountAmount
-  );
+  const calculatedFinalAmount = calculateFinalAmount(nonTreatSubtotal, discountAmount);
   return {
     nonTreatSubtotal,
     treatsValue,
@@ -84,15 +71,17 @@ export function calculateGroupTotals(group: GroupedSale) {
 
 // --- Grouping & Filtering ---
 
-export function groupSalesIntoOrders(
-  sales: SaleWithDetails[] | null | undefined
-): GroupedSale[] {
-  if (!sales?.length) {return [];}
+export function groupSalesIntoOrders(sales: SaleWithDetails[] | null | undefined): GroupedSale[] {
+  if (!sales?.length) {
+    return [];
+  }
 
   const orderMap = new Map<string, GroupedSale>();
 
   for (const sale of sales) {
-    if (!sale?.orderId || !sale.order) {continue;}
+    if (!sale?.orderId || !sale.order) {
+      continue;
+    }
 
     if (!orderMap.has(sale.orderId)) {
       orderMap.set(sale.orderId, {
@@ -122,8 +111,7 @@ export function groupSalesIntoOrders(
   }
 
   return Array.from(orderMap.values()).sort(
-    (a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 }
 
@@ -131,12 +119,14 @@ export function filterSalesBySearchQuery(
   sales: SaleWithDetails[],
   searchQuery: string
 ): SaleWithDetails[] {
-  if (!searchQuery) {return sales;}
+  if (!searchQuery) {
+    return sales;
+  }
   const query = searchQuery.toLowerCase();
   return sales.filter(
-    (sale) =>
+    sale =>
       sale.product.name.toLowerCase().includes(query) ||
-      (sale.product.category?.name || "").toLowerCase().includes(query)
+      (sale.product.category?.name || '').toLowerCase().includes(query)
   );
 }
 

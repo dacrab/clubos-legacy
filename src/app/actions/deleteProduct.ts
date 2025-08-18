@@ -1,10 +1,10 @@
-"use server"
+'use server';
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from 'next/cache';
 
-import { handleActionError, actionSuccess, type ActionResponse } from '@/lib/action-utils'
-import { PRODUCT_MESSAGES } from '@/lib/constants'
-import { checkProductHasSales } from '@/lib/db/services/products'
+import { actionSuccess, handleActionError, type ActionResponse } from '@/lib/action-utils';
+import { PRODUCT_MESSAGES } from '@/lib/constants';
+import { checkProductHasSales } from '@/lib/db/services/products';
 
 export async function deleteProduct(productId: string): Promise<ActionResponse> {
   try {
@@ -13,7 +13,7 @@ export async function deleteProduct(productId: string): Promise<ActionResponse> 
     if (hasSales) {
       throw new Error('Δεν μπορεί να διαγραφεί το προϊόν διότι έχει σχετικές πωλήσεις.');
     }
-    
+
     const response = await fetch(`${process.env.NEXTAUTH_URL}/api/products/${productId}`, {
       method: 'DELETE',
       headers: {
@@ -26,9 +26,9 @@ export async function deleteProduct(productId: string): Promise<ActionResponse> 
       throw new Error(error.error || 'Failed to delete product');
     }
 
-    revalidatePath('/dashboard/products')
-    return actionSuccess(PRODUCT_MESSAGES.DELETE_SUCCESS)
+    revalidatePath('/dashboard/products');
+    return actionSuccess(PRODUCT_MESSAGES.DELETE_SUCCESS);
   } catch (error) {
-    return handleActionError(error)
+    return handleActionError(error);
   }
-} 
+}

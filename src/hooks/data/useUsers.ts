@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
@@ -68,7 +68,7 @@ export function useUsers() {
   const addUser = async (userData: Record<string, unknown>) => {
     await apiRequest('/api/users', 'POST', userData, USER_MESSAGES.CREATE_SUCCESS);
   };
-  
+
   const deleteUser = async (userId: string) => {
     await apiRequest(`/api/users/${userId}`, 'DELETE', null, USER_MESSAGES.DELETE_SUCCESS);
   };
@@ -78,7 +78,12 @@ export function useUsers() {
   };
 
   const resetPassword = async (userId: string, password: string) => {
-    await apiRequest(`/api/users/${userId}`, 'POST', { password }, USER_MESSAGES.PASSWORD_RESET_SUCCESS);
+    await apiRequest(
+      `/api/users/${userId}`,
+      'POST',
+      { password },
+      USER_MESSAGES.PASSWORD_RESET_SUCCESS
+    );
   };
 
   return {
@@ -93,4 +98,4 @@ export function useUsers() {
     resetPassword,
     mutate,
   };
-} 
+}

@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import type { RegisterSessionWithClosings } from '@/types/register';
-
 
 export function useRegisterSessions() {
   const [sessions, setSessions] = useState<RegisterSessionWithClosings[]>([]);
@@ -30,22 +29,22 @@ export function useRegisterSessions() {
   const openSession = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/register-sessions', { 
+      const response = await fetch('/api/register-sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({}),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to open register session');
       }
-      
+
       const newSession = await response.json();
       setSessions(prev => [newSession, ...prev]);
-      
+
       toast.success('Νέα συνεδρία ταμείου ξεκίνησε');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Σφάλμα κατά το άνοιγμα ταμείου';
@@ -63,17 +62,17 @@ export function useRegisterSessions() {
       const response = await fetch(`/api/register-sessions/${sessionId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes })
+        body: JSON.stringify({ notes }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to close register session');
       }
-      
+
       const updatedSession = await response.json();
-      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
-      
+      setSessions(prev => prev.map(s => (s.id === sessionId ? updatedSession : s)));
+
       toast.success('Συνεδρία ταμείου έκλεισε');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Σφάλμα κατά το κλείσιμο ταμείου';

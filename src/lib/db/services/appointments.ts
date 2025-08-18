@@ -1,18 +1,15 @@
-import { eq, desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 import type { Appointment, AppointmentInsert } from '@/types/appointments';
+import { logger } from '@/lib/utils/logger';
 
 import { db } from '../index';
 import { appointments } from '../schema';
-import { logger } from '@/lib/utils/logger';
 
 export async function getAppointments(): Promise<Appointment[]> {
   try {
-    const result = await db
-      .select()
-      .from(appointments)
-      .orderBy(desc(appointments.dateTime));
-    
+    const result = await db.select().from(appointments).orderBy(desc(appointments.dateTime));
+
     return result as Appointment[];
   } catch (error) {
     logger.error('Error fetching appointments:', error);
@@ -22,13 +19,9 @@ export async function getAppointments(): Promise<Appointment[]> {
 
 export async function getAppointmentById(id: string): Promise<Appointment | null> {
   try {
-    const result = await db
-      .select()
-      .from(appointments)
-      .where(eq(appointments.id, id))
-      .limit(1);
-    
-    return result[0] as Appointment || null;
+    const result = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+
+    return (result[0] as Appointment) || null;
   } catch (error) {
     logger.error('Error fetching appointment by id:', error);
     throw new Error('Failed to fetch appointment');
@@ -44,11 +37,8 @@ export async function createAppointment(appointmentData: AppointmentInsert): Pro
       updatedAt: new Date(),
     };
 
-    const result = await db
-      .insert(appointments)
-      .values(newAppointment)
-      .returning();
-    
+    const result = await db.insert(appointments).values(newAppointment).returning();
+
     return result[0] as Appointment;
   } catch (error) {
     logger.error('Error creating appointment:', error);
@@ -56,7 +46,10 @@ export async function createAppointment(appointmentData: AppointmentInsert): Pro
   }
 }
 
-export async function updateAppointment(id: string, updateData: Partial<AppointmentInsert>): Promise<Appointment | null> {
+export async function updateAppointment(
+  id: string,
+  updateData: Partial<AppointmentInsert>
+): Promise<Appointment | null> {
   try {
     const result = await db
       .update(appointments)
@@ -66,8 +59,8 @@ export async function updateAppointment(id: string, updateData: Partial<Appointm
       })
       .where(eq(appointments.id, id))
       .returning();
-    
-    return result[0] as Appointment || null;
+
+    return (result[0] as Appointment) || null;
   } catch (error) {
     logger.error('Error updating appointment:', error);
     throw new Error('Failed to update appointment');
@@ -76,11 +69,8 @@ export async function updateAppointment(id: string, updateData: Partial<Appointm
 
 export async function deleteAppointment(id: string): Promise<boolean> {
   try {
-    const result = await db
-      .delete(appointments)
-      .where(eq(appointments.id, id))
-      .returning();
-    
+    const result = await db.delete(appointments).where(eq(appointments.id, id)).returning();
+
     return result.length > 0;
   } catch (error) {
     logger.error('Error deleting appointment:', error);

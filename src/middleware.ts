@@ -1,13 +1,15 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
 
-import { stackServerApp } from "@/lib/auth";
-import { logger } from "@/lib/utils/logger";
+import { stackServerApp } from '@/lib/auth';
+import { logger } from '@/lib/utils/logger';
 
 export async function middleware(request: NextRequest) {
   // Skip auth check for public routes, API routes, and handler routes
-  if (request.nextUrl.pathname === '/' || 
-      request.nextUrl.pathname.startsWith('/api/') ||
-      request.nextUrl.pathname.startsWith('/handler/')) {
+  if (
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname.startsWith('/api/') ||
+    request.nextUrl.pathname.startsWith('/handler/')
+  ) {
     return NextResponse.next();
   }
 

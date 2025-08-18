@@ -1,17 +1,16 @@
-"use client";
+'use client';
 
-import { Search, Package } from "lucide-react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from 'react';
+import { Package, Search } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
-import type { ProductWithCategory } from "@/types/products";
-import { logger } from "@/lib/utils/logger";
+import type { ProductWithCategory } from '@/types/products';
+import { logger } from '@/lib/utils/logger';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
 
-import ProductFormDialog from "./ProductFormDialog";
-
+import ProductFormDialog from './ProductFormDialog';
 
 interface ProductsTableProps {
   searchQuery?: string;
@@ -20,7 +19,7 @@ interface ProductsTableProps {
 export default function ProductsTable({ searchQuery }: ProductsTableProps) {
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingProduct, setEditingProduct] = useState<ProductWithCategory | null>(null);
   const [productToDelete, setProductToDelete] = useState<ProductWithCategory | null>(null);
 
@@ -48,21 +47,23 @@ export default function ProductsTable({ searchQuery }: ProductsTableProps) {
   }, []);
 
   const handleDelete = async () => {
-    if (!productToDelete) {return;}
-    
+    if (!productToDelete) {
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/products/${productToDelete.id}`, { 
-        method: 'DELETE' 
+      const response = await fetch(`/api/products/${productToDelete.id}`, {
+        method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete product');
       }
-      
+
       toast.success('Το προϊόν διαγράφηκε επιτυχώς');
       setProductToDelete(null);
-      
+
       // Refresh products list
       setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
     } catch (error) {
@@ -71,18 +72,19 @@ export default function ProductsTable({ searchQuery }: ProductsTableProps) {
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes((searchQuery || searchTerm).toLowerCase()) ||
-    product.description?.toLowerCase().includes((searchQuery || searchTerm).toLowerCase()) ||
-    product.barcode?.toLowerCase().includes((searchQuery || searchTerm).toLowerCase())
+  const filteredProducts = products.filter(
+    product =>
+      product.name.toLowerCase().includes((searchQuery || searchTerm).toLowerCase()) ||
+      product.description?.toLowerCase().includes((searchQuery || searchTerm).toLowerCase()) ||
+      product.barcode?.toLowerCase().includes((searchQuery || searchTerm).toLowerCase())
   );
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="animate-pulse h-4 bg-muted rounded w-full"></div>
-        <div className="animate-pulse h-4 bg-muted rounded w-3/4"></div>
-        <div className="animate-pulse h-4 bg-muted rounded w-1/2"></div>
+        <div className="bg-muted h-4 w-full animate-pulse rounded"></div>
+        <div className="bg-muted h-4 w-3/4 animate-pulse rounded"></div>
+        <div className="bg-muted h-4 w-1/2 animate-pulse rounded"></div>
       </div>
     );
   }
@@ -91,11 +93,11 @@ export default function ProductsTable({ searchQuery }: ProductsTableProps) {
     <div className="space-y-4">
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
         <Input
           placeholder="Αναζήτηση προϊόντων..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
           className="pl-10"
         />
       </div>
@@ -108,17 +110,17 @@ export default function ProductsTable({ searchQuery }: ProductsTableProps) {
           description="Δεν υπάρχουν προϊόντα που να ταιριάζουν με τα κριτήρια αναζήτησης."
         />
       ) : (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-muted-foreground py-8 text-center">
           Δεν υπάρχουν διαθέσιμα προϊόντα
         </div>
       )}
 
       {/* Edit Dialog */}
       {editingProduct && (
-        <ProductFormDialog 
-          product={editingProduct} 
-          open={!!editingProduct} 
-          onOpenChange={(open) => !open && setEditingProduct(null)}
+        <ProductFormDialog
+          product={editingProduct}
+          open={!!editingProduct}
+          onOpenChange={open => !open && setEditingProduct(null)}
           onProductSaved={() => {
             setEditingProduct(null);
             // Refresh products list
@@ -129,7 +131,7 @@ export default function ProductsTable({ searchQuery }: ProductsTableProps) {
       {/* Delete Confirmation */}
       <ConfirmationDialog
         open={!!productToDelete}
-        onOpenChange={(open) => !open && setProductToDelete(null)}
+        onOpenChange={open => !open && setProductToDelete(null)}
         title="Διαγραφή Προϊόντος"
         description={`Είστε σίγουροι ότι θέλετε να διαγράψετε το προϊόν "${productToDelete?.name}"; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.`}
         onConfirm={handleDelete}

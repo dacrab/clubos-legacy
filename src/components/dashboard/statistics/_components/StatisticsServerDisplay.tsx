@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SaleWithDetails } from "@/types/sales";
+import type { SaleWithDetails } from '@/types/sales';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-import StatsCards from "../StatsCards";
+import StatsCards from '../StatsCards';
 
 interface StatisticsServerDisplayProps {
   sales: SaleWithDetails[];
@@ -12,7 +12,7 @@ export default function StatisticsServerDisplay({ sales }: StatisticsServerDispl
     <div className="space-y-6">
       {/* Statistics Cards */}
       <StatsCards sales={sales} />
-      
+
       {/* Sales Summary */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -27,16 +27,14 @@ export default function StatisticsServerDisplay({ sales }: StatisticsServerDispl
               </div>
               <div className="flex justify-between">
                 <span>Μοναδικά προϊόντα:</span>
-                <span className="font-medium">
-                  {new Set(sales.map(s => s.productId)).size}
-                </span>
+                <span className="font-medium">{new Set(sales.map(s => s.productId)).size}</span>
               </div>
               <div className="flex justify-between">
                 <span>Περίοδος:</span>
-                <span className="font-medium text-sm">
+                <span className="text-sm font-medium">
                   {sales.length > 0 ? (
                     <>
-                                            {new Date(sales[sales.length - 1].createdAt).toLocaleDateString('el-GR')} -
+                      {new Date(sales[sales.length - 1].createdAt).toLocaleDateString('el-GR')} -
                       {new Date(sales[0].createdAt).toLocaleDateString('el-GR')}
                     </>
                   ) : (
@@ -68,9 +66,7 @@ export default function StatisticsServerDisplay({ sales }: StatisticsServerDispl
               </div>
               <div className="flex justify-between">
                 <span>Κεράσματα:</span>
-                <span className="font-medium">
-                  {sales.filter(s => s.isTreat).length}
-                </span>
+                <span className="font-medium">{sales.filter(s => s.isTreat).length}</span>
               </div>
             </div>
           </CardContent>

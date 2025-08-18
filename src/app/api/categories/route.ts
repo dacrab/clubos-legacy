@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/action-utils';
 import { stackServerApp } from '@/lib/auth';
-import { getCategories, createCategory, getGroupedCategories } from '@/lib/db/services/categories';
+import { createCategory, getCategories, getGroupedCategories } from '@/lib/db/services/categories';
 import { logger } from '@/lib/utils/logger';
 
 export async function GET(request: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating category:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create category' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create category' },
       { status: 500 }
     );
   }

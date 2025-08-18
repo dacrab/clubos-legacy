@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { SaleWithDetails } from '@/types/sales';
 
@@ -20,7 +20,7 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
     endDate: new Date().toISOString(),
     categoryId: '',
     subcategoryId: '',
-    productId: ''
+    productId: '',
   });
 
   // Filter sales based on date range and other filters
@@ -29,22 +29,22 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
       const saleDate = new Date(sale.createdAt);
       const startDate = new Date(filters.startDate);
       const endDate = new Date(filters.endDate);
-      
+
       // Check date range
       if (saleDate < startDate || saleDate > endDate) {
         return false;
       }
-      
+
       // Check category filter
       if (filters.categoryId && sale.product?.categoryId !== filters.categoryId) {
         return false;
       }
-      
+
       // Check product filter
       if (filters.productId && sale.productId !== filters.productId) {
         return false;
       }
-      
+
       return true;
     });
   }, [initialSales, filters]);
@@ -55,54 +55,53 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
 
   return (
     <div className="space-y-6">
-      <StatisticsFilter
-        onFilterChange={handleFilterChange}
-      />
-      
+      <StatisticsFilter onFilterChange={handleFilterChange} />
+
       {filteredSales.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="text-muted-foreground py-8 text-center">
           Δεν υπάρχουν δεδομένα πωλήσεων για την επιλεγμένη περίοδο
         </div>
       ) : (
         <div className="space-y-6">
           {/* Statistics Cards */}
           <StatsCards sales={filteredSales} />
-          
+
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <SalesChart sales={filteredSales} />
             <RevenueChart sales={filteredSales} />
           </div>
-          
+
           {/* Top Products Chart */}
           <TopProductsChart sales={filteredSales} />
-          
+
           {/* Summary Info */}
           <div className="bg-muted/50 rounded-lg p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
               <div>
-                <p className="text-2xl font-bold text-primary">
-                  {filteredSales.length}
-                </p>
-                <p className="text-sm text-muted-foreground">Συνολικές Πωλήσεις</p>
+                <p className="text-primary text-2xl font-bold">{filteredSales.length}</p>
+                <p className="text-muted-foreground text-sm">Συνολικές Πωλήσεις</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">
                   {filteredSales.reduce((sum, sale) => sum + sale.quantity, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Συνολικά Τεμάχια</p>
+                <p className="text-muted-foreground text-sm">Συνολικά Τεμάχια</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-600">
-                  €{filteredSales.reduce((sum, sale) => sum + parseFloat(sale.totalPrice?.toString() || '0'), 0).toFixed(2)}
+                  €
+                  {filteredSales
+                    .reduce((sum, sale) => sum + parseFloat(sale.totalPrice?.toString() || '0'), 0)
+                    .toFixed(2)}
                 </p>
-                <p className="text-sm text-muted-foreground">Συνολικά Έσοδα</p>
+                <p className="text-muted-foreground text-sm">Συνολικά Έσοδα</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-amber-600">
                   {filteredSales.filter(sale => sale.isTreat).length}
                 </p>
-                <p className="text-sm text-muted-foreground">Κεράσματα</p>
+                <p className="text-muted-foreground text-sm">Κεράσματα</p>
               </div>
             </div>
           </div>

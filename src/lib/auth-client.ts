@@ -1,3 +1,3 @@
-import { useUser, useStackApp } from "@stackframe/stack";
+import { useStackApp, useUser } from '@stackframe/stack';
 
 export { useUser, useStackApp };

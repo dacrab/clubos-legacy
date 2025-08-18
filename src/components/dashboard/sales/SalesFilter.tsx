@@ -1,18 +1,24 @@
-"use client";
+'use client';
 
-import { format } from "date-fns";
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { format } from 'date-fns';
 import { el } from 'date-fns/locale/el';
-import { CalendarIcon, X, Filter } from "lucide-react";
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from "react";
+import { CalendarIcon, Filter, X } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Calendar, type DateRange } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar, type DateRange } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FilterState {
   dateRange?: DateRange;
@@ -22,19 +28,19 @@ interface FilterState {
 }
 
 const QUICK_OPTIONS = {
-  CUSTOM: "Προσαρμοσμένο",
-  TODAY: "Σήμερα",
-  YESTERDAY: "Χθες",
-  THIS_WEEK: "Αυτή την εβδομάδα",
-  LAST_WEEK: "Προηγούμενη εβδομάδα",
-  THIS_MONTH: "Αυτόν τον μήνα",
-  LAST_MONTH: "Προηγούμενο μήνα"
+  CUSTOM: 'Προσαρμοσμένο',
+  TODAY: 'Σήμερα',
+  YESTERDAY: 'Χθες',
+  THIS_WEEK: 'Αυτή την εβδομάδα',
+  LAST_WEEK: 'Προηγούμενη εβδομάδα',
+  THIS_MONTH: 'Αυτόν τον μήνα',
+  LAST_MONTH: 'Προηγούμενο μήνα',
 };
 
 const getQuickSelectRange = (option: string): DateRange | undefined => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+
   switch (option) {
     case 'TODAY':
       return { from: today, to: today };
@@ -73,9 +79,9 @@ export default function SalesFilter() {
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<FilterState>({
-    startTime: "",
-    endTime: "",
-    quickSelect: "CUSTOM"
+    startTime: '',
+    endTime: '',
+    quickSelect: 'CUSTOM',
   });
   const [isOpen, setIsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -83,70 +89,76 @@ export default function SalesFilter() {
   useEffect(() => {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
-    const startTime = searchParams.get('startTime') || "";
-    const endTime = searchParams.get('endTime') || "";
+    const startTime = searchParams.get('startTime') || '';
+    const endTime = searchParams.get('endTime') || '';
 
-    const dateRange = from ? {
-      from: new Date(from),
-      to: to ? new Date(to) : new Date(from)
-    } : undefined;
+    const dateRange = from
+      ? {
+          from: new Date(from),
+          to: to ? new Date(to) : new Date(from),
+        }
+      : undefined;
 
     setFilters({
       dateRange,
       startTime,
       endTime,
-      quickSelect: "CUSTOM"
-        });
+      quickSelect: 'CUSTOM',
+    });
 
     setIsOpen(!!(from || to || startTime || endTime));
   }, [searchParams]);
-  
+
   const updateUrl = (newFilters: FilterState) => {
     const params = new URLSearchParams();
-    
+
     if (newFilters.dateRange?.from) {
       params.set('from', format(newFilters.dateRange.from, 'yyyy-MM-dd'));
       if (newFilters.dateRange.to) {
         params.set('to', format(newFilters.dateRange.to, 'yyyy-MM-dd'));
       }
     }
-    
-    if (newFilters.startTime) {params.set('startTime', newFilters.startTime);}
-    if (newFilters.endTime) {params.set('endTime', newFilters.endTime);}
+
+    if (newFilters.startTime) {
+      params.set('startTime', newFilters.startTime);
+    }
+    if (newFilters.endTime) {
+      params.set('endTime', newFilters.endTime);
+    }
     router.push(`${pathname}?${params.toString()}`);
-    };
-    
+  };
+
   const handleQuickSelect = (value: string) => {
     const dateRange = getQuickSelectRange(value);
     const newFilters = {
       ...filters,
       dateRange,
       quickSelect: value,
-      startTime: value !== "CUSTOM" ? "00:00" : filters.startTime,
-      endTime: value !== "CUSTOM" ? "23:59" : filters.endTime
-  };
+      startTime: value !== 'CUSTOM' ? '00:00' : filters.startTime,
+      endTime: value !== 'CUSTOM' ? '23:59' : filters.endTime,
+    };
 
     setFilters(newFilters);
     updateUrl(newFilters);
   };
 
   const handleDateChange = (dateRange: DateRange | undefined) => {
-    const newFilters = { ...filters, dateRange, quickSelect: "CUSTOM" };
+    const newFilters = { ...filters, dateRange, quickSelect: 'CUSTOM' };
     setFilters(newFilters);
     updateUrl(newFilters);
   };
 
   const handleTimeChange = (field: 'startTime' | 'endTime', value: string) => {
-    const newFilters = { ...filters, [field]: value, quickSelect: "CUSTOM" };
+    const newFilters = { ...filters, [field]: value, quickSelect: 'CUSTOM' };
     setFilters(newFilters);
     updateUrl(newFilters);
   };
   const clearFilters = () => {
     const newFilters = {
       dateRange: undefined,
-      startTime: "",
-      endTime: "",
-      quickSelect: "CUSTOM"
+      startTime: '',
+      endTime: '',
+      quickSelect: 'CUSTOM',
     };
     setFilters(newFilters);
     setCalendarOpen(false);
@@ -154,31 +166,29 @@ export default function SalesFilter() {
   };
 
   const formatDateRange = () => {
-    if (!filters.dateRange?.from) {return "Επιλέξτε ημερομηνίες";}
-    
+    if (!filters.dateRange?.from) {
+      return 'Επιλέξτε ημερομηνίες';
+    }
+
     const from = format(filters.dateRange.from, 'dd/MM/yyyy');
     const to = filters.dateRange.to ? format(filters.dateRange.to, 'dd/MM/yyyy') : from;
-    
+
     return from === to ? from : `${from} - ${to}`;
   };
   return (
     <div className="bg-muted/50 rounded-lg border">
-      <div className="px-4 py-3 border-b flex justify-between items-center">
+      <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Filter className="text-muted-foreground h-4 w-4" />
           <span className="font-medium">Φίλτρα</span>
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => setIsOpen(!isOpen)}
-          className="h-9 px-3"
-        >
-          {isOpen ? "Απόκρυψη" : "Εμφάνιση"}
+        <Button variant="ghost" onClick={() => setIsOpen(!isOpen)} className="h-9 px-3">
+          {isOpen ? 'Απόκρυψη' : 'Εμφάνιση'}
         </Button>
       </div>
       {isOpen && (
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label>Γρήγορη επιλογή</Label>
               <Select value={filters.quickSelect} onValueChange={handleQuickSelect}>
@@ -187,11 +197,13 @@ export default function SalesFilter() {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(QUICK_OPTIONS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-    </div>
+            </div>
 
             <div>
               <Label>Εύρος ημερομηνιών</Label>
@@ -200,8 +212,8 @@ export default function SalesFilter() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full mt-2 justify-start text-left font-normal",
-                      !filters.dateRange?.from && "text-muted-foreground"
+                      'mt-2 w-full justify-start text-left font-normal',
+                      !filters.dateRange?.from && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -225,7 +237,7 @@ export default function SalesFilter() {
               <Input
                 type="time"
                 value={filters.startTime}
-                onChange={(e) => handleTimeChange("startTime", e.target.value)}
+                onChange={e => handleTimeChange('startTime', e.target.value)}
                 className="mt-2"
               />
             </div>
@@ -235,7 +247,7 @@ export default function SalesFilter() {
               <Input
                 type="time"
                 value={filters.endTime}
-                onChange={(e) => handleTimeChange("endTime", e.target.value)}
+                onChange={e => handleTimeChange('endTime', e.target.value)}
                 className="mt-2"
               />
             </div>

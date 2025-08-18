@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { populateDatabase } from '../../../../scripts/seed';
 import { logger } from '@/lib/utils/logger';
+
+import { populateDatabase } from '../../../../scripts/seed';
 
 export async function POST() {
   if (process.env.NODE_ENV === 'production') {
@@ -10,7 +11,7 @@ export async function POST() {
       { status: 403 }
     );
   }
- 
+
   try {
     if (process.env.NODE_ENV === 'development') {
       logger.info('API endpoint /api/reset-db called');
@@ -25,4 +26,4 @@ export async function POST() {
       { status: 500 }
     );
   }
-} 
+}

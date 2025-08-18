@@ -1,19 +1,17 @@
-"use client";
+'use client';
 
-import { LogOut, Loader2, UserIcon} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { logger } from "@/lib/utils/logger";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2, LogOut, UserIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { ModeToggle } from "@/components/mode-toggle";
-import { Button } from "@/components/ui/button";
-import { useStackApp } from "@/lib/auth-client";
-import { PUBLIC_ROUTES } from "@/lib/constants";
+import { useStackApp } from '@/lib/auth-client';
+import { PUBLIC_ROUTES } from '@/lib/constants';
+import { logger } from '@/lib/utils/logger';
+import { Button } from '@/components/ui/button';
+import { ModeToggle } from '@/components/mode-toggle';
 
-
-
-// Minimal HeaderProps  
+// Minimal HeaderProps
 interface HeaderProps {
   user: { primaryEmail?: string | null; displayName?: string | null };
   profile: {
@@ -26,7 +24,8 @@ export default function Header({ user, profile }: HeaderProps) {
   const stackApp = useStackApp();
   const [isLoading, setIsLoading] = useState(false);
 
-  const displayName = profile?.username || user?.primaryEmail?.split('@')[0] || user?.displayName || 'Χρήστης';
+  const displayName =
+    profile?.username || user?.primaryEmail?.split('@')[0] || user?.displayName || 'Χρήστης';
 
   const handleSignOut = async () => {
     setIsLoading(true);
@@ -46,9 +45,9 @@ export default function Header({ user, profile }: HeaderProps) {
   };
 
   return (
-    <header className="border-b h-12 sm:h-14 bg-background flex items-center justify-between px-3">
-      <span className="flex items-center gap-1 text-sm sm:text-base font-semibold text-muted-foreground capitalize">
-        <UserIcon className="h-5 w-5 text-muted-foreground" aria-label="User" />
+    <header className="bg-background flex h-12 items-center justify-between border-b px-3 sm:h-14">
+      <span className="text-muted-foreground flex items-center gap-1 text-sm font-semibold capitalize sm:text-base">
+        <UserIcon className="text-muted-foreground h-5 w-5" aria-label="User" />
         {displayName}
       </span>
       <div className="flex items-center gap-2">
@@ -57,17 +56,17 @@ export default function Header({ user, profile }: HeaderProps) {
           size="sm"
           onClick={handleSignOut}
           disabled={isLoading}
-          className="h-8 sm:h-9 px-2 text-destructive text-sm sm:text-base"
+          className="text-destructive h-8 px-2 text-sm sm:h-9 sm:text-base"
         >
           {isLoading ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="hidden sm:inline ml-1">Αποσύνδεση...</span>
+              <span className="ml-1 hidden sm:inline">Αποσύνδεση...</span>
             </>
           ) : (
             <>
               <LogOut className="h-5 w-5" />
-              <span className="hidden sm:inline ml-1">Αποσύνδεση</span>
+              <span className="ml-1 hidden sm:inline">Αποσύνδεση</span>
             </>
           )}
         </Button>

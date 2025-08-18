@@ -13,7 +13,12 @@ import {
 // Define enums
 export const userRoleEnum = pgEnum('user_role', ['admin', 'employee', 'secretary']);
 export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'card', 'treat']);
-export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'confirmed', 'cancelled', 'completed']);
+export const bookingStatusEnum = pgEnum('booking_status', [
+  'pending',
+  'confirmed',
+  'cancelled',
+  'completed',
+]);
 
 // Users table
 export const users = pgTable('users', {
@@ -35,7 +40,9 @@ export const categories = pgTable('categories', {
   isActive: boolean('is_active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -54,7 +61,9 @@ export const products = pgTable('products', {
   isActive: boolean('is_active').notNull().default(true),
   trackInventory: boolean('track_inventory').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -63,7 +72,9 @@ export const registerSessions = pgTable('register_sessions', {
   id: uuid('id').defaultRandom().primaryKey(),
   sessionName: text('session_name'),
   openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
-  openedBy: text('opened_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  openedBy: text('opened_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   closedAt: timestamp('closed_at', { withTimezone: true }),
   closedBy: text('closed_by').references(() => users.id, { onDelete: 'restrict' }),
   openingCash: decimal('opening_cash', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -78,7 +89,9 @@ export const registerSessions = pgTable('register_sessions', {
 export const orders = pgTable('orders', {
   id: uuid('id').defaultRandom().primaryKey(),
   orderNumber: text('order_number').notNull().unique(),
-  registerSessionId: uuid('register_session_id').notNull().references(() => registerSessions.id, { onDelete: 'restrict' }),
+  registerSessionId: uuid('register_session_id')
+    .notNull()
+    .references(() => registerSessions.id, { onDelete: 'restrict' }),
   customerName: text('customer_name'),
   subtotal: decimal('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
   taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).notNull().default('0'),
@@ -90,7 +103,9 @@ export const orders = pgTable('orders', {
   isVoided: boolean('is_voided').notNull().default(false),
   voidReason: text('void_reason'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   voidedAt: timestamp('voided_at', { withTimezone: true }),
   voidedBy: text('voided_by').references(() => users.id, { onDelete: 'restrict' }),
 });
@@ -98,8 +113,12 @@ export const orders = pgTable('orders', {
 // Sales table (order items)
 export const sales = pgTable('sales', {
   id: uuid('id').defaultRandom().primaryKey(),
-  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'restrict' }),
+  orderId: uuid('order_id')
+    .notNull()
+    .references(() => orders.id, { onDelete: 'cascade' }),
+  productId: uuid('product_id')
+    .notNull()
+    .references(() => products.id, { onDelete: 'restrict' }),
   productName: text('product_name').notNull(), // Snapshot for historical data
   quantity: integer('quantity').notNull(),
   unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),

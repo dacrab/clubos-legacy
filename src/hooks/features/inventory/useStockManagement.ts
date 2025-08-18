@@ -16,14 +16,14 @@ export function useStockManagement() {
       const response = await fetch(`/api/products/${update.productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: update.newStock })
+        body: JSON.stringify({ stock: update.newStock }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update stock');
       }
-      
+
       toast.success('Το απόθεμα ενημερώθηκε επιτυχώς');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Άγνωστο σφάλμα';
@@ -42,7 +42,10 @@ export function useStockManagement() {
       }
       return await response.json();
     } catch (error) {
-      (await import('@/lib/utils/logger')).logger.error('Error fetching low stock products:', error);
+      (await import('@/lib/utils/logger')).logger.error(
+        'Error fetching low stock products:',
+        error
+      );
       return [];
     }
   };

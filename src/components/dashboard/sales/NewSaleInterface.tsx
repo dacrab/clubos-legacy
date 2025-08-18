@@ -1,19 +1,18 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useMemo } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { useEffect, useMemo, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Category, OrderItem as OrderItemType, Product } from '@/types/sales';
+import { EXTRA_SHOT_PRICE } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 import { useSales } from '@/hooks/features/sales/useSales';
-import { useMediaQuery } from "@/hooks/utils/useMediaQuery";
-import { EXTRA_SHOT_PRICE } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import type { OrderItem as OrderItemType, Product, Category } from "@/types/sales";
+import { useMediaQuery } from '@/hooks/utils/useMediaQuery';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-import { CartSection } from "./components/CartSection";
-import { CategorySection } from "./components/CategorySection";
-import { ProductSection } from "./components/ProductSection";
-
+import { CartSection } from './components/CartSection';
+import { CategorySection } from './components/CategorySection';
+import { ProductSection } from './components/ProductSection';
 
 interface NewSaleInterfaceProps {
   open: boolean;
@@ -22,14 +21,14 @@ interface NewSaleInterfaceProps {
 
 export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfaceProps) {
   const { products, categories: allCategories, categoriesMap, isLoading, createSale } = useSales();
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   const [orderItems, setOrderItems] = useState<OrderItemType[]>([]);
   const [cardDiscountCount, setCardDiscountCount] = useState(0);
   const [view, setView] = useState<'products' | 'categories' | 'cart'>('products');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<Category | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = allCategories.filter((c: Category) => !c.parentId);
 
@@ -38,12 +37,14 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     setCardDiscountCount(0);
     setSelectedCategory(null);
     setSelectedSubcategory(null);
-    setSearchQuery("");
+    setSearchQuery('');
     setView('products');
   };
 
   useEffect(() => {
-    if (open) {resetState();}
+    if (open) {
+      resetState();
+    }
   }, [open]);
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -51,15 +52,16 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     if (selectedSubcategory) {
       filtered = filtered.filter((p: Product) => p.category?.id === selectedSubcategory.id);
     } else if (selectedCategory) {
-      filtered = filtered.filter((p: Product) => 
-        p.category?.id === selectedCategory.id || p.category?.parentId === selectedCategory.id
+      filtered = filtered.filter(
+        (p: Product) =>
+          p.category?.id === selectedCategory.id || p.category?.parentId === selectedCategory.id
       );
     }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((p: Product) => 
-        p.name.toLowerCase().includes(query) || p.id.toString().includes(query)
+      filtered = filtered.filter(
+        (p: Product) => p.name.toLowerCase().includes(query) || p.id.toString().includes(query)
       );
     }
     return filtered.sort((a: Product, b: Product) => a.name.localeCompare(b.name));
@@ -70,9 +72,8 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     let treatsValue = 0;
 
     orderItems.forEach(item => {
-      const dosageExtra = item.dosageCount && item.dosageCount > 1 
-        ? (item.dosageCount - 1) * EXTRA_SHOT_PRICE 
-        : 0;
+      const dosageExtra =
+        item.dosageCount && item.dosageCount > 1 ? (item.dosageCount - 1) * EXTRA_SHOT_PRICE : 0;
       const itemPrice = ((parseFloat(item.product.price) || 0) + dosageExtra) * item.quantity;
 
       if (item.isTreat) {
@@ -82,25 +83,36 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
       }
     });
 
-    const finalTotal = Math.max(0, subtotal - (cardDiscountCount * 2));
+    const finalTotal = Math.max(0, subtotal - cardDiscountCount * 2);
     return { subtotal, finalTotal, treatsValue };
   }, [orderItems, cardDiscountCount]);
 
   const productSectionTitle = useMemo(() => {
-    if (searchQuery) {return "Αποτελέσματα Αναζήτησης";}
-    if (selectedSubcategory) {return selectedSubcategory.name;}
-    if (selectedCategory) {return selectedCategory.name;}
-    return "Όλα τα προϊόντα";
+    if (searchQuery) {
+      return 'Αποτελέσματα Αναζήτησης';
+    }
+    if (selectedSubcategory) {
+      return selectedSubcategory.name;
+    }
+    if (selectedCategory) {
+      return selectedCategory.name;
+    }
+    return 'Όλα τα προϊόντα';
   }, [selectedCategory, selectedSubcategory, searchQuery]);
 
   const addProduct = (product: Product) => {
-    setOrderItems(prev => [...prev, { 
-      id: uuidv4(), 
-      product, 
-      quantity: 1, 
-      isTreat: false 
-    }]);
-    if (!isDesktop) {setView('cart');}
+    setOrderItems(prev => [
+      ...prev,
+      {
+        id: uuidv4(),
+        product,
+        quantity: 1,
+        isTreat: false,
+      },
+    ]);
+    if (!isDesktop) {
+      setView('cart');
+    }
   };
 
   const removeItem = (id: string) => {
@@ -108,19 +120,23 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   };
 
   const toggleTreat = (id: string) => {
-    setOrderItems(prev => prev.map(item => 
-      item.id === id ? { ...item, isTreat: !item.isTreat } : item
-    ));
+    setOrderItems(prev =>
+      prev.map(item => (item.id === id ? { ...item, isTreat: !item.isTreat } : item))
+    );
   };
 
   const increaseDosage = (id: string) => {
-    setOrderItems(prev => prev.map(item => 
-      item.id === id ? { ...item, dosageCount: (item.dosageCount || 1) + 1 } : item
-    ));
+    setOrderItems(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, dosageCount: (item.dosageCount || 1) + 1 } : item
+      )
+    );
   };
 
   const handlePayment = async () => {
-    if (!orderItems.length) {return;}
+    if (!orderItems.length) {
+      return;
+    }
     await createSale({
       items: orderItems,
       totalAmount: totals.subtotal,
@@ -131,14 +147,16 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   };
 
   const handleClose = (isOpen: boolean) => {
-    if (!isOpen) {resetState();}
+    if (!isOpen) {
+      resetState();
+    }
     onOpenChange(isOpen);
   };
 
   const renderContent = () => {
     if (isDesktop) {
       return (
-        <div className="grid grid-cols-[300px_1fr_380px] h-full">
+        <div className="grid h-full grid-cols-[300px_1fr_380px]">
           <div className="border-r">
             <CategorySection
               categories={categories}
@@ -237,15 +255,13 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={cn(
-        "max-w-none w-full h-full p-0 gap-0 overflow-hidden flex flex-col"
-      )}>
-        <DialogHeader className="p-4 border-b hidden lg:block shrink-0">
+      <DialogContent
+        className={cn('flex h-full w-full max-w-none flex-col gap-0 overflow-hidden p-0')}
+      >
+        <DialogHeader className="hidden shrink-0 border-b p-4 lg:block">
           <DialogTitle>Νέα Πώληση</DialogTitle>
         </DialogHeader>
-        <div className="grow overflow-auto">
-          {renderContent()}
-        </div>
+        <div className="grow overflow-auto">{renderContent()}</div>
       </DialogContent>
     </Dialog>
   );

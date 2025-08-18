@@ -1,8 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import {
+  deleteAppointment,
+  getAppointmentById,
+  updateAppointment,
+} from '@/lib/db/services/appointments';
 import { logger } from '@/lib/utils/logger';
-import { getAppointmentById, updateAppointment, deleteAppointment } from '@/lib/db/services/appointments';
 
 export async function GET(
   request: NextRequest,
@@ -53,7 +57,7 @@ export async function PUT(
       logger.error('Error updating appointment:', error);
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update appointment' }, 
+      { error: error instanceof Error ? error.message : 'Failed to update appointment' },
       { status: 500 }
     );
   }
@@ -71,7 +75,7 @@ export async function DELETE(
     }
 
     const success = await deleteAppointment(appointmentId);
-    
+
     if (!success) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
     }
@@ -82,7 +86,7 @@ export async function DELETE(
       logger.error('Error deleting appointment:', error);
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete appointment' }, 
+      { error: error instanceof Error ? error.message : 'Failed to delete appointment' },
       { status: 500 }
     );
   }

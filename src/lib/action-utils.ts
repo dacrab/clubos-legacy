@@ -4,7 +4,7 @@ import { getUserById } from '@/lib/db/services/users';
 export enum UserRole {
   Admin = 'admin',
   Staff = 'staff',
-  User = 'user'
+  User = 'user',
 }
 
 /**
@@ -23,17 +23,17 @@ export async function getAuthUser() {
  */
 export async function checkAdminAccess() {
   const user = await getAuthUser();
-  
+
   // Get user details from database to check role
   const userDetails = await getUserById(user.id);
   if (!userDetails) {
     throw new Error('Ο χρήστης δεν βρέθηκε στη βάση δεδομένων');
   }
-  
+
   if (userDetails.role !== 'admin') {
     throw new Error('Απαιτείται δικαίωμα διαχειριστή');
   }
-  
+
   return true;
 }
 
@@ -42,17 +42,17 @@ export async function checkAdminAccess() {
  */
 export async function checkUserRole(requiredRole: 'admin' | 'employee' | 'secretary') {
   const user = await getAuthUser();
-  
+
   // Get user details from database to check role
   const userDetails = await getUserById(user.id);
   if (!userDetails) {
     throw new Error('Ο χρήστης δεν βρέθηκε στη βάση δεδομένων');
   }
-  
+
   if (userDetails.role !== requiredRole) {
     throw new Error(`Απαιτείται δικαίωμα ${requiredRole}`);
   }
-  
+
   return true;
 }
 
@@ -61,12 +61,12 @@ export async function checkUserRole(requiredRole: 'admin' | 'employee' | 'secret
  */
 export async function getUserRole(): Promise<'admin' | 'employee' | 'secretary'> {
   const user = await getAuthUser();
-  
+
   const userDetails = await getUserById(user.id);
   if (!userDetails) {
     throw new Error('Ο χρήστης δεν βρέθηκε στη βάση δεδομένων');
   }
-  
+
   return userDetails.role;
 }
 
@@ -85,7 +85,7 @@ export interface ActionResponse<T = unknown> {
 export function actionSuccess<T>(data?: T): ActionResponse<T> {
   return {
     success: true,
-    data
+    data,
   };
 }
 
@@ -96,7 +96,7 @@ export function handleActionError(error: unknown): ActionResponse {
   const message = error instanceof Error ? error.message : 'Απρόσμενο σφάλμα';
   return {
     success: false,
-    error: message
+    error: message,
   };
 }
 
@@ -105,13 +105,13 @@ export function handleActionError(error: unknown): ActionResponse {
  */
 export function extractFormData<T>(formData: FormData, fields: (keyof T)[]): Partial<T> {
   const result: Partial<T> = {};
-  
+
   for (const field of fields) {
     const value = formData.get(field as string);
     if (value !== null) {
       result[field] = value as T[keyof T];
     }
   }
-  
+
   return result;
 }

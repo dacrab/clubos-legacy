@@ -1,9 +1,6 @@
 module.exports = {
   root: true,
-  extends: [
-    'next/core-web-vitals',
-    'next/typescript'
-  ],
+  extends: ['next/core-web-vitals', 'next/typescript'],
   plugins: ['unused-imports'],
   ignorePatterns: [
     'node_modules/**',
@@ -12,7 +9,7 @@ module.exports = {
     'build/**',
     'coverage/**',
     '*.config.{js,ts}',
-    'drizzle/**'
+    'drizzle/**',
   ],
   rules: {
     // Custom rules for better code quality
@@ -31,8 +28,8 @@ module.exports = {
         vars: 'all',
         varsIgnorePattern: '^_',
         args: 'after-used',
-        argsIgnorePattern: '^_'
-      }
-    ]
-  }
+        argsIgnorePattern: '^_',
+      },
+    ],
+  },
 };

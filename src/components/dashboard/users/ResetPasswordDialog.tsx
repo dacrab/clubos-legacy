@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ResetPasswordDialogProps {
   open: boolean;
@@ -27,29 +27,29 @@ export default function ResetPasswordDialog({
   onSubmit,
   loading,
 }: ResetPasswordDialogProps) {
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     if (!open) {
-      setNewPassword("");
+      setNewPassword('');
     }
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPassword || loading) {return;}
+    if (!newPassword || loading) {
+      return;
+    }
     await onSubmit(newPassword);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={(e) => loading && e.preventDefault()}>
+      <DialogContent onInteractOutside={e => loading && e.preventDefault()}>
         <div className="animate-fade-in">
           <DialogHeader>
             <DialogTitle>Επαναφορά Κωδικού</DialogTitle>
-            <DialogDescription>
-              Εισάγετε τον νέο κωδικό για τον χρήστη.
-            </DialogDescription>
+            <DialogDescription>Εισάγετε τον νέο κωδικό για τον χρήστη.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -59,7 +59,7 @@ export default function ResetPasswordDialog({
                 id="newPassword"
                 type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={e => setNewPassword(e.target.value)}
                 placeholder="Εισάγετε τον νέο κωδικό"
                 required
                 minLength={6}
@@ -77,7 +77,7 @@ export default function ResetPasswordDialog({
                 Ακύρωση
               </Button>
               <Button type="submit" disabled={loading || !newPassword}>
-                {loading ? "Επαναφορά..." : "Επαναφορά"}
+                {loading ? 'Επαναφορά...' : 'Επαναφορά'}
               </Button>
             </DialogFooter>
           </form>

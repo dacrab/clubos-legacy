@@ -20,5 +20,3 @@ export function error(message: string, errorObj?: unknown): void {
 }
 
 export const logger = { debug, info, warn, error };
-
-

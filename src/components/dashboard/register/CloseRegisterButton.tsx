@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { Textarea } from "@/components/ui/textarea";
-import { useUser } from "@/lib/auth-client";
-import { logger } from "@/lib/utils/logger";
+import { useUser } from '@/lib/auth-client';
+import { logger } from '@/lib/utils/logger';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CloseRegisterButtonProps {
   onRegisterClosed?: () => void;
@@ -20,9 +20,13 @@ interface CloseRegisterButtonProps {
 export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [closingCash, setClosingCash] = useState("");
-  const [notes, setNotes] = useState("");
-  const [activeSession, setActiveSession] = useState<{ id: string; openedAt: string; openedBy?: { username?: string } } | null>(null);
+  const [closingCash, setClosingCash] = useState('');
+  const [notes, setNotes] = useState('');
+  const [activeSession, setActiveSession] = useState<{
+    id: string;
+    openedAt: string;
+    openedBy?: { username?: string };
+  } | null>(null);
   const [expectedCash, setExpectedCash] = useState(0);
   const router = useRouter();
   useUser();
@@ -62,12 +66,12 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
 
   const handleClose = async () => {
     if (!activeSession) {
-      toast.error("Δεν υπάρχει ενεργή συνεδρία ταμείου");
+      toast.error('Δεν υπάρχει ενεργή συνεδρία ταμείου');
       return;
     }
 
     if (!closingCash.trim()) {
-      toast.error("Παρακαλώ εισάγετε το ποσό κλεισίματος");
+      toast.error('Παρακαλώ εισάγετε το ποσό κλεισίματος');
       return;
     }
 
@@ -95,20 +99,20 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
         throw new Error(error.error || 'Failed to close register');
       }
 
-      toast.success("Το ταμείο έκλεισε επιτυχώς");
+      toast.success('Το ταμείο έκλεισε επιτυχώς');
       setOpen(false);
       onRegisterClosed?.();
-      
+
       // Reset form
-      setClosingCash("");
-      setNotes("");
+      setClosingCash('');
+      setNotes('');
       setActiveSession(null);
-      
+
       // Redirect to register closings page
       router.push('/dashboard/register-closings');
     } catch (error) {
       logger.error('Error closing register:', error);
-      toast.error(error instanceof Error ? error.message : "Σφάλμα κατά το κλείσιμο του ταμείου");
+      toast.error(error instanceof Error ? error.message : 'Σφάλμα κατά το κλείσιμο του ταμείου');
     } finally {
       setLoading(false);
     }
@@ -116,11 +120,7 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
 
   return (
     <>
-      <Button 
-        onClick={() => setOpen(true)} 
-        variant="destructive"
-        className="w-full"
-      >
+      <Button onClick={() => setOpen(true)} variant="destructive" className="w-full">
         Κλείσιμο Ταμείου
       </Button>
 
@@ -129,15 +129,15 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
           <DialogHeader>
             <DialogTitle>Κλείσιμο Ταμείου</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             {activeSession && (
-              <div className="bg-muted p-3 rounded-lg">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-sm font-medium">Ενεργή Συνεδρία:</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Άνοιξε: {new Date(activeSession.openedAt).toLocaleString('el-GR')}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Από: {activeSession.openedBy?.username || 'Άγνωστος'}
                 </p>
               </div>
@@ -146,13 +146,9 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Αναμενόμενο Ποσό</Label>
-                <Input
-                  value={`€${expectedCash.toFixed(2)}`}
-                  disabled
-                  className="bg-muted"
-                />
+                <Input value={`€${expectedCash.toFixed(2)}`} disabled className="bg-muted" />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="closingCash">
                   Ποσό Κλεισίματος <span className="text-red-500">*</span>
@@ -163,46 +159,44 @@ export function CloseRegisterButton({ onRegisterClosed }: CloseRegisterButtonPro
                   step="0.01"
                   placeholder="0.00"
                   value={closingCash}
-                  onChange={(e) => setClosingCash(e.target.value)}
+                  onChange={e => setClosingCash(e.target.value)}
                 />
               </div>
             </div>
 
             {closingCash && expectedCash > 0 && (
-              <div className="bg-muted p-3 rounded-lg">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-sm font-medium">
-                  Διαφορά: 
-                  <span className={`ml-1 ${
-                    (parseFloat(closingCash) - expectedCash) >= 0 
-                      ? 'text-green-600' 
-                      : 'text-red-600'
-                  }`}>
+                  Διαφορά:
+                  <span
+                    className={`ml-1 ${
+                      parseFloat(closingCash) - expectedCash >= 0
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
+                  >
                     €{(parseFloat(closingCash) - expectedCash).toFixed(2)}
                   </span>
                 </p>
               </div>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="notes">Σημειώσεις</Label>
               <Textarea
                 id="notes"
                 placeholder="Προαιρετικές σημειώσεις..."
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={e => setNotes(e.target.value)}
               />
             </div>
           </div>
 
-          <LoadingButton 
-            loading={loading}
-            onClick={handleClose}
-            className="w-full mt-4"
-          >
+          <LoadingButton loading={loading} onClick={handleClose} className="mt-4 w-full">
             Κλείσιμο Ταμείου
           </LoadingButton>
         </DialogContent>
       </Dialog>
     </>
   );
-} 
+}

@@ -1,25 +1,25 @@
-import { type ClassValue, clsx } from "clsx"
- 
+import { clsx, type ClassValue } from 'clsx';
+
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
+  return clsx(inputs);
 }
 
 interface DateInterval {
-  start: Date
-  end: Date
+  start: Date;
+  end: Date;
 }
 
 export function eachDayOfInterval({ start, end }: DateInterval): Date[] {
-  const days: Date[] = []
-  const currentDate = new Date(start)
+  const days: Date[] = [];
+  const currentDate = new Date(start);
 
   while (currentDate <= end) {
-    days.push(new Date(currentDate))
-    currentDate.setDate(currentDate.getDate() + 1)
+    days.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  return days
-} 
+  return days;
+}
 
 const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   day: 'numeric',
@@ -28,7 +28,7 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: 'numeric',
   minute: 'numeric',
   hour12: false,
-  hourCycle: 'h23'
+  hourCycle: 'h23',
 };
 
 /**
@@ -37,10 +37,7 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
  * @returns Formatted date string
  */
 export function formatDateWithGreekAmPm(date: Date): string {
-  return date
-    .toLocaleString('el', DATE_FORMAT_OPTIONS)
-    .replace('AM', 'π.μ.')
-    .replace('PM', 'μ.μ.');
+  return date.toLocaleString('el', DATE_FORMAT_OPTIONS).replace('AM', 'π.μ.').replace('PM', 'μ.μ.');
 }
 
 /**
@@ -70,7 +67,7 @@ export function formatTimeToHHMM(date: Date): string {
   return date.toLocaleTimeString('el', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   });
 }
 
@@ -86,7 +83,7 @@ export function formatDate(dateString: string) {
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 }
 

@@ -43,7 +43,8 @@ export async function closeRegisterSession(
     notes?: string;
   }
 ) {
-  const [result] = await db.update(registerSessions)
+  const [result] = await db
+    .update(registerSessions)
     .set({
       closedAt: new Date(),
       closedBy,

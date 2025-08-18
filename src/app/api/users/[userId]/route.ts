@@ -1,9 +1,9 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/api-utils';
 import { stackServerApp } from '@/lib/auth';
 import { ALLOWED_USER_ROLES, PASSWORD_MIN_LENGTH } from '@/lib/constants';
-import { getUserById, updateUser, deleteUser } from '@/lib/db/services/users';
+import { deleteUser, getUserById, updateUser } from '@/lib/db/services/users';
 
 function getUserId(request: NextRequest): string | null {
   return request.nextUrl.pathname.split('/').pop() || null;
@@ -23,11 +23,15 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = getUserId(request);
-    if (!userId) {return errorResponse('User ID is required', 400);}
-    
+    if (!userId) {
+      return errorResponse('User ID is required', 400);
+    }
+
     const userData = await getUserById(userId);
-    if (!userData) {return errorResponse('User not found', 404);}
-    
+    if (!userData) {
+      return errorResponse('User not found', 404);
+    }
+
     return NextResponse.json(userData);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
@@ -49,12 +53,14 @@ export async function DELETE(request: NextRequest) {
     if (!currentUser || currentUser.role !== 'admin') {
       return errorResponse('Admin access required', 403);
     }
-    
+
     const userId = getUserId(request);
-    if (!userId) {return errorResponse('User ID is required', 400);}
-    
+    if (!userId) {
+      return errorResponse('User ID is required', 400);
+    }
+
     await deleteUser(userId);
-    
+
     return new NextResponse(null, { status: 204 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
@@ -78,14 +84,16 @@ export async function PATCH(request: NextRequest) {
     }
 
     const userId = getUserId(request);
-    if (!userId) {return errorResponse('User ID is required', 400);}
+    if (!userId) {
+      return errorResponse('User ID is required', 400);
+    }
     const { role } = await request.json();
     if (!role || !ALLOWED_USER_ROLES.includes(role)) {
       return errorResponse('Invalid role specified', 400);
     }
-    
+
     const updatedUser = await updateUser(userId, { role });
-    
+
     return NextResponse.json(updatedUser);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
@@ -100,13 +108,15 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = getUserId(request);
-    if (!userId) {return errorResponse('User ID is required', 400);}
+    if (!userId) {
+      return errorResponse('User ID is required', 400);
+    }
 
     const { password } = await request.json();
     if (!password || password.length < PASSWORD_MIN_LENGTH) {
       return errorResponse('Password does not meet minimum length requirement', 400);
     }
-    
+
     // Implement password reset with Stack Auth
     const stackUser = await stackServerApp.getUser(userId);
     if (!stackUser) {
@@ -115,7 +125,7 @@ export async function POST(request: NextRequest) {
 
     // Update password using Stack Auth
     await stackUser.update({ password });
-    
+
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';

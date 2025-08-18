@@ -1,9 +1,9 @@
 import { toast } from 'sonner';
 import useSWR, { useSWRConfig } from 'swr';
 
+import type { Appointment, AppointmentFormData } from '@/types/appointments';
 import { useUser } from '@/lib/auth-client';
 import { APPOINTMENT_MESSAGES } from '@/lib/constants';
-import type { Appointment, AppointmentFormData } from '@/types/appointments';
 
 const appointmentsFetcher = async (): Promise<Appointment[]> => {
   const response = await fetch('/api/appointments');
@@ -15,14 +15,20 @@ const appointmentsFetcher = async (): Promise<Appointment[]> => {
 
 export function useAppointments() {
   const user = useUser();
-  const { data: appointments, error, isLoading } = useSWR<Appointment[]>('appointments', appointmentsFetcher);
+  const {
+    data: appointments,
+    error,
+    isLoading,
+  } = useSWR<Appointment[]>('appointments', appointmentsFetcher);
   const { mutate } = useSWRConfig();
 
   const revalidate = () => mutate('appointments');
 
   const addAppointment = async (formData: AppointmentFormData) => {
     try {
-      if (!user) {throw new Error("User not authenticated");}
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
       const response = await fetch('/api/appointments', {
         method: 'POST',
@@ -36,7 +42,7 @@ export function useAppointments() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create appointment');
       }
-      
+
       toast.success(APPOINTMENT_MESSAGES.CREATE_SUCCESS);
       revalidate();
       return { success: true };
@@ -61,7 +67,7 @@ export function useAppointments() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update appointment');
       }
-      
+
       toast.success(APPOINTMENT_MESSAGES.UPDATE_SUCCESS);
       revalidate();
       return { success: true };
@@ -82,7 +88,7 @@ export function useAppointments() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete appointment');
       }
-      
+
       toast.success(APPOINTMENT_MESSAGES.DELETE_SUCCESS);
       revalidate();
     } catch (error) {

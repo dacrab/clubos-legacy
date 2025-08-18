@@ -1,0 +1,95 @@
+# Dependabot configuration for ClubOS
+# This configuration enables automated dependency updates with optimizations for Bun
+
+version: 2
+updates:
+  # Enable Bun dependency updates
+  - package-ecosystem: 'npm' # Dependabot treats Bun projects as npm
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
+    # Configuration for security and performance
+    reviewers:
+      - 'dacrab' # Replace with actual maintainer(s)
+    assignees:
+      - 'dacrab' # Replace with actual maintainer(s)
+    commit-message:
+      prefix: 'chore'
+      prefix-development: 'chore'
+      include: 'scope'
+    # Limit the number of open PRs
+    open-pull-requests-limit: 5
+    # Group updates to reduce noise
+    groups:
+      # Group all patch updates together
+      patch-updates:
+        applies-to: version-updates
+        update-types:
+          - 'patch'
+      # Group minor updates for common categories
+      react-ecosystem:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+        patterns:
+          - 'react*'
+          - '@types/react*'
+      next-ecosystem:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+        patterns:
+          - 'next*'
+          - '@next/*'
+      ui-components:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+        patterns:
+          - '@radix-ui/*'
+          - 'lucide-react'
+          - 'tailwindcss*'
+          - 'class-variance-authority'
+      dev-tools:
+        applies-to: version-updates
+        update-types:
+          - 'minor'
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - 'prettier*'
+          - '@typescript-eslint/*'
+          - 'typescript'
+    # Ignore specific packages that require manual updates
+    ignore:
+      # Ignore major version updates for critical dependencies
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
+      # Ignore beta/alpha releases
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+        versions: ['*-alpha*', '*-beta*', '*-rc*']
+
+  # Enable GitHub Actions updates
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:30'
+      timezone: 'UTC'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
+    reviewers:
+      - 'dacrab'
+    assignees:
+      - 'dacrab'
+    open-pull-requests-limit: 3

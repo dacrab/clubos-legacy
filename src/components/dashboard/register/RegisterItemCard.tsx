@@ -1,14 +1,13 @@
-import { Euro, CreditCard, Gift, ChevronDown, ChevronUp } from "lucide-react";
-import { memo } from "react";
+import { memo } from 'react';
+import { ChevronDown, ChevronUp, CreditCard, Euro, Gift } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { CARD_DISCOUNT } from "@/lib/constants";
-import { formatDateWithGreekAmPm, formatPrice, cn } from '@/lib/utils';
 import type { ListItem, Order } from '@/types/register';
+import { CARD_DISCOUNT } from '@/lib/constants';
+import { cn, formatDateWithGreekAmPm, formatPrice } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 
-import { ClosingDetails } from "./ClosingDetails";
-
+import { ClosingDetails } from './ClosingDetails';
 
 interface RegisterItemCardProps {
   item: ListItem;
@@ -20,7 +19,7 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
   const isActive = item.type === 'active';
   const id = isActive ? item.id : item.session.id;
   const date = new Date(isActive ? item.opened_at : item.created_at);
-  
+
   // Calculate totals with proper types
   const orders: Order[] = item.orders || [];
   let totalAmount = 0;
@@ -32,7 +31,7 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
     // Properly typed order calculations
     totalAmount += parseFloat(order.finalAmount?.toString() || '0');
     cardDiscounts += order.cardDiscountCount || 0;
-    
+
     // Calculate treats from sales data
     if (order.sales) {
       order.sales.forEach(sale => {
@@ -47,17 +46,19 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
   const discountAmount = cardDiscounts * CARD_DISCOUNT;
   const finalAmount = Math.max(0, totalAmount - discountAmount);
   return (
-    <Card className={cn(
-      "p-4 transition-colors w-full",
-      isActive && "border-primary/20",
-      isExpanded && "bg-muted/50"
-    )}>
-      <div 
+    <Card
+      className={cn(
+        'w-full p-4 transition-colors',
+        isActive && 'border-primary/20',
+        isExpanded && 'bg-muted/50'
+      )}
+    >
+      <div
         role="button"
         tabIndex={0}
-        className="flex items-center justify-between cursor-pointer"
+        className="flex cursor-pointer items-center justify-between"
         onClick={() => onToggle(id)}
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             onToggle(id);
@@ -65,38 +66,38 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
         }}
       >
         <div className="flex-1">
-          <div className="flex items-center justify-between mb-3">
-            <Badge variant={isActive ? "outline" : "secondary"} 
-                   className={isActive ? "border-primary text-primary" : ""}>
-                {isActive ? "Ενεργό Ταμείο" : `Έκλεισε από: ${item.closed_by_name}`}
-              </Badge>
-            <span className="text-sm text-muted-foreground">
-              {formatDateWithGreekAmPm(date)}
-            </span>
+          <div className="mb-3 flex items-center justify-between">
+            <Badge
+              variant={isActive ? 'outline' : 'secondary'}
+              className={isActive ? 'border-primary text-primary' : ''}
+            >
+              {isActive ? 'Ενεργό Ταμείο' : `Έκλεισε από: ${item.closed_by_name}`}
+            </Badge>
+            <span className="text-muted-foreground text-sm">{formatDateWithGreekAmPm(date)}</span>
           </div>
-          
+
           <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1 text-muted-foreground text-xs mb-1">
+              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
                 <Euro className="h-3 w-3 text-green-500" />
                 Τελικό Ποσό
-        </div>
+              </div>
               <span className="font-semibold">{formatPrice(finalAmount)}</span>
-        </div>
-            
+            </div>
+
             <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1 text-muted-foreground text-xs mb-1">
+              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
                 <CreditCard className="h-3 w-3 text-blue-500" />
                 Κουπόνια
-      </div>
+              </div>
               <span className="font-semibold">{cardDiscounts}x</span>
               {cardDiscounts > 0 && (
                 <span className="text-xs text-red-500">-{formatPrice(discountAmount)}</span>
-      )}
+              )}
             </div>
-            
+
             <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1 text-muted-foreground text-xs mb-1">
+              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
                 <Gift className="h-3 w-3 text-amber-500" />
                 Κεράσματα
               </div>
@@ -107,9 +108,9 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
             </div>
           </div>
         </div>
-        
+
         <div className="ml-4">
-          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
         </div>
       </div>
 
@@ -124,4 +125,4 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
   );
 }
 
-export default memo(RegisterItemCard); 
+export default memo(RegisterItemCard);

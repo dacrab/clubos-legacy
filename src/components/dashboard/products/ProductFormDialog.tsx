@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import type { Category, Product } from '@/types/products';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Product, Category } from '@/types/products';
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -44,7 +50,7 @@ const FORM_LABELS = {
   BARCODE: 'Barcode',
   IMAGE: 'Εικόνα',
   IS_ACTIVE: 'Ενεργό',
-  TRACK_INVENTORY: 'Παρακολούθηση Αποθέματος'
+  TRACK_INVENTORY: 'Παρακολούθηση Αποθέματος',
 } as const;
 
 const initialFormData: ProductFormData = {
@@ -79,12 +85,12 @@ const uploadImage = async (file: File): Promise<string> => {
   return data.url;
 };
 
-export default function ProductFormDialog({ 
-  open, 
-  onOpenChange, 
-  product, 
-  categories = [], 
-  onProductSaved 
+export default function ProductFormDialog({
+  open,
+  onOpenChange,
+  product,
+  categories = [],
+  onProductSaved,
 }: ProductFormDialogProps) {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
@@ -128,7 +134,9 @@ export default function ProductFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) {return;}
+    if (loading) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -164,7 +172,9 @@ export default function ProductFormDialog({
         throw new Error(error.error || 'Failed to save product');
       }
 
-      toast.success(isEditMode ? 'Το προϊόν ενημερώθηκε επιτυχώς' : 'Το προϊόν δημιουργήθηκε επιτυχώς');
+      toast.success(
+        isEditMode ? 'Το προϊόν ενημερώθηκε επιτυχώς' : 'Το προϊόν δημιουργήθηκε επιτυχώς'
+      );
       onProductSaved?.();
       onOpenChange(false);
     } catch (error) {
@@ -177,38 +187,36 @@ export default function ProductFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditMode ? 'Επεξεργασία Προϊόντος' : 'Νέο Προϊόν'}
-          </DialogTitle>
+          <DialogTitle>{isEditMode ? 'Επεξεργασία Προϊόντος' : 'Νέο Προϊόν'}</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">{FORM_LABELS.NAME} *</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={e => handleInputChange('name', e.target.value)}
                 required
                 disabled={loading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="category">{FORM_LABELS.CATEGORY}</Label>
               <Select
                 value={formData.categoryId}
-                onValueChange={(value) => handleInputChange('categoryId', value)}
+                onValueChange={value => handleInputChange('categoryId', value)}
                 disabled={loading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Επιλέξτε κατηγορία" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
+                  {categories.map(category => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
@@ -223,12 +231,12 @@ export default function ProductFormDialog({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={e => handleInputChange('description', e.target.value)}
               disabled={loading}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="price">{FORM_LABELS.PRICE} *</Label>
               <Input
@@ -236,12 +244,12 @@ export default function ProductFormDialog({
                 type="number"
                 step="0.01"
                 value={formData.price}
-                onChange={(e) => handleInputChange('price', e.target.value)}
+                onChange={e => handleInputChange('price', e.target.value)}
                 required
                 disabled={loading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="costPrice">{FORM_LABELS.COST_PRICE}</Label>
               <Input
@@ -249,31 +257,31 @@ export default function ProductFormDialog({
                 type="number"
                 step="0.01"
                 value={formData.costPrice}
-                onChange={(e) => handleInputChange('costPrice', e.target.value)}
+                onChange={e => handleInputChange('costPrice', e.target.value)}
                 disabled={loading}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="stock">{FORM_LABELS.STOCK}</Label>
               <Input
                 id="stock"
                 type="number"
                 value={formData.stock}
-                onChange={(e) => handleInputChange('stock', e.target.value)}
+                onChange={e => handleInputChange('stock', e.target.value)}
                 disabled={loading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="minStockLevel">{FORM_LABELS.MIN_STOCK_LEVEL}</Label>
               <Input
                 id="minStockLevel"
                 type="number"
                 value={formData.minStockLevel}
-                onChange={(e) => handleInputChange('minStockLevel', e.target.value)}
+                onChange={e => handleInputChange('minStockLevel', e.target.value)}
                 disabled={loading}
               />
             </div>
@@ -284,7 +292,7 @@ export default function ProductFormDialog({
             <Input
               id="barcode"
               value={formData.barcode}
-              onChange={(e) => handleInputChange('barcode', e.target.value)}
+              onChange={e => handleInputChange('barcode', e.target.value)}
               disabled={loading}
             />
           </div>
@@ -299,9 +307,7 @@ export default function ProductFormDialog({
               disabled={loading}
             />
             {formData.imageUrl && (
-              <p className="text-sm text-muted-foreground">
-                Τρέχουσα εικόνα: {formData.imageUrl}
-              </p>
+              <p className="text-muted-foreground text-sm">Τρέχουσα εικόνα: {formData.imageUrl}</p>
             )}
           </div>
 
@@ -310,17 +316,17 @@ export default function ProductFormDialog({
               <Checkbox
                 id="isActive"
                 checked={formData.isActive}
-                onCheckedChange={(checked) => handleInputChange('isActive', checked === true)}
+                onCheckedChange={checked => handleInputChange('isActive', checked === true)}
                 disabled={loading}
               />
               <Label htmlFor="isActive">{FORM_LABELS.IS_ACTIVE}</Label>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="trackInventory"
                 checked={formData.trackInventory}
-                onCheckedChange={(checked) => handleInputChange('trackInventory', checked === true)}
+                onCheckedChange={checked => handleInputChange('trackInventory', checked === true)}
                 disabled={loading}
               />
               <Label htmlFor="trackInventory">{FORM_LABELS.TRACK_INVENTORY}</Label>
@@ -344,4 +350,4 @@ export default function ProductFormDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

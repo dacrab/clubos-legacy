@@ -1,20 +1,26 @@
-"use client";
+'use client';
 
-import { Trash2, Edit3, Save, X } from "lucide-react";
-import React, { useState, useEffect } from 'react';
-import { toast } from "sonner";
+import React, { useEffect, useState } from 'react';
+import { Edit3, Save, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatPrice } from "@/lib/utils";
-import type { Sale, Product } from "@/types/sales";
-import { logger } from "@/lib/utils/logger";
+import type { Product, Sale } from '@/types/sales';
+import { formatPrice } from '@/lib/utils';
+import { logger } from '@/lib/utils/logger';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface EditableSaleCardProps {
   sale: Sale;
@@ -104,16 +110,16 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
   };
 
   const selectedProduct = products.find(p => p.id === editedSale.productId);
-  const calculatedTotal = selectedProduct ? parseFloat(selectedProduct.price) * editedSale.quantity : 0;
+  const calculatedTotal = selectedProduct
+    ? parseFloat(selectedProduct.price) * editedSale.quantity
+    : 0;
 
   return (
     <>
       <Card className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">
-              {sale.productName || 'Προϊόν'}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">{sale.productName || 'Προϊόν'}</CardTitle>
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <>
@@ -137,12 +143,7 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
                 </>
               ) : (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={loading}
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleSave} disabled={loading}>
                     <Save className="h-4 w-4" />
                   </Button>
                   <Button
@@ -158,7 +159,7 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="pt-0">
           {!isEditing ? (
             <div className="space-y-2">
@@ -174,10 +175,10 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
                 <span>Σύνολο:</span>
                 <span>{formatPrice(parseFloat(sale.totalPrice))}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-sm">Τύπος:</span>
-                <Badge variant={sale.isTreat ? "secondary" : "default"}>
-                  {sale.isTreat ? "Κέρασμα" : "Κανονική πώληση"}
+                <Badge variant={sale.isTreat ? 'secondary' : 'default'}>
+                  {sale.isTreat ? 'Κέρασμα' : 'Κανονική πώληση'}
                 </Badge>
               </div>
             </div>
@@ -188,14 +189,14 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
                   <Label htmlFor="productId">Προϊόν</Label>
                   <Select
                     value={editedSale.productId}
-                    onValueChange={(value) => setEditedSale(prev => ({ ...prev, productId: value }))}
+                    onValueChange={value => setEditedSale(prev => ({ ...prev, productId: value }))}
                     disabled={loading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε προϊόν" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((product) => (
+                      {products.map(product => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name} - €{parseFloat(product.price).toFixed(2)}
                         </SelectItem>
@@ -211,10 +212,12 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
                     type="number"
                     min="1"
                     value={editedSale.quantity}
-                    onChange={(e) => setEditedSale(prev => ({ 
-                      ...prev, 
-                      quantity: parseInt(e.target.value) || 1 
-                    }))}
+                    onChange={e =>
+                      setEditedSale(prev => ({
+                        ...prev,
+                        quantity: parseInt(e.target.value) || 1,
+                      }))
+                    }
                     disabled={loading}
                   />
                 </div>
@@ -224,18 +227,20 @@ export default function EditableSaleCard({ sale, onEdit, onDelete }: EditableSal
                 <Checkbox
                   id="isTreat"
                   checked={editedSale.isTreat}
-                  onCheckedChange={(checked) => setEditedSale(prev => ({ 
-                    ...prev, 
-                    isTreat: checked === true 
-                  }))}
+                  onCheckedChange={checked =>
+                    setEditedSale(prev => ({
+                      ...prev,
+                      isTreat: checked === true,
+                    }))
+                  }
                   disabled={loading}
                 />
                 <Label htmlFor="isTreat">Κέρασμα</Label>
               </div>
 
               {selectedProduct && (
-                <div className="bg-muted p-3 rounded-lg">
-                  <div className="flex justify-between items-center">
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Υπολογισμένο Σύνολο:</span>
                     <span className="font-semibold">€{calculatedTotal.toFixed(2)}</span>
                   </div>

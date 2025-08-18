@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useStockManagement } from "@/hooks/features/inventory/useStockManagement";
-import { DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
+import { DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_CATEGORY_ID } from '@/lib/constants';
+import { useStockManagement } from '@/hooks/features/inventory/useStockManagement';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 type StockManagementDialogProps = {
   code: {
@@ -24,7 +24,7 @@ type StockManagementDialogProps = {
 type StockManagementDialogContentProps = {
   code: NonNullable<StockManagementDialogProps['code']>;
   onOpenChange: (open: boolean) => void;
-}
+};
 
 function StockManagementDialogContent({ code, onOpenChange }: StockManagementDialogContentProps) {
   const [stock, setStock] = useState(code.stock.toString());
@@ -35,7 +35,7 @@ function StockManagementDialogContent({ code, onOpenChange }: StockManagementDia
     await updateStock({
       productId: code.id,
       newStock: parseInt(stock),
-      reason: 'Manual adjustment'
+      reason: 'Manual adjustment',
     });
     onOpenChange(false);
   };
@@ -50,13 +50,9 @@ function StockManagementDialogContent({ code, onOpenChange }: StockManagementDia
 
       {isUnlimited ? (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {STOCK_MESSAGES.UNLIMITED_STOCK_NOTE}
-          </p>
+          <p className="text-muted-foreground text-sm">{STOCK_MESSAGES.UNLIMITED_STOCK_NOTE}</p>
           <div className="flex justify-end">
-            <Button onClick={() => onOpenChange(false)}>
-              {DIALOG_MESSAGES.CLOSE_BUTTON}
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>{DIALOG_MESSAGES.CLOSE_BUTTON}</Button>
           </div>
         </div>
       ) : (
@@ -67,7 +63,7 @@ function StockManagementDialogContent({ code, onOpenChange }: StockManagementDia
               <Input
                 type="number"
                 value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                onChange={e => setStock(e.target.value)}
                 min="0"
                 required
                 disabled={isLoading}
@@ -75,17 +71,17 @@ function StockManagementDialogContent({ code, onOpenChange }: StockManagementDia
               {isLoading && (
                 <LoadingSpinner
                   size="sm"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 />
               )}
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               {DIALOG_MESSAGES.CANCEL_BUTTON_DEFAULT}
             </Button>
-            <LoadingButton 
-              type="submit" 
+            <LoadingButton
+              type="submit"
               loading={isLoading}
               loadingText={DIALOG_MESSAGES.SAVE_LOADING}
             >
@@ -98,7 +94,11 @@ function StockManagementDialogContent({ code, onOpenChange }: StockManagementDia
   );
 }
 
-export default function StockManagementDialog({ code, open, onOpenChange }: StockManagementDialogProps) {
+export default function StockManagementDialog({
+  code,
+  open,
+  onOpenChange,
+}: StockManagementDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && code && <StockManagementDialogContent code={code} onOpenChange={onOpenChange} />}

@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-import ProductFormDialog from "./ProductFormDialog";
+import ProductFormDialog from './ProductFormDialog';
 
 export default function AddProductButton() {
   const [open, setOpen] = useState(false);
@@ -16,8 +15,8 @@ export default function AddProductButton() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button 
-            onClick={() => setOpen(true)} 
+          <Button
+            onClick={() => setOpen(true)}
             className="w-full sm:w-auto"
             variant="default"
             size="default"
@@ -33,4 +32,4 @@ export default function AddProductButton() {
       <ProductFormDialog open={open} onOpenChange={setOpen} />
     </TooltipProvider>
   );
-} 
+}

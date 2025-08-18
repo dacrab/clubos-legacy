@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import { createSale, getSales } from '@/lib/db/services/sales';
 import { logger } from '@/lib/utils/logger';
-import { getSales, createSale } from '@/lib/db/services/sales';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating sale:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create sale' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create sale' },
       { status: 500 }
     );
   }

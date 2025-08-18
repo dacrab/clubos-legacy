@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { usePathname } from "next/navigation";
+import { usePathname } from 'next/navigation';
 
 export default function AnimatedContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

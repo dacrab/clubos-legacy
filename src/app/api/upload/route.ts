@@ -1,13 +1,8 @@
-import { writeFile, mkdir } from 'fs/promises';
+import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-
 import type { NextRequest } from 'next/server';
 
-import { 
-  errorResponse, 
-  successResponse, 
-  handleApiError 
-} from '@/lib/api-utils';
+import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,28 +27,27 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
     const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
-    
+
     // Create uploads directory if it doesn't exist
     const uploadDir = join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadDir, { recursive: true });
-    
+
     // Save file
     const filePath = join(uploadDir, fileName);
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
+
     await writeFile(filePath, buffer);
-    
+
     // Return the public URL
     const publicUrl = `/uploads/${fileName}`;
-    
-    return successResponse({ 
+
+    return successResponse({
       url: publicUrl,
       originalName: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
     });
-
   } catch (error) {
     (await import('@/lib/utils/logger')).logger.error('File upload error:', error);
     return handleApiError(error);

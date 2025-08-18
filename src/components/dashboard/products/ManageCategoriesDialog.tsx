@@ -1,16 +1,29 @@
-import { Plus, Edit, Trash2 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Edit, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import type { Category } from '@/types/products';
 import { Button } from '@/components/ui/button';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import type { Category } from '@/types/products';
 
 interface ManageCategoriesDialogProps {
   open: boolean;
@@ -23,7 +36,10 @@ interface CategoryFormData {
   parentId: string;
 }
 
-export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCategoriesDialogProps) {
+export default function ManageCategoriesDialog({
+  open,
+  onOpenChange,
+}: ManageCategoriesDialogProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -83,7 +99,9 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) {return;}
+    if (loading) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -92,7 +110,9 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
         parentId: formData.parentId || null,
       };
 
-      const endpoint = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
+      const endpoint = editingCategory
+        ? `/api/categories/${editingCategory.id}`
+        : '/api/categories';
       const method = editingCategory ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
@@ -108,7 +128,9 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
         throw new Error(error.error || 'Failed to save category');
       }
 
-      toast.success(editingCategory ? 'Η κατηγορία ενημερώθηκε επιτυχώς' : 'Η κατηγορία δημιουργήθηκε επιτυχώς');
+      toast.success(
+        editingCategory ? 'Η κατηγορία ενημερώθηκε επιτυχώς' : 'Η κατηγορία δημιουργήθηκε επιτυχώς'
+      );
       await fetchCategories();
       setShowForm(false);
       setEditingCategory(null);
@@ -121,7 +143,9 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
   };
 
   const handleDelete = async () => {
-    if (!categoryToDelete) {return;}
+    if (!categoryToDelete) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -159,50 +183,46 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Διαχείριση Κατηγοριών</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {!showForm && (
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Κατηγορίες Προϊόντων</h3>
-                <Button
-                  onClick={() => setShowForm(true)}
-                  disabled={loading}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={() => setShowForm(true)} disabled={loading} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
                   Νέα Κατηγορία
                 </Button>
               </div>
             )}
 
             {showForm && (
-              <form onSubmit={handleSubmit} className="space-y-4 border rounded-lg p-4">
+              <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
                 <h4 className="font-medium">
                   {editingCategory ? 'Επεξεργασία Κατηγορίας' : 'Νέα Κατηγορία'}
                 </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Όνομα *</Label>
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      onChange={e => handleInputChange('name', e.target.value)}
                       required
                       disabled={loading}
                       placeholder="Όνομα κατηγορίας"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="parentId">Γονική Κατηγορία</Label>
                     <Select
                       value={formData.parentId}
-                      onValueChange={(value) => handleInputChange('parentId', value)}
+                      onValueChange={value => handleInputChange('parentId', value)}
                       disabled={loading}
                     >
                       <SelectTrigger>
@@ -210,9 +230,9 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">Κανένα (Κύρια κατηγορία)</SelectItem>
-                        {mainCategories.map((category) => (
-                          <SelectItem 
-                            key={category.id} 
+                        {mainCategories.map(category => (
+                          <SelectItem
+                            key={category.id}
                             value={category.id}
                             disabled={editingCategory?.id === category.id}
                           >
@@ -229,7 +249,7 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    onChange={e => handleInputChange('description', e.target.value)}
                     disabled={loading}
                     placeholder="Περιγραφή κατηγορίας (προαιρετικό)"
                   />
@@ -251,7 +271,7 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
               </form>
             )}
 
-            <div className="border rounded-lg">
+            <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -264,26 +284,25 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={4} className="py-8 text-center">
                         Φόρτωση κατηγοριών...
                       </TableCell>
                     </TableRow>
                   ) : categories.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
                         Δεν υπάρχουν κατηγορίες
                       </TableCell>
                     </TableRow>
                   ) : (
-                    categories.map((category) => (
+                    categories.map(category => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>{category.description || '-'}</TableCell>
                         <TableCell>
-                          {category.parentId ? 
-                            categories.find(c => c.id === category.parentId)?.name || 'Άγνωστη' 
-                            : 'Κύρια κατηγορία'
-                          }
+                          {category.parentId
+                            ? categories.find(c => c.id === category.parentId)?.name || 'Άγνωστη'
+                            : 'Κύρια κατηγορία'}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -317,7 +336,7 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
 
       <ConfirmationDialog
         open={!!categoryToDelete}
-        onOpenChange={(open) => !open && setCategoryToDelete(null)}
+        onOpenChange={open => !open && setCategoryToDelete(null)}
         title="Διαγραφή Κατηγορίας"
         description={`Είστε σίγουρος ότι θέλετε να διαγράψετε την κατηγορία "${categoryToDelete?.name}";`}
         onConfirm={handleDelete}

@@ -1,13 +1,12 @@
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import { History } from "lucide-react";
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
+import { endOfMonth, format, startOfMonth } from 'date-fns';
+import { History } from 'lucide-react';
 
-
+import { stackServerApp } from '@/lib/auth';
+import { DATE_FORMAT } from '@/lib/constants';
+import { getSalesWithDetails } from '@/lib/db/services/sales';
 import SalesFilter from '@/components/dashboard/sales/SalesFilter';
 import SalesTable from '@/components/dashboard/sales/SalesTable';
-import { stackServerApp } from '@/lib/auth';
-import { DATE_FORMAT } from "@/lib/constants";
-import { getSalesWithDetails } from '@/lib/db/services/sales';
 
 interface HistoryPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -15,7 +14,9 @@ interface HistoryPageProps {
 
 async function validateUser() {
   const user = await stackServerApp.getUser();
-  if (!user) {redirect('/');}
+  if (!user) {
+    redirect('/');
+  }
   return user;
 }
 
@@ -32,16 +33,16 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
   try {
     await validateUser();
-    
+
     // Fetch sales using Drizzle service
     const sales = await getSalesWithDetails();
-    
+
     return (
-      <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
+      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <div className="rounded-full bg-primary/10 p-3">
-              <History className="h-6 w-6 text-primary" />
+            <div className="bg-primary/10 rounded-full p-3">
+              <History className="text-primary h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Ιστορικό Πωλήσεων</h1>
@@ -50,7 +51,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
               </p>
             </div>
           </div>
-          
+
           <div className="space-y-6">
             <SalesFilter />
             <SalesTable initialSales={sales} />
@@ -64,10 +65,10 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         (await import('@/lib/utils/logger')).logger.error('Error fetching sales data:', error);
       }
     }
-    
+
     return (
-      <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
-        <div className="text-center py-12">
+      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
+        <div className="py-12 text-center">
           <p className="text-destructive">Σφάλμα κατά τη φόρτωση των δεδομένων</p>
         </div>
       </div>

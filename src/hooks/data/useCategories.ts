@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { Category, GroupedCategory } from '@/types/products';
 
@@ -44,7 +44,10 @@ export const useCategories = () => {
       return await response.json();
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        (await import('@/lib/utils/logger')).logger.error('Error fetching grouped categories:', err);
+        (await import('@/lib/utils/logger')).logger.error(
+          'Error fetching grouped categories:',
+          err
+        );
       }
       return [];
     }

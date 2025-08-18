@@ -1,18 +1,17 @@
 'use client';
 
-import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { logger } from '@/lib/utils/logger';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useStackApp } from '@/lib/auth-client';
+import { logger } from '@/lib/utils/logger';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useStackApp } from '@/lib/auth-client';
-
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -45,12 +44,10 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 p-4 dark:from-gray-900 dark:to-gray-800">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Σύνδεση
-          </CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">Σύνδεση</CardTitle>
           <CardDescription className="text-center">
             Εισάγετε τα στοιχεία σας για να συνδεθείτε
           </CardDescription>
@@ -62,20 +59,20 @@ export function LoginForm() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@clubos.com"
+                placeholder="vkavouras@proton.me"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Κωδικός</Label>
               <div className="relative">
@@ -84,7 +81,7 @@ export function LoginForm() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Εισάγετε τον κωδικό σας"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
                 />
@@ -92,24 +89,16 @@ export function LoginForm() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute top-0 right-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
-            
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -120,14 +109,20 @@ export function LoginForm() {
               )}
             </Button>
           </form>
-          
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+
+          <div className="text-muted-foreground mt-6 text-center text-sm">
             <p>Δοκιμαστικοί λογαριασμοί:</p>
             <div className="mt-2 space-y-1">
-              <p><strong>Admin:</strong> admin@clubos.com</p>
-              <p><strong>Staff:</strong> staff@clubos.com</p>
-              <p><strong>Secretary:</strong> secretary@clubos.com</p>
-              <p className="text-xs mt-2">Κωδικός για όλους: password123</p>
+              <p>
+                <strong>Admin:</strong> vkavouras@proton.me
+              </p>
+              <p>
+                <strong>Staff:</strong> staff@clubos.com
+              </p>
+              <p>
+                <strong>Secretary:</strong> secretary@clubos.com
+              </p>
+              <p className="mt-2 text-xs">Κωδικός για όλους: password123</p>
             </div>
           </div>
         </CardContent>

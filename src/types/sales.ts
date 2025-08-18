@@ -1,4 +1,5 @@
-import type { Product, Category } from "./products";
+import type { Category, Product } from './products';
+
 // Removed Supabase Tables import - migrated to Drizzle
 
 export type { Product, Category };

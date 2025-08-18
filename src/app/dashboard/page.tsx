@@ -1,18 +1,17 @@
 import { notFound } from 'next/navigation';
 
-
-import AddSaleButton from "@/components/dashboard/sales/AddSaleButton";
-import NewSaleInterface from "@/components/dashboard/sales/NewSaleInterface";
-import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
-import SecretariatDashboard from '@/components/dashboard/views/SecretariatDashboard';
+import type { Product } from '@/types/products';
+import type { Order, SaleWithDetails } from '@/types/sales';
 import { stackServerApp } from '@/lib/auth';
 import { getLowStockProducts } from '@/lib/db/services/products';
 import { getRecentOrders } from '@/lib/db/services/sales';
 import { getUserById } from '@/lib/db/services/users';
-import type { Product } from '@/types/products';
-import type { SaleWithDetails, Order } from '@/types/sales';
 import { logger } from '@/lib/utils/logger';
+import AddSaleButton from '@/components/dashboard/sales/AddSaleButton';
+import NewSaleInterface from '@/components/dashboard/sales/NewSaleInterface';
+import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
+import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
+import SecretariatDashboard from '@/components/dashboard/views/SecretariatDashboard';
 
 // Type for the order data returned from the database query
 interface DatabaseOrder {
@@ -74,7 +73,7 @@ const transformOrderToSales = (order: DatabaseOrder): SaleWithDetails[] => {
     voidedBy: order.voidedBy,
   };
 
-  return order.sales.map((sale) => ({
+  return order.sales.map(sale => ({
     ...sale,
     order: orderData,
   }));
@@ -103,12 +102,7 @@ export default async function DashboardPage() {
       case 'admin': {
         const lowStock = await getLowStockProducts();
 
-        return (
-          <AdminDashboard 
-            recentSales={recentSales} 
-            lowStock={lowStock as Product[]} 
-          />
-        );
+        return <AdminDashboard recentSales={recentSales} lowStock={lowStock as Product[]} />;
       }
       case 'employee':
         return <EmployeeDashboard recentSales={recentSales} />;
@@ -116,7 +110,7 @@ export default async function DashboardPage() {
         return <SecretariatDashboard />;
       default:
         return (
-          <div className="flex flex-col flex-1 bg-background p-4 sm:p-6">
+          <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold tracking-tight">Πωλήσεις</h1>
@@ -129,7 +123,7 @@ export default async function DashboardPage() {
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      logger.error("Error fetching dashboard data:", error);
+      logger.error('Error fetching dashboard data:', error);
     }
     return notFound();
   }

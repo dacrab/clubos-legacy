@@ -1,9 +1,9 @@
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { logger } from '@/lib/utils/logger';
 
 import { useUser } from '@/lib/auth-client';
 import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import { logger } from '@/lib/utils/logger';
 
 type AuthorizationStatus = 'loading' | 'authorized' | 'unauthorized';
 
@@ -23,7 +23,9 @@ export function useAuthorization(role: string = ALLOWED_USER_ROLES[0]) {
 
         // Check user role via API
         const response = await fetch(`/api/users/${user.id}`);
-        if (!response.ok) {throw new Error('Failed to fetch user data');}
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
         const userData = await response.json();
         if (!userData || userData.role !== role) {
           router.push('/dashboard');
@@ -43,4 +45,4 @@ export function useAuthorization(role: string = ALLOWED_USER_ROLES[0]) {
   }, [router, user, role]);
 
   return status;
-} 
+}

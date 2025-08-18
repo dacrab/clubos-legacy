@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/action-utils';
 import { stackServerApp } from '@/lib/auth';
+import { deleteSale, getSaleById, updateSale } from '@/lib/db/services/sales';
 import { logger } from '@/lib/utils/logger';
-import { getSaleById, updateSale, deleteSale } from '@/lib/db/services/sales';
 
 export async function GET(
   request: NextRequest,
@@ -53,7 +53,7 @@ export async function PUT(
   } catch (error) {
     logger.error('Error updating sale:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update sale' }, 
+      { error: error instanceof Error ? error.message : 'Failed to update sale' },
       { status: 500 }
     );
   }
@@ -74,7 +74,7 @@ export async function DELETE(
     await checkAdminAccess();
 
     const success = await deleteSale(saleId);
-    
+
     if (!success) {
       return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
     }
@@ -83,7 +83,7 @@ export async function DELETE(
   } catch (error) {
     logger.error('Error deleting sale:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete sale' }, 
+      { error: error instanceof Error ? error.message : 'Failed to delete sale' },
       { status: 500 }
     );
   }

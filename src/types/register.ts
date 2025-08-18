@@ -1,17 +1,17 @@
-import type { 
-  Sale as SalesTypeSale, 
-  SaleWithDetails
-} from './sales';
-// Removed Supabase imports - migrated to Drizzle
-type Json = unknown; // Simple type replacement for Json
+import type { Sale as SalesTypeSale, SaleWithDetails } from './sales';
+// Simple type replacement for Json
 import type { User } from './users';
+
+// Removed Supabase imports - migrated to Drizzle
+type Json = unknown;
 
 // Import types from other modules
 
 // Re-export the Sale type for convenience, and extend it
 export type { User };
 export type Sale = SalesTypeSale;
-export interface ExtendedSale extends Omit<Sale, 'is_edited' | 'is_deleted' | 'original_code' | 'original_quantity'> {
+export interface ExtendedSale
+  extends Omit<Sale, 'is_edited' | 'is_deleted' | 'original_code' | 'original_quantity'> {
   is_edited?: boolean;
   is_deleted?: boolean;
   original_code?: string;

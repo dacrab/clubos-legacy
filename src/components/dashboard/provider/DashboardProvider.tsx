@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
@@ -9,11 +9,7 @@ interface DashboardContextType {
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
-export function DashboardProvider({ 
-  children,
-}: { 
-  children: ReactNode;
-}) {
+export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isSidebarVisible, setSidebarVisible] = useState(false);
 
   return (

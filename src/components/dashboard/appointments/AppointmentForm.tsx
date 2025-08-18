@@ -1,29 +1,29 @@
 'use client';
 
-import { format } from "date-fns";
-import { el } from 'date-fns/locale';
-import { CalendarIcon } from "lucide-react";
 import React, { useState } from 'react';
+import { format } from 'date-fns';
+import { el } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { useAppointments } from '@/hooks/features/appointments/useAppointments';
-import { 
-  APPOINTMENT_MESSAGES, 
-  FORM_LABELS, 
-  PLACEHOLDERS,
-  BUTTON_LABELS,
-  DIALOG_MESSAGES,
-  DATE_FORMAT
-} from '@/lib/constants';
-import { cn } from "@/lib/utils";
 import type { AppointmentFormData } from '@/types/appointments';
+import {
+  APPOINTMENT_MESSAGES,
+  BUTTON_LABELS,
+  DATE_FORMAT,
+  DIALOG_MESSAGES,
+  FORM_LABELS,
+  PLACEHOLDERS,
+} from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import { useAppointments } from '@/hooks/features/appointments/useAppointments';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LoadingButton } from '@/components/ui/loading-button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
 
 interface AppointmentFormProps {
   onSuccess?: () => void;
@@ -46,18 +46,18 @@ const INITIAL_FORM_STATE: FormState = {
   contact_details: '',
   num_children: '',
   num_adults: '',
-  notes: ''
+  notes: '',
 };
 
 export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
   const [formState, setFormState] = useState<FormState>(INITIAL_FORM_STATE);
   const [isLoading, setIsLoading] = useState(false);
-    const { addAppointment } = useAppointments();
-    
+  const { addAppointment } = useAppointments();
+
   const updateFormField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setFormState(prev => ({ ...prev, [field]: value }));
-    };
-  
+  };
+
   const isFormValid = (): boolean => {
     const requiredFields = [
       formState.who_booked,
@@ -65,12 +65,12 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
       formState.time,
       formState.contact_details,
       formState.num_children,
-      formState.num_adults
+      formState.num_adults,
     ];
-    
+
     return requiredFields.every(field => field !== '' && field !== undefined);
-        };
-  
+  };
+
   const createAppointmentData = (): AppointmentFormData => {
     const [hours, minutes] = formState.time.split(':').map(Number);
     const appointmentDate = new Date(formState.date || new Date());
@@ -95,8 +95,10 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
 
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
-    if (isLoading) {return;}
+
+    if (isLoading) {
+      return;
+    }
 
     if (!isFormValid()) {
       toast.error(APPOINTMENT_MESSAGES.REQUIRED_FIELDS);
@@ -119,141 +121,140 @@ export default function AppointmentForm({ onSuccess }: AppointmentFormProps) {
   };
 
   return (
-      <div className="w-full">
+    <div className="w-full">
       <form onSubmit={handleFormSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="who_booked">
-              {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="who_booked"
+        <div className="space-y-2">
+          <Label htmlFor="who_booked">
+            {FORM_LABELS.WHO_BOOKED} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="who_booked"
             value={formState.who_booked}
-            onChange={(e) => updateFormField('who_booked', e.target.value)}
-              placeholder={PLACEHOLDERS.WHO_BOOKED}
+            onChange={e => updateFormField('who_booked', e.target.value)}
+            placeholder={PLACEHOLDERS.WHO_BOOKED}
             disabled={isLoading}
+            required
+            className="h-10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
+          </Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'h-10 w-full justify-start truncate text-left font-normal',
+                    !formState.date && 'text-muted-foreground'
+                  )}
+                  disabled={isLoading}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  {formState.date ? (
+                    format(formState.date, DATE_FORMAT.DISPLAY, { locale: el })
+                  ) : (
+                    <span>Επιλέξτε ημερομηνία</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formState.date}
+                  onSelect={date => updateFormField('date', date as Date | undefined)}
+                  initialFocus
+                  locale={el}
+                />
+              </PopoverContent>
+            </Popover>
+            <Input
+              type="time"
+              value={formState.time}
+              onChange={e => updateFormField('time', e.target.value)}
+              className="h-10 text-center"
               required
-              className="h-10"
+              disabled={isLoading}
+              step="300"
             />
           </div>
+        </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="contact_details">
+            {FORM_LABELS.CONTACT_DETAILS} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="contact_details"
+            value={formState.contact_details}
+            onChange={e => updateFormField('contact_details', e.target.value)}
+            placeholder={PLACEHOLDERS.CONTACT_DETAILS}
+            required
+            disabled={isLoading}
+            className="h-10"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>
-              {FORM_LABELS.DATE_TIME} <span className="text-destructive">*</span>
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                  variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-10 truncate",
-                    !formState.date && "text-muted-foreground"
-                    )}
-                  disabled={isLoading}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                  {formState.date ? 
-                    format(formState.date, DATE_FORMAT.DISPLAY, { locale: el }) : 
-                    <span>Επιλέξτε ημερομηνία</span>
-                  }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                  selected={formState.date}
-                  onSelect={(date) => updateFormField('date', date as Date | undefined)}
-                    initialFocus
-                    locale={el}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Input
-                type="time"
-              value={formState.time}
-              onChange={(e) => updateFormField('time', e.target.value)}
-                className="text-center h-10"
-                required
-              disabled={isLoading}
-                step="300"
-              />
-            </div>
-          </div>
-  
-          <div className="space-y-2">
-            <Label htmlFor="contact_details">
-              {FORM_LABELS.CONTACT_DETAILS} <span className="text-destructive">*</span>
+            <Label htmlFor="num_children">
+              {FORM_LABELS.NUM_CHILDREN} <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="contact_details"
-            value={formState.contact_details}
-            onChange={(e) => updateFormField('contact_details', e.target.value)}
-              placeholder={PLACEHOLDERS.CONTACT_DETAILS}
+              id="num_children"
+              type="number"
+              value={formState.num_children}
+              onChange={e => updateFormField('num_children', e.target.value)}
+              min="1"
               required
-            disabled={isLoading}
+              placeholder={PLACEHOLDERS.NUM_CHILDREN}
+              disabled={isLoading}
               className="h-10"
             />
           </div>
-  
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="num_children">
-                {FORM_LABELS.NUM_CHILDREN} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="num_children"
-                type="number"
-              value={formState.num_children}
-              onChange={(e) => updateFormField('num_children', e.target.value)}
-                min="1"
-                required
-                placeholder={PLACEHOLDERS.NUM_CHILDREN}
-              disabled={isLoading}
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="num_adults">
-                {FORM_LABELS.NUM_ADULTS} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="num_adults"
-                type="number"
-              value={formState.num_adults}
-              onChange={(e) => updateFormField('num_adults', e.target.value)}
-                min="0"
-                required
-                placeholder={PLACEHOLDERS.NUM_ADULTS}
-              disabled={isLoading}
-                className="h-10"
-              />
-            </div>
-          </div>
-  
           <div className="space-y-2">
-            <Label htmlFor="notes">
-              {FORM_LABELS.NOTES}
+            <Label htmlFor="num_adults">
+              {FORM_LABELS.NUM_ADULTS} <span className="text-destructive">*</span>
             </Label>
-            <Textarea
-              id="notes"
-            value={formState.notes}
-            onChange={(e) => updateFormField('notes', e.target.value)}
-              rows={3}
-              placeholder={PLACEHOLDERS.NOTES}
-            disabled={isLoading}
-              className="resize-none"
+            <Input
+              id="num_adults"
+              type="number"
+              value={formState.num_adults}
+              onChange={e => updateFormField('num_adults', e.target.value)}
+              min="0"
+              required
+              placeholder={PLACEHOLDERS.NUM_ADULTS}
+              disabled={isLoading}
+              className="h-10"
             />
           </div>
-  
-          <LoadingButton
-            type="submit"
-            className="w-full h-10"
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="notes">{FORM_LABELS.NOTES}</Label>
+          <Textarea
+            id="notes"
+            value={formState.notes}
+            onChange={e => updateFormField('notes', e.target.value)}
+            rows={3}
+            placeholder={PLACEHOLDERS.NOTES}
+            disabled={isLoading}
+            className="resize-none"
+          />
+        </div>
+
+        <LoadingButton
+          type="submit"
+          className="h-10 w-full"
           loading={isLoading}
-            loadingText={DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}
-          >
-            {BUTTON_LABELS.BOOK_APPOINTMENT}
-          </LoadingButton>
-        </form>
-      </div>
-    );
+          loadingText={DIALOG_MESSAGES.LOADING_TEXT_DEFAULT}
+        >
+          {BUTTON_LABELS.BOOK_APPOINTMENT}
+        </LoadingButton>
+      </form>
+    </div>
+  );
 }

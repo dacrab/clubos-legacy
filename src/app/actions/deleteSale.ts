@@ -1,8 +1,8 @@
-"use server";
+'use server';
 
 import { revalidatePath } from 'next/cache';
 
-import { handleActionError, actionSuccess, type ActionResponse } from '@/lib/action-utils';
+import { actionSuccess, handleActionError, type ActionResponse } from '@/lib/action-utils';
 import { stackServerApp } from '@/lib/auth';
 
 export async function deleteSale(saleId: string): Promise<ActionResponse> {
@@ -26,7 +26,6 @@ export async function deleteSale(saleId: string): Promise<ActionResponse> {
 
     revalidatePath('/dashboard/history');
     return actionSuccess('Sale deleted successfully');
-
   } catch (error) {
     return handleActionError(error);
   }

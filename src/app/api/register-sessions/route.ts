@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { stackServerApp } from '@/lib/auth';
+import { createRegisterSession, getRegisterSessions } from '@/lib/db/services/register';
 import { logger } from '@/lib/utils/logger';
-import { getRegisterSessions, createRegisterSession } from '@/lib/db/services/register';
 
 export async function GET() {
   try {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating register session:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create register session' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create register session' },
       { status: 500 }
     );
   }

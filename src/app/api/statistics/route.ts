@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import type { SaleWithDetails } from '@/types/sales';
 import { stackServerApp } from '@/lib/auth';
 import { getSales } from '@/lib/db/services/sales';
 import { logger } from '@/lib/utils/logger';
-import type { SaleWithDetails } from '@/types/sales';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,22 +24,31 @@ export async function GET(request: NextRequest) {
 
     // Calculate basic statistics
     const totalRevenue = sales.reduce((sum, sale) => {
-      const price = typeof sale.totalPrice === 'string' ? sale.totalPrice : String((sale as SaleWithDetails).totalPrice ?? '0');
+      const price =
+        typeof sale.totalPrice === 'string'
+          ? sale.totalPrice
+          : String((sale as SaleWithDetails).totalPrice ?? '0');
       return sum + parseFloat(price || '0');
     }, 0);
     const totalSales = sales.length;
-    
+
     // Group sales by category for category statistics
-    const categoryStats = sales.reduce((acc: Record<string, { count: number; revenue: number }>, sale) => {
-      const category = (sale as SaleWithDetails).product?.category?.name || 'Uncategorized';
-      if (!acc[category]) {
-        acc[category] = { count: 0, revenue: 0 };
-      }
-      acc[category].count++;
-      const price = typeof sale.totalPrice === 'string' ? sale.totalPrice : String((sale as SaleWithDetails).totalPrice ?? '0');
-      acc[category].revenue += parseFloat(price || '0');
-      return acc;
-    }, {});
+    const categoryStats = sales.reduce(
+      (acc: Record<string, { count: number; revenue: number }>, sale) => {
+        const category = (sale as SaleWithDetails).product?.category?.name || 'Uncategorized';
+        if (!acc[category]) {
+          acc[category] = { count: 0, revenue: 0 };
+        }
+        acc[category].count++;
+        const price =
+          typeof sale.totalPrice === 'string'
+            ? sale.totalPrice
+            : String((sale as SaleWithDetails).totalPrice ?? '0');
+        acc[category].revenue += parseFloat(price || '0');
+        return acc;
+      },
+      {}
+    );
 
     const statistics = {
       totalRevenue,

@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/action-utils';
 import { stackServerApp } from '@/lib/auth';
+import { createProduct, getProducts } from '@/lib/db/services/products';
 import { logger } from '@/lib/utils/logger';
-import { getProducts, createProduct } from '@/lib/db/services/products';
 
 export async function GET() {
   try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error creating product:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create product' }, 
+      { error: error instanceof Error ? error.message : 'Failed to create product' },
       { status: 500 }
     );
   }
