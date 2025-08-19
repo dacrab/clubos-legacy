@@ -97,6 +97,9 @@ jobs:
           fi
         env:
           DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db'
+          NEXT_PUBLIC_STACK_PROJECT_ID: 'ci-test-build'
+          NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY: 'ci-test-key'
+          STACK_SECRET_SERVER_KEY: 'ci-test-secret'
 
       - name: 📊 Calculate health score
         id: calculate-score
@@ -197,6 +200,13 @@ jobs:
           else
             echo "❌ Build issues detected - needs attention" >> $GITHUB_STEP_SUMMARY
           fi
+        env:
+          # Mock environment variables for CI build verification
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db'
+          NEXT_PUBLIC_STACK_PROJECT_ID: 'ci-test-build'
+          NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY: 'ci-test-key'
+          STACK_SECRET_SERVER_KEY: 'ci-test-secret'
+          NODE_ENV: 'production'
 
   # Create comprehensive maintenance report
   maintenance-report:
