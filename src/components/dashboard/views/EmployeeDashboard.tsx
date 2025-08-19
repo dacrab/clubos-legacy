@@ -23,10 +23,9 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
   // State Management
   const [localRecentSales, setLocalRecentSales] = useState<SaleWithDetails[]>(recentSales);
 
-  // Stack Auth
+  // Authentication and authorization
   const user = useUser({ or: 'redirect' });
 
-  // Authorization Check - Stack Auth handles loading and auth state
   if (!user) {
     return null;
   }

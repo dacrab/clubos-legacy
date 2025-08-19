@@ -6,7 +6,7 @@ import { logger } from '@/lib/utils/logger';
 
 export async function signOut() {
   try {
-    // Stack Auth handles sign out through its URLs
+    // Sign out is handled through Stack Auth URLs
     return { success: true };
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {

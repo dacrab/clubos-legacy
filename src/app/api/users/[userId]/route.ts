@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { checkAdminAccess } from '@/lib/api-utils';
 import { stackServerApp } from '@/lib/auth';
-import { ALLOWED_USER_ROLES, PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import { ALLOWED_USER_ROLES } from '@/lib/constants';
 import { deleteUser, getUserById, updateUser } from '@/lib/db/services/users';
 
 function getUserId(request: NextRequest): string | null {
@@ -112,21 +112,21 @@ export async function POST(request: NextRequest) {
       return errorResponse('User ID is required', 400);
     }
 
-    const { password } = await request.json();
-    if (!password || password.length < PASSWORD_MIN_LENGTH) {
-      return errorResponse('Password does not meet minimum length requirement', 400);
+    // Get user data to find their email
+    const userData = await getUserById(userId);
+    if (!userData) {
+      return errorResponse('User not found', 404);
     }
 
-    // Implement password reset with Stack Auth
-    const stackUser = await stackServerApp.getUser(userId);
-    if (!stackUser) {
-      return errorResponse('User not found in Stack Auth', 404);
-    }
+    // For Stack Auth, password resets are handled through the authentication flow
+    // Admins should direct users to use the "Forgot Password" link on the login page
+    // This provides a secure, Stack Auth-managed password reset process
 
-    // Update password using Stack Auth
-    await stackUser.update({ password });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: `Password reset: Please direct ${userData.username} to use the "Forgot Password" link on the login page to reset their password securely.`,
+      userEmail: userData.email,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal Server Error';
     return errorResponse(message, 500);

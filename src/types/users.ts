@@ -18,5 +18,5 @@ export interface UserInsert extends Omit<User, 'id' | 'createdAt' | 'updatedAt'>
 
 export type UserUpdate = Partial<UserInsert>;
 
-// Re-export Stack Auth types for consistency
+// Re-export Stack Auth types
 export type { UserProfile, StackUser, ExtendedUser } from './stack-auth';

@@ -1,4 +1,4 @@
-// Stack Auth user types based on @stackframe/stack
+// Stack Auth user types and interfaces
 export interface StackUser {
   id: string;
   displayName: string | null;

@@ -14,5 +14,5 @@ export type RouteHandler<T = unknown> = (
   context: RouteContext<T>
 ) => Promise<Response>;
 
-// Re-export Stack Auth types for backward compatibility
+// Re-export Stack Auth types for compatibility
 export type { StackUser, UserProfile, ExtendedUser } from './stack-auth';

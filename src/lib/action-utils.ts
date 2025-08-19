@@ -8,7 +8,7 @@ export enum UserRole {
 }
 
 /**
- * Get the authenticated user from Stack Auth
+ * Get the authenticated user
  */
 export async function getAuthUser() {
   const user = await stackServerApp.getUser();
