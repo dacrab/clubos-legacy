@@ -5,11 +5,11 @@ import { StackServerApp } from '@stackframe/stack';
 const hasStackAuthConfig = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
 
 // Create Stack Auth instance only if configuration is available
-export const stackServerApp = hasStackAuthConfig 
+export const stackServerApp = hasStackAuthConfig
   ? new StackServerApp({
       tokenStore: 'nextjs-cookie', // storing auth tokens in cookies
     })
-  : {
+  : ({
       // Mock implementation for CI builds or when Stack Auth is not configured
       async getUser(_userId?: string) {
         if (process.env.NODE_ENV === 'production') {
@@ -30,6 +30,6 @@ export const stackServerApp = hasStackAuthConfig
           throw new Error('Stack Auth is not configured. Please set NEXT_PUBLIC_STACK_PROJECT_ID.');
         }
         return null;
-      }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any; // Type assertion to match StackServerApp interface
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any); // Type assertion to match StackServerApp interface

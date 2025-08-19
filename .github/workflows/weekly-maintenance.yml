@@ -104,34 +104,34 @@ jobs:
           # Calculate health score based on checks
           score=0
           issues=""
-          
+
           if [ "${{ steps.typescript-check.outputs.typescript_healthy }}" = "true" ]; then
             score=$((score + 25))
           else
             issues="${issues}TypeScript compilation errors; "
           fi
-          
+
           if [ "${{ steps.lint-check.outputs.lint_healthy }}" = "true" ]; then
             score=$((score + 25))
           else
             issues="${issues}Code quality issues; "
           fi
-          
+
           if [ "${{ steps.security-scan.outputs.security_healthy }}" = "true" ]; then
             score=$((score + 25))
           else
             issues="${issues}Security vulnerabilities; "
           fi
-          
+
           if [ "${{ steps.db-check.outputs.db_healthy }}" = "true" ]; then
             score=$((score + 25))
           else
             issues="${issues}Database schema issues; "
           fi
-          
+
           echo "score=$score" >> $GITHUB_OUTPUT
           echo "issues=$issues" >> $GITHUB_OUTPUT
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Overall Health Score: $score/100" >> $GITHUB_STEP_SUMMARY
 
@@ -161,15 +161,15 @@ jobs:
         id: build-perf
         run: |
           echo "## ⚡ Build Performance Analysis" >> $GITHUB_STEP_SUMMARY
-          
+
           START_TIME=$(date +%s)
           bun run build
           END_TIME=$(date +%s)
           BUILD_TIME=$((END_TIME - START_TIME))
-          
+
           echo "build-time=$BUILD_TIME" >> $GITHUB_OUTPUT
           echo "- **Build time:** ${BUILD_TIME}s" >> $GITHUB_STEP_SUMMARY
-          
+
           # Analyze bundle size
           if [ -d ".next/static" ]; then
             BUNDLE_SIZE=$(du -sh .next/static | awk '{print $1}')
@@ -178,7 +178,7 @@ jobs:
           else
             echo "bundle-size=unknown" >> $GITHUB_OUTPUT
           fi
-          
+
           # Performance recommendations
           if [ "$BUILD_TIME" -lt 120 ]; then
             echo "✅ Excellent build performance (< 2 minutes)" >> $GITHUB_STEP_SUMMARY
@@ -193,23 +193,23 @@ jobs:
         run: |
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Dependency Analysis" >> $GITHUB_STEP_SUMMARY
-          
+
           PROD_DEPS=$(jq '.dependencies | length' package.json)
           DEV_DEPS=$(jq '.devDependencies | length' package.json)
           TOTAL_DEPS=$((PROD_DEPS + DEV_DEPS))
-          
+
           echo "total-deps=$TOTAL_DEPS" >> $GITHUB_OUTPUT
-          
+
           echo "- **Production dependencies:** $PROD_DEPS" >> $GITHUB_STEP_SUMMARY
           echo "- **Development dependencies:** $DEV_DEPS" >> $GITHUB_STEP_SUMMARY
           echo "- **Total dependencies:** $TOTAL_DEPS" >> $GITHUB_STEP_SUMMARY
-          
+
           # Check node_modules size
           if [ -d "node_modules" ]; then
             MODULES_SIZE=$(du -sh node_modules | awk '{print $1}')
             echo "- **node_modules size:** $MODULES_SIZE" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           # Dependency health assessment
           if [ "$TOTAL_DEPS" -lt 50 ]; then
             echo "✅ Lean dependency footprint" >> $GITHUB_STEP_SUMMARY
@@ -238,18 +238,18 @@ jobs:
             const buildTime = '${{ needs.performance-analysis.outputs.build-time }}' || 'Unknown';
             const bundleSize = '${{ needs.performance-analysis.outputs.bundle-size }}' || 'Unknown';
             const depCount = '${{ needs.performance-analysis.outputs.dep-count }}' || 'Unknown';
-            
+
             const healthStatus = needs['health-audit'].result;
             const perfStatus = needs['performance-analysis'].result;
-            
+
             // Determine overall health
             const overallHealth = parseInt(healthScore) >= 75 ? '🟢 HEALTHY' : 
                                 parseInt(healthScore) >= 50 ? '🟡 ATTENTION' : '🔴 CRITICAL';
-            
+
             const body = `## 🧹 Weekly Maintenance Report - ${date}
 
             ### 📊 System Health Overview
-            
+
             **Overall Health Score: ${healthScore}/100** ${overallHealth}
 
             | Component | Status | Details |
@@ -259,14 +259,14 @@ jobs:
             | Dependencies | 📦 ${depCount} total | Monitoring for updates via Renovate |
 
             ### 🔧 Maintenance Activities
-            
+
             #### ✅ Completed This Week
             - [x] Comprehensive health assessment
             - [x] Security vulnerability scan  
             - [x] Performance baseline measurement
             - [x] Dependency analysis
             - [x] Database schema validation
-            
+
             #### 🎯 Key Metrics
             - **Build Performance**: ${buildTime}s
             - **Bundle Size**: ${bundleSize}
@@ -274,7 +274,7 @@ jobs:
             - **Health Score**: ${healthScore}/100
 
             ### 📈 Recommendations
-            
+
             ${healthScore >= 75 ? 
               '✅ **System is healthy** - Continue current maintenance schedule' :
               healthScore >= 50 ?
@@ -283,13 +283,13 @@ jobs:
             }
 
             ### 🔄 Automated Updates
-            
+
             - **Renovate**: Managing dependency updates
             - **Kodiak**: Handling auto-merge for approved changes
             - **Formatting**: Scheduled code formatting maintenance
 
             ### 📅 Next Steps
-            
+
             1. Review any detected issues
             2. Monitor Renovate dependency PRs
             3. Next automated maintenance: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}

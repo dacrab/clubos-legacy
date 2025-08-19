@@ -1,7 +1,7 @@
-# Auto-formatting workflow for ClubOS
-# Runs on schedule to avoid conflicts with main CI workflow
+# Scheduled auto-formatting workflow for ClubOS
+# Deep cleanup and formatting that runs weekly as maintenance
 
-name: 🎨 Auto Format
+name: 🎨 Scheduled Format Cleanup
 
 on:
   workflow_dispatch: # Allow manual trigger
@@ -22,7 +22,7 @@ jobs:
     name: 🎨 Format Code
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     # Only run if no other workflows are running
     if: github.repository_owner == 'dacrab' # Adjust to your username/org
 
@@ -38,10 +38,10 @@ jobs:
         run: |
           # Wait a bit to ensure no other workflows are starting
           sleep 30
-          
+
           echo "Checking for running workflows..."
           # This is a safety check - in practice concurrency group handles this
-          
+
       - name: 🏗️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -74,11 +74,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: '🎨 chore: auto-format code with prettier and eslint'
-          title: '🎨 Auto-format: Code formatting updates'
+          title: '🎨 Scheduled format cleanup: Weekly maintenance'
           body: |
-            ## 🎨 Automated Code Formatting
+            ## 🎨 Scheduled Code Formatting Cleanup
 
-            This PR contains automated formatting changes applied during scheduled maintenance:
+            This PR contains formatting changes from the weekly maintenance cleanup:
 
             ### 🔧 Changes Applied
             - ✅ Prettier formatting applied
@@ -87,17 +87,19 @@ jobs:
             - ✅ Tailwind classes organized
 
             ### 🤖 Automation Details
-            - **Triggered**: Scheduled workflow (Monday 2 AM UTC)
+            - **Triggered**: Weekly scheduled maintenance (Monday 2 AM UTC)
+            - **Supplementary**: Main CI workflow handles day-to-day auto-formatting
             - **Safe to merge**: ✅ These are only style changes with no functional impact
             - **Auto-merge**: 🚀 Will be automatically merged by Kodiak after CI passes
 
             ### 📊 Impact
             - No functional changes
-            - Improves code consistency
+            - Catches any formatting drift over time
             - Maintains code quality standards
+            - Complements the auto-formatting in main CI workflow
 
             ---
-            *This PR was automatically created by the ClubOS formatting workflow*
+            *This PR was automatically created by the ClubOS scheduled formatting workflow*
           branch: auto-format/scheduled-cleanup
           delete-branch: true
           labels: |
