@@ -1,25 +1,36 @@
 # Weekly maintenance workflow for ClubOS
-# Performs routine maintenance tasks and health checks
+# Comprehensive health checks and maintenance reporting
 
 name: 🧹 Weekly Maintenance
 
 on:
   schedule:
-    # Run every Sunday at 1 AM UTC
+    # Run every Sunday at 1 AM UTC (non-conflicting time)
     - cron: '0 1 * * 0'
   workflow_dispatch: # Allow manual trigger
 
+# Prevent conflicts with other workflows
+concurrency:
+  group: maintenance-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   issues: write
+  pull-requests: read
+
+env:
+  BUN_VERSION: 1.2.20
 
 jobs:
-  # Job 1: Health Check
-  health-check:
-    name: 🏥 System Health Check
+  # Comprehensive health and security audit
+  health-audit:
+    name: 🏥 Health & Security Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    outputs:
+      health-score: ${{ steps.calculate-score.outputs.score }}
+      issues-found: ${{ steps.calculate-score.outputs.issues }}
 
     steps:
       - name: 📂 Checkout repository
@@ -28,96 +39,111 @@ jobs:
       - name: 🏗️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.20
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: 📦 Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: 🔍 Check project health
+      - name: 🎯 TypeScript health check
+        id: typescript-check
         run: |
-          echo "## 🏥 Weekly Health Check Report" >> $GITHUB_STEP_SUMMARY
-          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Check for outdated dependencies
-          echo "### 📦 Dependency Status" >> $GITHUB_STEP_SUMMARY
-          if command -v bun >/dev/null 2>&1; then
-            echo "✅ Bun package manager available" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Check TypeScript configuration
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔧 TypeScript Health" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 TypeScript Health Check" >> $GITHUB_STEP_SUMMARY
           if bun run type-check; then
+            echo "typescript_healthy=true" >> $GITHUB_OUTPUT
             echo "✅ TypeScript compilation successful" >> $GITHUB_STEP_SUMMARY
           else
+            echo "typescript_healthy=false" >> $GITHUB_OUTPUT
             echo "❌ TypeScript compilation issues detected" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Check for lint issues
+      - name: 🔍 Code quality assessment
+        id: lint-check
+        run: |
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔍 Code Quality" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Code Quality Assessment" >> $GITHUB_STEP_SUMMARY
           if bun run lint; then
+            echo "lint_healthy=true" >> $GITHUB_OUTPUT
             echo "✅ No linting issues found" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Linting issues detected - see details above" >> $GITHUB_STEP_SUMMARY
+            echo "lint_healthy=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Linting issues detected" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Job 2: Dependency Audit
-  dependency-maintenance:
-    name: 📊 Dependency Maintenance
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: 📂 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🏗️ Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.20
-
-      - name: 📦 Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: 🔍 Security audit
+      - name: 🔒 Security vulnerability scan
+        id: security-scan
         run: |
-          echo "## 🔒 Security Audit Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Run security audit
+          echo "## 🔒 Security Vulnerability Scan" >> $GITHUB_STEP_SUMMARY
           if bun audit --audit-level moderate; then
-            echo "✅ No security vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+            echo "security_healthy=true" >> $GITHUB_OUTPUT
+            echo "✅ No security vulnerabilities found" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Security vulnerabilities detected!" >> $GITHUB_STEP_SUMMARY
-            echo "Please review the audit results above." >> $GITHUB_STEP_SUMMARY
+            echo "security_healthy=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Security vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: 📈 Generate dependency report
+      - name: 🗄️ Database schema validation
+        id: db-check
         run: |
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Dependency Overview" >> $GITHUB_STEP_SUMMARY
-
-          PROD_COUNT=$(jq '.dependencies | length' package.json)
-          DEV_COUNT=$(jq '.devDependencies | length' package.json)
-          TOTAL_COUNT=$((PROD_COUNT + DEV_COUNT))
-
-          echo "- **Production dependencies:** $PROD_COUNT" >> $GITHUB_STEP_SUMMARY
-          echo "- **Development dependencies:** $DEV_COUNT" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total dependencies:** $TOTAL_COUNT" >> $GITHUB_STEP_SUMMARY
-
-          # Check node_modules size
-          if [ -d "node_modules" ]; then
-            MODULES_SIZE=$(du -sh node_modules | awk '{print $1}')
-            echo "- **node_modules size:** $MODULES_SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "## 🗄️ Database Schema Validation" >> $GITHUB_STEP_SUMMARY
+          bun run db:generate
+          if [ -z "$(git status --porcelain src/lib/db/migrations/)" ]; then
+            echo "db_healthy=true" >> $GITHUB_OUTPUT
+            echo "✅ Database schema is up to date" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "db_healthy=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Database schema changes detected but not committed" >> $GITHUB_STEP_SUMMARY
           fi
+        env:
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db'
 
-  # Job 3: Performance Baseline
-  performance-baseline:
-    name: 📈 Performance Baseline
+      - name: 📊 Calculate health score
+        id: calculate-score
+        run: |
+          # Calculate health score based on checks
+          score=0
+          issues=""
+          
+          if [ "${{ steps.typescript-check.outputs.typescript_healthy }}" = "true" ]; then
+            score=$((score + 25))
+          else
+            issues="${issues}TypeScript compilation errors; "
+          fi
+          
+          if [ "${{ steps.lint-check.outputs.lint_healthy }}" = "true" ]; then
+            score=$((score + 25))
+          else
+            issues="${issues}Code quality issues; "
+          fi
+          
+          if [ "${{ steps.security-scan.outputs.security_healthy }}" = "true" ]; then
+            score=$((score + 25))
+          else
+            issues="${issues}Security vulnerabilities; "
+          fi
+          
+          if [ "${{ steps.db-check.outputs.db_healthy }}" = "true" ]; then
+            score=$((score + 25))
+          else
+            issues="${issues}Database schema issues; "
+          fi
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          echo "issues=$issues" >> $GITHUB_OUTPUT
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Overall Health Score: $score/100" >> $GITHUB_STEP_SUMMARY
+
+  # Performance and dependency analysis
+  performance-analysis:
+    name: 📈 Performance & Dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      build-time: ${{ steps.build-perf.outputs.build-time }}
+      bundle-size: ${{ steps.build-perf.outputs.bundle-size }}
+      dep-count: ${{ steps.dep-analysis.outputs.total-deps }}
 
     steps:
       - name: 📂 Checkout repository
@@ -126,88 +152,153 @@ jobs:
       - name: 🏗️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.20
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: 📦 Install dependencies
         run: bun install --frozen-lockfile
 
       - name: ⚡ Build performance test
+        id: build-perf
         run: |
-          echo "## ⚡ Weekly Performance Baseline" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Time the build
+          echo "## ⚡ Build Performance Analysis" >> $GITHUB_STEP_SUMMARY
+          
           START_TIME=$(date +%s)
           bun run build
           END_TIME=$(date +%s)
           BUILD_TIME=$((END_TIME - START_TIME))
-
-          echo "### 🏗️ Build Performance" >> $GITHUB_STEP_SUMMARY
+          
+          echo "build-time=$BUILD_TIME" >> $GITHUB_OUTPUT
           echo "- **Build time:** ${BUILD_TIME}s" >> $GITHUB_STEP_SUMMARY
-
+          
           # Analyze bundle size
           if [ -d ".next/static" ]; then
             BUNDLE_SIZE=$(du -sh .next/static | awk '{print $1}')
+            echo "bundle-size=$BUNDLE_SIZE" >> $GITHUB_OUTPUT
             echo "- **Bundle size:** $BUNDLE_SIZE" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "bundle-size=unknown" >> $GITHUB_OUTPUT
           fi
-
-          # Performance status
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Performance Status" >> $GITHUB_STEP_SUMMARY
-          if [ "$BUILD_TIME" -lt 180 ]; then
-            echo "✅ Build performance is excellent (< 3 minutes)" >> $GITHUB_STEP_SUMMARY
+          
+          # Performance recommendations
+          if [ "$BUILD_TIME" -lt 120 ]; then
+            echo "✅ Excellent build performance (< 2 minutes)" >> $GITHUB_STEP_SUMMARY
           elif [ "$BUILD_TIME" -lt 300 ]; then
-            echo "⚠️ Build performance is acceptable (< 5 minutes)" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Acceptable build performance (< 5 minutes)" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Build performance needs attention (> 5 minutes)" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Job 4: Create maintenance report
+      - name: 📊 Dependency analysis
+        id: dep-analysis
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Dependency Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          PROD_DEPS=$(jq '.dependencies | length' package.json)
+          DEV_DEPS=$(jq '.devDependencies | length' package.json)
+          TOTAL_DEPS=$((PROD_DEPS + DEV_DEPS))
+          
+          echo "total-deps=$TOTAL_DEPS" >> $GITHUB_OUTPUT
+          
+          echo "- **Production dependencies:** $PROD_DEPS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Development dependencies:** $DEV_DEPS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total dependencies:** $TOTAL_DEPS" >> $GITHUB_STEP_SUMMARY
+          
+          # Check node_modules size
+          if [ -d "node_modules" ]; then
+            MODULES_SIZE=$(du -sh node_modules | awk '{print $1}')
+            echo "- **node_modules size:** $MODULES_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Dependency health assessment
+          if [ "$TOTAL_DEPS" -lt 50 ]; then
+            echo "✅ Lean dependency footprint" >> $GITHUB_STEP_SUMMARY
+          elif [ "$TOTAL_DEPS" -lt 100 ]; then
+            echo "⚠️ Moderate dependency count" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ High dependency count - consider audit" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Create comprehensive maintenance report
   maintenance-report:
     name: 📋 Maintenance Report
     runs-on: ubuntu-latest
-    needs: [health-check, dependency-maintenance, performance-baseline]
+    needs: [health-audit, performance-analysis]
     if: always()
 
     steps:
-      - name: 📊 Create weekly report
+      - name: 📊 Generate comprehensive report
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const date = new Date().toISOString().split('T')[0];
-            const healthStatus = '${{ needs.health-check.result }}';
-            const depStatus = '${{ needs.dependency-maintenance.result }}';
-            const perfStatus = '${{ needs.performance-baseline.result }}';
-
+            const healthScore = '${{ needs.health-audit.outputs.health-score }}' || '0';
+            const issues = '${{ needs.health-audit.outputs.issues-found }}' || 'None detected';
+            const buildTime = '${{ needs.performance-analysis.outputs.build-time }}' || 'Unknown';
+            const bundleSize = '${{ needs.performance-analysis.outputs.bundle-size }}' || 'Unknown';
+            const depCount = '${{ needs.performance-analysis.outputs.dep-count }}' || 'Unknown';
+            
+            const healthStatus = needs['health-audit'].result;
+            const perfStatus = needs['performance-analysis'].result;
+            
+            // Determine overall health
+            const overallHealth = parseInt(healthScore) >= 75 ? '🟢 HEALTHY' : 
+                                parseInt(healthScore) >= 50 ? '🟡 ATTENTION' : '🔴 CRITICAL';
+            
             const body = `## 🧹 Weekly Maintenance Report - ${date}
 
-            ### 📊 System Status Overview
+            ### 📊 System Health Overview
+            
+            **Overall Health Score: ${healthScore}/100** ${overallHealth}
 
-            | Component | Status |
-            |-----------|--------|
-            | System Health | ${healthStatus === 'success' ? '✅ HEALTHY' : '❌ ISSUES'} |
-            | Dependencies | ${depStatus === 'success' ? '✅ SECURE' : '⚠️ ATTENTION'} |
-            | Performance | ${perfStatus === 'success' ? '✅ OPTIMAL' : '⚠️ REVIEW'} |
+            | Component | Status | Details |
+            |-----------|--------|---------|
+            | Code Quality | ${healthStatus === 'success' ? '✅ HEALTHY' : '❌ ISSUES'} | ${issues === 'None detected' ? 'All checks passed' : issues} |
+            | Performance | ${perfStatus === 'success' ? '✅ OPTIMAL' : '⚠️ REVIEW'} | Build: ${buildTime}s, Bundle: ${bundleSize} |
+            | Dependencies | 📦 ${depCount} total | Monitoring for updates via Renovate |
 
-            ### 🔍 Weekly Maintenance Tasks Completed
-
-            - [x] System health check
-            - [x] Dependency security audit
+            ### 🔧 Maintenance Activities
+            
+            #### ✅ Completed This Week
+            - [x] Comprehensive health assessment
+            - [x] Security vulnerability scan  
             - [x] Performance baseline measurement
-            - [x] Code quality validation
+            - [x] Dependency analysis
+            - [x] Database schema validation
+            
+            #### 🎯 Key Metrics
+            - **Build Performance**: ${buildTime}s
+            - **Bundle Size**: ${bundleSize}
+            - **Total Dependencies**: ${depCount}
+            - **Health Score**: ${healthScore}/100
 
-            ### 📈 Trends & Recommendations
+            ### 📈 Recommendations
+            
+            ${healthScore >= 75 ? 
+              '✅ **System is healthy** - Continue current maintenance schedule' :
+              healthScore >= 50 ?
+              '⚠️ **Some attention needed** - Review detected issues and address during next sprint' :
+              '🚨 **Immediate attention required** - Critical issues detected that should be addressed promptly'
+            }
 
-            This automated report helps track the project's health over time.
-            ${healthStatus !== 'success' || depStatus !== 'success' || perfStatus !== 'success' 
-              ? '\n⚠️ **Action Required:** Some issues were detected. Please review the workflow logs.'
-              : '\n✅ **All Good:** No immediate action required.'}
+            ### 🔄 Automated Updates
+            
+            - **Renovate**: Managing dependency updates
+            - **Kodiak**: Handling auto-merge for approved changes
+            - **Formatting**: Scheduled code formatting maintenance
+
+            ### 📅 Next Steps
+            
+            1. Review any detected issues
+            2. Monitor Renovate dependency PRs
+            3. Next automated maintenance: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
 
             ---
-            *Generated automatically by ClubOS maintenance workflow*`;
+            *Generated automatically by ClubOS maintenance workflow*
+            *For questions or issues, contact @dacrab*`;
 
-            // Create or update the maintenance issue
+            // Create maintenance issue or update existing one
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -223,6 +314,14 @@ jobs:
                 issue_number: issues.data[0].number,
                 body: body
               });
+              
+              // Update title to reflect current week
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                title: `🧹 Weekly Maintenance Report - ${date}`
+              });
             } else {
               // Create new maintenance issue
               await github.rest.issues.create({
@@ -233,3 +332,11 @@ jobs:
                 labels: ['🧹 maintenance', '📊 automated', '📋 report']
               });
             }
+
+      - name: 📝 Update workflow summary
+        run: |
+          echo "## 🧹 Weekly Maintenance Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Comprehensive system health check completed" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Maintenance report generated and posted as issue" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 Next maintenance scheduled for next Sunday" >> $GITHUB_STEP_SUMMARY

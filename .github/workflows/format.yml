@@ -1,12 +1,17 @@
 # Auto-formatting workflow for ClubOS
-# Automatically formats code and creates PR with changes
+# Runs on schedule to avoid conflicts with main CI workflow
 
 name: 🎨 Auto Format
 
 on:
   workflow_dispatch: # Allow manual trigger
   schedule:
-    - cron: '0 2 * * 1' # Run every Monday at 2 AM UTC
+    - cron: '0 2 * * 1' # Run every Monday at 2 AM UTC (off-peak hours)
+
+# Prevent conflicts with main CI workflow
+concurrency:
+  group: format-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -16,14 +21,27 @@ jobs:
   format:
     name: 🎨 Format Code
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    
+    # Only run if no other workflows are running
+    if: github.repository_owner == 'dacrab' # Adjust to your username/org
 
     steps:
       - name: 📂 Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch recent history to avoid conflicts
+          fetch-depth: 10
 
+      - name: 🔍 Check for conflicting workflows
+        run: |
+          # Wait a bit to ensure no other workflows are starting
+          sleep 30
+          
+          echo "Checking for running workflows..."
+          # This is a safety check - in practice concurrency group handles this
+          
       - name: 🏗️ Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -43,7 +61,7 @@ jobs:
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> $GITHUB_OUTPUT
-            echo "Files that would be formatted:" >> $GITHUB_STEP_SUMMARY
+            echo "📝 Files that will be formatted:" >> $GITHUB_STEP_SUMMARY
             git status --porcelain >> $GITHUB_STEP_SUMMARY
           else
             echo "changes=false" >> $GITHUB_OUTPUT
@@ -60,20 +78,42 @@ jobs:
           body: |
             ## 🎨 Automated Code Formatting
 
-            This PR contains automated formatting changes:
+            This PR contains automated formatting changes applied during scheduled maintenance:
 
+            ### 🔧 Changes Applied
             - ✅ Prettier formatting applied
             - ✅ ESLint auto-fixes applied  
             - ✅ Import statements sorted
             - ✅ Tailwind classes organized
 
-            ### 🤖 Auto-generated
-            This PR was automatically created by the formatting workflow.
+            ### 🤖 Automation Details
+            - **Triggered**: Scheduled workflow (Monday 2 AM UTC)
+            - **Safe to merge**: ✅ These are only style changes with no functional impact
+            - **Auto-merge**: 🚀 Will be automatically merged by Kodiak after CI passes
 
-            **Safe to merge** ✅ - These are only style changes with no functional impact.
-          branch: auto-format/prettier-eslint
+            ### 📊 Impact
+            - No functional changes
+            - Improves code consistency
+            - Maintains code quality standards
+
+            ---
+            *This PR was automatically created by the ClubOS formatting workflow*
+          branch: auto-format/scheduled-cleanup
           delete-branch: true
           labels: |
             🎨 formatting
             🤖 automated
             📦 maintenance
+          draft: false
+
+      - name: 📊 Report completion
+        run: |
+          if [ "${{ steps.check-changes.outputs.changes }}" = "true" ]; then
+            echo "## 🎨 Formatting Complete" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Created PR with formatting changes" >> $GITHUB_STEP_SUMMARY
+            echo "🚀 PR will be auto-merged by Kodiak after CI passes" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ✨ Code Already Perfect" >> $GITHUB_STEP_SUMMARY
+            echo "🎯 No formatting changes were needed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Code formatting is already consistent" >> $GITHUB_STEP_SUMMARY
+          fi

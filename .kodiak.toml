@@ -1,0 +1,90 @@
+# Kodiak configuration for ClubOS
+# Automated merging with safety checks
+
+# The minimum number of approvals required for merging
+[approve]
+auto_approve_usernames = ["renovate[bot]", "dacrab"]
+auto_approve_labels = ["🤖 automated", "🔄 dependencies"] 
+
+# Merge configuration
+[merge]
+# Require all status checks to pass
+require_automerge_label = false
+# Block merging if any status checks are failing
+block_on_reviews_requested = false
+# Method for merging pull requests: "merge", "squash", or "rebase"
+method = "squash"
+# Delete the branch after merging
+delete_branch_on_merge = true
+# Don't merge if the pull request is a draft
+dont_wait_on_status_checks = []
+
+# Merge message configuration
+[merge.message]
+title = "pull_request_title"
+body = "pull_request_body"
+# Include PR number in merge commit
+include_pr_number = true
+# Include coauthors in merge commit
+include_coauthors = true
+
+# Status checks configuration
+[merge.status_checks]
+# Don't wait for status checks that are not required
+dont_wait_on_status_checks = []
+
+# Update configuration
+[update]
+# Always update pull request branches to latest
+always = true
+# Require branches to be up to date before merging
+require_automerge_label = false
+
+# Automatic approval configuration for renovate
+[approve.auto_approve_dependabot]
+enabled = false  # We're using Renovate instead
+
+# Block configuration for problematic situations
+[merge.block_on_reviews_requested]
+enabled = false
+
+# Configuration for different types of PRs
+[merge.automerge_label] 
+# Label that must be present for auto-merging (optional)
+# If not specified, any PR meeting other criteria will auto-merge
+# name = "🤖 automerge"
+
+# Notification configuration  
+[merge.notification_failure]
+# Don't spam on failures
+enabled = false
+
+# GitHub Apps and bot configuration
+[approve.github_api_version]
+# Use latest GitHub API version
+enabled = true
+
+# Rules for different scenarios
+[merge.prioritize_ready_to_merge]
+enabled = true
+
+# Advanced merge settings
+[merge.do_not_merge]
+# Block merging if PR has these labels
+labels = ["🚫 do-not-merge", "⏸️ hold", "🚧 work-in-progress"]
+
+# Title patterns to block
+title_regex = "(?i)(wip|draft|do not merge|hold)"
+
+# Branch protection overrides
+[merge.optimistic_updates]
+enabled = true
+
+# Review requirements for auto-merge
+[approve.require_automerge_label]
+enabled = false
+
+# Specific rules for dependency updates
+[merge.dependabot]
+# Auto-merge patch and minor updates from Renovate
+enabled = true

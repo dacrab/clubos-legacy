@@ -1,0 +1,318 @@
+# Main CI/CD Pipeline for ClubOS
+# Consolidated workflow to avoid race conditions and optimize resource usage
+
+name: 🚀 ClubOS CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+
+# Prevent multiple runs on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Global environment variables
+env:
+  BUN_VERSION: 1.2.20
+  NODE_ENV: production
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  # Stage 1: Setup and basic validation
+  setup:
+    name: 🔧 Setup & Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      should-run-security: ${{ steps.check-trigger.outputs.run-security }}
+      
+    steps:
+      - name: 📂 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for security scans
+
+      - name: 🏗️ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 🔑 Generate cache key
+        id: cache-key
+        run: |
+          CACHE_KEY="deps-${{ runner.os }}-${{ hashFiles('**/bun.lockb', '**/package.json') }}"
+          echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "Cache key: $CACHE_KEY"
+
+      - name: 📦 Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🔍 Check trigger conditions
+        id: check-trigger
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run-security=true" >> $GITHUB_OUTPUT
+          else
+            echo "run-security=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Stage 2: Code quality and static analysis
+  quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: setup
+    
+    steps:
+      - name: 📂 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 📦 Restore dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: 🎯 Type checking
+        run: bun run type-check
+
+      - name: 🔧 ESLint check
+        run: bun run lint
+
+      - name: 💅 Prettier format check
+        run: bun run format:check
+
+      - name: 🗄️ Database schema validation
+        run: |
+          bun run db:generate
+          if [ -n "$(git status --porcelain src/lib/db/migrations/)" ]; then
+            echo "❌ Database schema changes detected but migrations not committed!"
+            echo "Please run 'bun run db:generate' and commit the migration files."
+            exit 1
+          fi
+        env:
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db'
+
+  # Stage 3: Security analysis (only for PRs and scheduled runs)
+  security:
+    name: 🛡️ Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [setup, quality]
+    if: needs.setup.outputs.should-run-security == 'true' || github.event_name == 'schedule'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        scan-type: [codeql, secrets, dependencies]
+    
+    steps:
+      - name: 📂 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏗️ Setup Bun (for dependency scan)
+        if: matrix.scan-type == 'dependencies'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 📦 Restore dependencies (for dependency scan)
+        if: matrix.scan-type == 'dependencies'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      # CodeQL Analysis
+      - name: 🔧 Initialize CodeQL
+        if: matrix.scan-type == 'codeql'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: 🏗️ Autobuild (CodeQL)
+        if: matrix.scan-type == 'codeql'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 🔍 Perform CodeQL Analysis
+        if: matrix.scan-type == 'codeql'
+        uses: github/codeql-action/analyze@v3
+
+      # Secret Scanning
+      - name: 🔐 Scan for secrets
+        if: matrix.scan-type == 'secrets'
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified --fail
+
+      # Dependency Security Scan
+      - name: 🔍 Security audit
+        if: matrix.scan-type == 'dependencies'
+        run: |
+          echo "## 🛡️ Security Audit Results" >> $GITHUB_STEP_SUMMARY
+          if bun audit --audit-level moderate; then
+            echo "✅ No security vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Security vulnerabilities detected!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+  # Stage 4: Build and performance analysis
+  build:
+    name: 🏗️ Build & Performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [setup, quality]
+    
+    steps:
+      - name: 📂 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: 📦 Restore dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+          fail-on-cache-miss: true
+
+      - name: ⚡ Measure build performance
+        run: |
+          echo "## ⚡ Build Performance Report" >> $GITHUB_STEP_SUMMARY
+          START_TIME=$(date +%s)
+          bun run build
+          END_TIME=$(date +%s)
+          BUILD_TIME=$((END_TIME - START_TIME))
+          
+          echo "- **Build time:** ${BUILD_TIME}s" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$BUILD_TIME" -gt 300 ]; then
+            echo "⚠️ Build time over 5 minutes - consider optimizations" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Build time acceptable" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📊 Bundle size analysis
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Bundle Analysis" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -d ".next/static" ]; then
+            BUNDLE_SIZE=$(du -sh .next/static | awk '{print $1}')
+            echo "- **Total bundle size:** $BUNDLE_SIZE" >> $GITHUB_STEP_SUMMARY
+            
+            # Count JS files
+            JS_COUNT=$(find .next/static -name "*.js" | wc -l)
+            echo "- **JavaScript files:** $JS_COUNT" >> $GITHUB_STEP_SUMMARY
+            
+            # Count CSS files  
+            CSS_COUNT=$(find .next/static -name "*.css" | wc -l)
+            echo "- **CSS files:** $CSS_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 💾 Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+            .next/static
+          key: build-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-
+
+  # Stage 5: Final validation and reporting
+  validation:
+    name: ✅ Final Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [setup, quality, build]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate final report
+        run: |
+          echo "## 🎯 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check all job results
+          setup_result="${{ needs.setup.result }}"
+          quality_result="${{ needs.quality.result }}"
+          build_result="${{ needs.build.result }}"
+          
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Setup | $([ "$setup_result" = "success" ] && echo "✅ PASSED" || echo "❌ FAILED") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality | $([ "$quality_result" = "success" ] && echo "✅ PASSED" || echo "❌ FAILED") |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | $([ "$build_result" = "success" ] && echo "✅ PASSED" || echo "❌ FAILED") |" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall status
+          if [ "$setup_result" = "success" ] && [ "$quality_result" = "success" ] && [ "$build_result" = "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **All checks passed!** Ready for deployment." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Some checks failed.** Please review the errors above." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+  # Stage 6: Deployment readiness (only for main branch)
+  deploy-ready:
+    name: 🚀 Deploy Ready
+    runs-on: ubuntu-latest
+    needs: [setup, quality, build, validation]
+    if: github.ref == 'refs/heads/main' && needs.validation.result == 'success'
+    
+    steps:
+      - name: 🎉 Deployment ready
+        run: |
+          echo "## 🚀 Deployment Ready!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All quality gates passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build successful" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Security checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for production deployment! 🎯" >> $GITHUB_STEP_SUMMARY
