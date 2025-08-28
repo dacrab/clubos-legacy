@@ -46,7 +46,7 @@ function Footer() {
         <p>Σε περίπτωση προβλήματος, επικοινωνήστε με τον διαχειριστή</p>
       </div>
       <div className="text-center text-xs text-muted-foreground/60">
-        <p>Copyright {new Date().getFullYear()} clubOS - Powered By MediaVaultBoost | Webees</p>
+        <p>Copyright {new Date().getFullYear()} clubOS - Powered By dacrab</p>
       </div>
     </div>
   );
