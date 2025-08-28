@@ -1,151 +1,152 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { BarChart3, Medal } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { createBrowserClient } from "@supabase/ssr";
+import { Medal, BarChart3 } from "lucide-react";
+import { toast } from "sonner";
 
-import type { Category, SaleWithDetails } from '@/types/sales';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { STATISTICS, CATEGORY_SALES_CHART, API_ERROR_MESSAGES } from '@/lib/constants';
+import { Sale } from "@/types/sales";
+import { Database } from "@/types/supabase";
+import { cn } from "@/lib/utils";
+import { aggregateSalesByCategory, MEDAL_COLORS } from "@/lib/utils/chart-utils";
 
-interface CategorySalesChartProps {
-  sales: SaleWithDetails[];
-  categories: Category[];
-  subCategories: Record<string, Category[]>;
+interface Category {
+  id: string;
+  name: string;
+  parent_id: string | null;
 }
 
-export default function CategorySalesChart({
-  sales,
-  categories,
-  subCategories,
-}: CategorySalesChartProps) {
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+interface CategorySalesChartProps {
+  sales: Sale[];
+}
 
-  // Get all categories (main + sub) in a flat array
-  const allCategories = [...categories, ...Object.values(subCategories).flat()];
+interface CategorySalesItem {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
 
-  // Find selected category
-  const selectedCategory = allCategories.find(c => c.id === selectedCategoryId);
+export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subCategories, setSubCategories] = useState<Record<string, Category[]>>({});
 
-  // Calculate sales data for selected category
-  const getSalesData = () => {
-    if (!selectedCategory) {
-      return [];
+  const supabase = createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
+        return;
+      }
+
+      const mainCategories = data.filter(cat => !cat.parent_id);
+      const subCategoriesMap = data.reduce((acc, cat) => {
+        if (cat.parent_id) {
+          if (!acc[cat.parent_id]) acc[cat.parent_id] = [];
+          acc[cat.parent_id].push(cat);
+        }
+        return acc;
+      }, {} as Record<string, Category[]>);
+
+      setCategories(mainCategories);
+      setSubCategories(subCategoriesMap);
     }
 
-    const categoryItems = sales
-      .filter(sale => sale.product?.category?.name === selectedCategory.name)
-      .reduce(
-        (acc, sale) => {
-          const itemName = sale.product?.name || 'Unknown';
-          if (!acc[itemName]) {
-            acc[itemName] = { quantity: 0, revenue: 0 };
-          }
-          acc[itemName].quantity += sale.quantity;
-          acc[itemName].revenue += parseFloat(sale.totalPrice);
-          return acc;
-        },
-        {} as Record<string, { quantity: number; revenue: number }>
-      );
+    fetchCategories();
+  }, [supabase]);
 
-    return Object.entries(categoryItems)
-      .map(([name, data]: [string, { quantity: number; revenue: number }]) => ({
-        name,
-        count: data.quantity,
-        revenue: data.revenue,
-      }))
-      .sort((a, b) => b.count - a.count);
-  };
+  const categoryData = useMemo((): CategorySalesItem[] => {
+    if (!selectedCategory) return [];
+    
+    const data = aggregateSalesByCategory(sales, selectedCategory);
+    
+    return data.map(item => ({
+      name: item.name,
+      quantity: item.value,
+      revenue: item.total
+    }));
+  }, [sales, selectedCategory]);
 
-  const salesData = getSalesData();
-  const maxQuantity = salesData[0]?.count || 0;
+  const maxQuantity = categoryData.length > 0 ? categoryData[0].quantity : 0;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base font-medium">Πωλήσεις ανά Κατηγορία</CardTitle>
-        <BarChart3 className="text-muted-foreground h-4 w-4" />
+        <CardTitle className="text-base font-medium">
+          Πωλήσεις ανά Κατηγορία
+        </CardTitle>
+        <BarChart3 className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="space-y-4">
-        <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Επιλέξτε κατηγορία" />
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[180px] relative z-50">
+            <SelectValue placeholder={CATEGORY_SALES_CHART.UI.CATEGORY_SELECT_PLACEHOLDER} />
           </SelectTrigger>
           <SelectContent>
             {categories.map(category => (
-              <div key={category.id}>
-                <SelectItem value={category.id}>{category.name}</SelectItem>
+              <SelectGroup key={category.id}>
+                <SelectItem value={category.name}>{category.name}</SelectItem>
                 {subCategories[category.id]?.map(sub => (
-                  <SelectItem
-                    key={sub.id}
-                    value={sub.id}
-                    className="text-muted-foreground pl-6 text-sm"
-                  >
+                  <SelectItem key={sub.id} value={sub.name} className="pl-6 text-sm text-muted-foreground">
                     ↳ {sub.name}
                   </SelectItem>
                 ))}
-              </div>
+              </SelectGroup>
             ))}
           </SelectContent>
         </Select>
 
         <div className="space-y-2">
-          {salesData.map((item, index) => (
-            <div
-              key={item.name}
-              className={cn('flex items-center gap-3 rounded-lg p-2', index < 3 && 'bg-muted/50')}
-            >
+          {categoryData.map((item, index) => (
+            <div key={item.name} className={cn("flex items-center gap-3 p-2 rounded-lg", index < 3 && "bg-muted/50")}>
               <div className="w-6 text-center">
                 {index < 3 ? (
-                  <Medal
-                    className={cn(
-                      'h-5 w-5',
-                      index === 0
-                        ? 'text-yellow-500'
-                        : index === 1
-                          ? 'text-gray-400'
-                          : 'text-amber-600'
-                    )}
-                  />
+                  <Medal className={cn("w-5 h-5", MEDAL_COLORS[index as keyof typeof MEDAL_COLORS])} />
                 ) : (
-                  <span className="text-muted-foreground text-sm">{index + 1}</span>
+                  <span className="text-sm text-muted-foreground">{index + 1}</span>
                 )}
               </div>
-              <div className="min-w-0 flex-1">
+              
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <div className="truncate text-sm font-medium">{item.name}</div>
-                  <div className="text-muted-foreground text-xs whitespace-nowrap">
-                    {item.count} τεμ.
-                  </div>
+                  <div className="font-medium truncate text-sm">{item.name}</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">{item.quantity} τεμ.</div>
                 </div>
-                <div className="text-muted-foreground text-xs">{item.revenue.toFixed(2)}€</div>
+                <div className="text-xs text-muted-foreground">{item.revenue.toFixed(2)}€</div>
               </div>
 
               <div className="w-16">
-                <div className="bg-muted h-1.5 overflow-hidden rounded-full">
-                  <div
-                    className="bg-primary h-full transition-all duration-300"
-                    style={{ width: `${(item.count / maxQuantity) * 100}%` }}
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300" 
+                    style={{width: maxQuantity ? `${(item.quantity / maxQuantity) * 100}%` : '0%'}} 
                   />
                 </div>
               </div>
             </div>
           ))}
 
-          {selectedCategoryId && salesData.length === 0 && (
-            <div className="text-muted-foreground py-6 text-center text-sm">
-              Δεν υπάρχουν πωλήσεις για αυτή την κατηγορία
+          {selectedCategory && categoryData.length === 0 && (
+            <div className="text-center text-muted-foreground py-6 text-sm">
+              {CATEGORY_SALES_CHART.EMPTY_STATES.NO_SALES}
             </div>
           )}
 
-          {!selectedCategoryId && (
-            <div className="text-muted-foreground py-6 text-center text-sm">
-              Επιλέξτε μια κατηγορία για να δείτε τις πωλήσεις
+          {!selectedCategory && (
+            <div className="text-center text-muted-foreground py-6 text-sm">
+              {CATEGORY_SALES_CHART.EMPTY_STATES.NO_CATEGORY}
             </div>
           )}
         </div>

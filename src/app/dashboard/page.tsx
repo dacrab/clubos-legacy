@@ -1,130 +1,196 @@
-import { notFound } from 'next/navigation';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { Database } from '@/types/supabase';
+import AdminDashboard from '@/components/dashboard/AdminDashboard';
+import EmployeeDashboard from '@/components/dashboard/EmployeeDashboard';
+import type { Sale, Code as SaleCode } from '@/types/sales';
+import type { PaymentMethodType } from '@/types/supabase';
 
-import type { Product } from '@/types/products';
-import type { Order, SaleWithDetails } from '@/types/sales';
-import { stackServerApp } from '@/lib/auth';
-import { getLowStockProducts } from '@/lib/db/services/products';
-import { getRecentOrders } from '@/lib/db/services/sales';
-import { getUserById } from '@/lib/db/services/users';
-import { logger } from '@/lib/utils/logger';
-import AddSaleButton from '@/components/dashboard/sales/AddSaleButton';
-import NewSaleInterface from '@/components/dashboard/sales/NewSaleInterface';
-import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
-import SecretariatDashboard from '@/components/dashboard/views/SecretariatDashboard';
-
-// Type for the order data returned from the database query
-interface DatabaseOrder {
+interface OrderSale {
   id: string;
-  orderNumber: string;
-  registerSessionId: string;
-  customerName?: string | null;
-  subtotal?: string;
-  taxAmount?: string;
-  discountAmount?: string;
-  totalAmount?: string;
-  finalAmount: string;
-  paymentMethod: 'cash' | 'card' | 'treat';
-  cardDiscountCount: number;
-  isVoided: boolean;
-  voidReason?: string | null;
-  createdAt: Date;
-  createdBy: string;
-  voidedAt?: Date | null;
-  voidedBy?: string | null;
-  sales: Array<{
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  is_treat: boolean;
+  coffee_options: any;
+  code?: {
     id: string;
-    orderId: string;
-    productId: string;
-    productName: string;
-    quantity: number;
-    unitPrice: string;
-    totalPrice: string;
-    isTreat: boolean;
-    isVoided: boolean;
-    voidReason?: string | null;
-    createdAt: Date;
-    voidedAt?: Date | null;
-    voidedBy?: string | null;
-    product: Product;
-  }>;
+    name: string;
+    price: number;
+    image_url: string | null;
+    category?: {
+      id: string;
+      name: string;
+      description: string | null;
+    } | null;
+  };
 }
 
-// This function can be moved to a utils file if it's used elsewhere
-const transformOrderToSales = (order: DatabaseOrder): SaleWithDetails[] => {
-  // Create the order object that matches the Order type
-  const orderData: Order = {
-    id: order.id,
-    orderNumber: order.orderNumber,
-    registerSessionId: order.registerSessionId,
-    customerName: order.customerName,
-    subtotal: order.subtotal || '0',
-    taxAmount: order.taxAmount || '0',
-    discountAmount: order.discountAmount || '0',
-    totalAmount: order.totalAmount || '0',
-    finalAmount: order.finalAmount,
-    paymentMethod: order.paymentMethod,
-    cardDiscountCount: order.cardDiscountCount,
-    isVoided: order.isVoided,
-    voidReason: order.voidReason,
-    createdAt: order.createdAt,
-    createdBy: order.createdBy,
-    voidedAt: order.voidedAt,
-    voidedBy: order.voidedBy,
-  };
+interface OrderData {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  discount_amount: number;
+  final_amount: number;
+  card_discount_count: number;
+  payment_method: PaymentMethodType;
+  created_by: string;
+  sales?: OrderSale[];
+}
 
-  return order.sales.map(sale => ({
-    ...sale,
-    order: orderData,
-  }));
-};
+// Helper function to transform order data to Sale type
+function transformOrderToSales(order: OrderData): Sale[] {
+  return (order.sales || []).map((sale: OrderSale) => {
+    if (!sale.code) {
+      throw new Error('Sale must have a code');
+    }
+
+    const saleCode: SaleCode = {
+      id: sale.code.id,
+      name: sale.code.name,
+      price: sale.code.price,
+      stock: 0, // Default value since it's not in the query
+      image_url: sale.code.image_url,
+      created_at: order.created_at,
+      created_by: order.created_by,
+      updated_at: null,
+      category_id: sale.code.category?.id || '', // Required by type
+      category: sale.code.category ? {
+        id: sale.code.category.id,
+        name: sale.code.category.name,
+        description: sale.code.category.description,
+        parent_id: null, // These fields aren't in the query but required by type
+        created_at: order.created_at,
+        created_by: order.created_by
+      } : undefined
+    };
+
+    return {
+      id: sale.id,
+      order_id: order.id,
+      code_id: sale.code.id,
+      quantity: sale.quantity,
+      unit_price: sale.unit_price,
+      total_price: sale.total_price,
+      is_treat: sale.is_treat,
+      coffee_options: sale.coffee_options,
+      created_at: order.created_at,
+      code: saleCode,
+      order: {
+        id: order.id,
+        register_session_id: '', // Not needed for display
+        total_amount: order.total_amount,
+        discount_amount: order.discount_amount,
+        final_amount: order.final_amount,
+        card_discount_count: order.card_discount_count,
+        payment_method: order.payment_method,
+        created_by: order.created_by,
+        created_at: order.created_at
+      }
+    };
+  });
+}
 
 export default async function DashboardPage() {
-  const user = await stackServerApp.getUser();
-
-  if (!user) {
-    return notFound();
-  }
-
-  const profile = await getUserById(user.id);
-
-  if (!profile) {
-    return notFound();
-  }
-
-  // Common data for all roles
-  try {
-    const recentOrders = await getRecentOrders(5);
-    const recentSales = recentOrders?.flatMap(transformOrderToSales) || [];
-
-    // Role-specific data and component rendering
-    switch (profile.role) {
-      case 'admin': {
-        const lowStock = await getLowStockProducts();
-
-        return <AdminDashboard recentSales={recentSales} lowStock={lowStock as Product[]} />;
-      }
-      case 'employee':
-        return <EmployeeDashboard recentSales={recentSales} />;
-      case 'secretary':
-        return <SecretariatDashboard />;
-      default:
-        return (
-          <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold tracking-tight">Πωλήσεις</h1>
-                <AddSaleButton />
-              </div>
-              <NewSaleInterface open={false} onOpenChange={() => {}} />
-            </div>
-          </div>
-        );
+  const cookieStore = await cookies();
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value ?? '';
+        },
+      },
     }
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      logger.error('Error fetching dashboard data:', error);
-    }
-    return notFound();
+  );
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect('/');
   }
+
+  const { data: userData, error: userDataError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (userDataError) {
+    console.error('User error:', userDataError);
+    throw userDataError;
+  }
+
+  if (!userData) {
+    redirect('/');
+  }
+
+  // Fetch recent orders with full details
+  const { data: recentOrders = [] } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      created_at,
+      total_amount,
+      discount_amount,
+      final_amount,
+      card_discount_count,
+      payment_method,
+      created_by,
+      sales (
+        id,
+        quantity,
+        unit_price,
+        total_price,
+        is_treat,
+        coffee_options,
+        code:codes (
+          id,
+          name,
+          price,
+          image_url,
+          category:categories (
+            id,
+            name,
+            description
+          )
+        )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  // If admin, also fetch low stock items with category details
+  if (userData.role === 'admin') {
+    const { data: lowStock = [] } = await supabase
+      .from('codes')
+      .select(`
+        *,
+        category:categories (
+          id,
+          name,
+          description,
+          created_at,
+          parent_id
+        )
+      `)
+      .lt('stock', 10)
+      .neq('stock', -1)
+      .order('stock', { ascending: true })
+      .limit(10);
+
+    const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
+    
+    return <AdminDashboard 
+      recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
+      lowStock={lowStock as unknown as SaleCode[]}
+    />;
+  }
+
+  const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
+
+  return <EmployeeDashboard 
+    recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
+  />;
 }

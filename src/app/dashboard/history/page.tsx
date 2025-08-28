@@ -1,77 +1,136 @@
-import { redirect } from 'next/navigation';
-import { endOfMonth, format, startOfMonth } from 'date-fns';
-import { History } from 'lucide-react';
+"use client";
 
-import { stackServerApp } from '@/lib/auth';
-import { DATE_FORMAT } from '@/lib/constants';
-import { getSalesWithDetails } from '@/lib/db/services/sales';
-import SalesFilter from '@/components/dashboard/sales/SalesFilter';
+import { useEffect, useState } from "react";
+import { createClientSupabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { History } from "lucide-react";
+import { toast } from "sonner";
 import SalesTable from '@/components/dashboard/sales/SalesTable';
+import SalesFilter from '@/components/dashboard/sales/SalesFilter';
+import { API_ERROR_MESSAGES } from "@/lib/constants";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import type { Sale } from '@/types/sales';
 
-interface HistoryPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+interface SalesDateRange {
+  startDate: string;
+  endDate: string;
 }
 
-async function validateUser() {
-  const user = await stackServerApp.getUser();
-  if (!user) {
-    redirect('/');
-  }
-  return user;
+interface TimeRange {
+  startTime: string;
+  endTime: string;
 }
 
-export default async function HistoryPage({ searchParams }: HistoryPageProps) {
-  const params = await searchParams;
-  const { from } = params;
+export default function HistoryPage() {
+  const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
+  const [allSales, setAllSales] = useState<Sale[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const supabase = createClientSupabase();
 
-  // Redirect if no date range provided
-  if (!from) {
-    const start = format(startOfMonth(new Date()), DATE_FORMAT.API);
-    const end = format(endOfMonth(new Date()), DATE_FORMAT.API);
-    redirect(`/dashboard/history?from=${start}&to=${end}&startTime=00:00&endTime=23:59`);
-  }
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          router.push('/');
+          return;
+        }
 
-  try {
-    await validateUser();
+        const { data: userData, error: userDataError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
 
-    // Fetch sales using Drizzle service
-    const sales = await getSalesWithDetails();
+        if (userDataError || !userData) {
+          console.error('User error:', userDataError);
+          router.push('/');
+          return;
+        }
 
-    return (
-      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-primary/10 rounded-full p-3">
-              <History className="text-primary h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Ιστορικό Πωλήσεων</h1>
-              <p className="text-muted-foreground">
-                Προβολή και ανάλυση ιστορικών δεδομένων πωλήσεων
-              </p>
-            </div>
-          </div>
+        const { data: sales, error: salesError } = await supabase
+          .from('sales')
+          .select(`
+            *,
+            code:codes (
+              id,
+              name,
+              price,
+              image_url,
+              category:categories (
+                id,
+                name
+              )
+            ),
+            order:orders (
+              id,
+              created_by,
+              created_at,
+              final_amount,
+              card_discount_count
+            )
+          `)
+          .order('created_at', { ascending: false });
 
-          <div className="space-y-6">
-            <SalesFilter />
-            <SalesTable initialSales={sales} />
-          </div>
-        </div>
-      </div>
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      if (process.env.NODE_ENV === 'development') {
-        (await import('@/lib/utils/logger')).logger.error('Error fetching sales data:', error);
+        if (salesError) {
+          console.error('Sales error:', salesError);
+          throw new Error(salesError.message);
+        }
+
+        if (!sales) {
+          throw new Error('No sales data received');
+        }
+
+        // Type assertion to handle the type mismatch from the Supabase query
+        const typedSales = sales as unknown as Sale[];
+        setAllSales(typedSales);
+        setFilteredSales(typedSales);
+      } catch (error: any) {
+        console.error('Error fetching sales:', error);
+        toast.error(error.message || API_ERROR_MESSAGES.SERVER_ERROR);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    return (
-      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-        <div className="py-12 text-center">
-          <p className="text-destructive">Σφάλμα κατά τη φόρτωση των δεδομένων</p>
-        </div>
-      </div>
-    );
+    fetchSales();
+  }, [router, supabase]);
+
+  const handleFilterChange = (dateRange: SalesDateRange, timeRange: TimeRange) => {
+    if (!dateRange.startDate || !dateRange.endDate) {
+      setFilteredSales(allSales);
+      return;
+    }
+    
+    const startDateTime = new Date(`${dateRange.startDate}T${timeRange.startTime || '00:00:00'}`);
+    const endDateTime = new Date(`${dateRange.endDate}T${timeRange.endTime || '23:59:59'}`);
+    
+    const filtered = allSales.filter(sale => {
+      const saleDate = new Date(sale.created_at);
+      return saleDate >= startDateTime && saleDate <= endDateTime;
+    });
+
+    setFilteredSales(filtered);
+  };
+
+  if (isLoading) {
+    return <LoadingAnimation />;
   }
+
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-2">
+        <div className="rounded-full bg-primary/10 p-2 sm:p-3">
+          <History className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+        </div>
+        <h1 className="text-xl sm:text-2xl font-semibold">Ιστορικό Πωλήσεων</h1>
+      </div>
+      
+      <div className="space-y-5 sm:space-y-6">
+        <SalesFilter onFilterChange={handleFilterChange} />
+        <SalesTable initialSales={filteredSales} />
+      </div>
+    </div>
+  );
 }

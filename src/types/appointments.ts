@@ -1,27 +1,7 @@
-// Appointment types for the application
-export interface Appointment {
-  id: string;
-  title: string;
-  whoBooked: string;
-  contactDetails?: string | null;
-  contactEmail?: string | null;
-  dateTime: Date;
-  durationMinutes: number;
-  numChildren: number;
-  numAdults: number;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  notes?: string | null;
-  createdAt: Date;
-  userId?: string | null;
-  updatedAt: Date;
-}
+import type { Database } from './supabase';
 
-export interface AppointmentInsert extends Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'> {
-  id?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+export type Appointment = Database['public']['Tables']['appointments']['Row'];
+export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert'];
+export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update'];
 
-export type AppointmentUpdate = Partial<AppointmentInsert>;
-
-export type AppointmentFormData = Omit<AppointmentInsert, 'userId'>;
+export type AppointmentFormData = Omit<AppointmentInsert, 'created_at' | 'id'>; 

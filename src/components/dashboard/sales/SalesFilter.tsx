@@ -1,264 +1,288 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { format } from 'date-fns';
+import { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import { el } from 'date-fns/locale/el';
-import { CalendarIcon, Filter, X } from 'lucide-react';
+import { CalendarIcon, X, Filter } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
+import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
 
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Calendar, type DateRange } from '@/components/ui/calendar';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-interface FilterState {
-  dateRange?: DateRange;
-  startTime: string;
-  endTime: string;
-  quickSelect: string;
+interface SalesDateRange {
+  startDate: string;
+  endDate: string;
 }
 
-const QUICK_OPTIONS = {
-  CUSTOM: 'Προσαρμοσμένο',
-  TODAY: 'Σήμερα',
-  YESTERDAY: 'Χθες',
-  THIS_WEEK: 'Αυτή την εβδομάδα',
-  LAST_WEEK: 'Προηγούμενη εβδομάδα',
-  THIS_MONTH: 'Αυτόν τον μήνα',
-  LAST_MONTH: 'Προηγούμενο μήνα',
-};
+interface TimeRange {
+  startTime: string;
+  endTime: string;
+}
 
-const getQuickSelectRange = (option: string): DateRange | undefined => {
+interface SalesFilterProps {
+  onFilterChange: (dateRange: SalesDateRange, timeRange: TimeRange) => void;
+}
+
+const getDateRangeForQuickSelect = (value: string): { start: Date, end: Date } | null => {
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = new Date(now.setHours(0, 0, 0, 0));
 
-  switch (option) {
-    case 'TODAY':
-      return { from: today, to: today };
-    case 'YESTERDAY': {
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return { from: yesterday, to: yesterday };
+  const ranges = {
+    TODAY: {
+      start: today,
+      end: new Date()
+    },
+    YESTERDAY: {
+      start: new Date(today.setDate(today.getDate() - 1)),
+      end: new Date(today.setHours(23, 59, 59, 999))
+    },
+    THIS_WEEK: {
+      start: new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1))),
+      end: new Date()
+    },
+    LAST_WEEK: {
+      start: new Date(today.setDate(today.getDate() - today.getDay() - 6)),
+      end: new Date(new Date(today).setDate(today.getDate() + 6))
+    },
+    THIS_MONTH: {
+      start: new Date(today.getFullYear(), today.getMonth(), 1),
+      end: new Date()
+    },
+    LAST_MONTH: {
+      start: new Date(today.getFullYear(), today.getMonth() - 1, 1),
+      end: new Date(today.getFullYear(), today.getMonth(), 0)
+    },
+    THIS_YEAR: {
+      start: new Date(today.getFullYear(), 0, 1),
+      end: new Date()
+    },
+    LAST_YEAR: {
+      start: new Date(today.getFullYear() - 1, 0, 1),
+      end: new Date(today.getFullYear() - 1, 11, 31)
     }
-    case 'THIS_WEEK': {
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() + 1);
-      return { from: weekStart, to: today };
-    }
-    case 'LAST_WEEK': {
-      const lastWeekEnd = new Date(today);
-      lastWeekEnd.setDate(today.getDate() - today.getDay());
-      const lastWeekStart = new Date(lastWeekEnd);
-      lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-      return { from: lastWeekStart, to: lastWeekEnd };
-    }
-    case 'THIS_MONTH':
-      return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
-    case 'LAST_MONTH': {
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-      return { from: lastMonth, to: lastMonthEnd };
-    }
-    default:
-      return undefined;
-  }
+  };
+
+  return ranges[value as keyof typeof ranges] || null;
 };
 
-export default function SalesFilter() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+const isValidTimeFormat = (time: string) => {
+  if (!time) return true;
+  return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+};
 
-  const [filters, setFilters] = useState<FilterState>({
-    startTime: '',
-    endTime: '',
-    quickSelect: 'CUSTOM',
-  });
-  const [isOpen, setIsOpen] = useState(false);
+export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
+  const [date, setDate] = useState<DateRange>();
+  const [timeRange, setTimeRange] = useState<TimeRange>({ startTime: "", endTime: "" });
+  const [quickSelect, setQuickSelect] = useState("CUSTOM");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const updateFilters = useCallback((dateRange: SalesDateRange, timeRange: TimeRange) => {
+    onFilterChange(dateRange, timeRange);
+  }, [onFilterChange]);
+
+  const handleQuickSelectChange = useCallback((value: string) => {
+    const range = getDateRangeForQuickSelect(value);
+    if (!range) return;
+
+    const { start, end } = range;
+    const newTimeRange = {
+      startTime: "00:00",
+      endTime: value === "TODAY" ? format(new Date(), "HH:mm") : "23:59"
+    };
+
+    setDate({ from: start, to: end });
+    setTimeRange(newTimeRange);
+    setQuickSelect(value);
+    setCalendarOpen(false);
+
+    updateFilters(
+      {
+        startDate: format(start, DATE_FORMAT.API),
+        endDate: format(end, DATE_FORMAT.API)
+      },
+      newTimeRange
+    );
+  }, [updateFilters]);
 
   useEffect(() => {
-    const from = searchParams.get('from');
-    const to = searchParams.get('to');
-    const startTime = searchParams.get('startTime') || '';
-    const endTime = searchParams.get('endTime') || '';
+    if (!date) {
+      handleQuickSelectChange("THIS_MONTH");
+    }
+  }, [date, handleQuickSelectChange]);
 
-    const dateRange = from
-      ? {
-          from: new Date(from),
-          to: to ? new Date(to) : new Date(from),
-        }
-      : undefined;
+  const handleDateChange = (range: DateRange | undefined) => {
+    if (!range?.from) return;
+    
+    setDate(range);
+    setQuickSelect("CUSTOM");
 
-    setFilters({
-      dateRange,
-      startTime,
-      endTime,
-      quickSelect: 'CUSTOM',
-    });
+    updateFilters(
+      {
+        startDate: format(range.from, DATE_FORMAT.API),
+        endDate: format(range.to || range.from, DATE_FORMAT.API)
+      },
+      timeRange
+    );
+  };
 
-    setIsOpen(!!(from || to || startTime || endTime));
-  }, [searchParams]);
+  const handleTimeChange = (field: keyof TimeRange, value: string) => {
+    if (value.length > 5) return;
 
-  const updateUrl = (newFilters: FilterState) => {
-    const params = new URLSearchParams();
+    const newTimeRange = { ...timeRange, [field]: value };
+    setTimeRange(newTimeRange);
+    setQuickSelect("CUSTOM");
 
-    if (newFilters.dateRange?.from) {
-      params.set('from', format(newFilters.dateRange.from, 'yyyy-MM-dd'));
-      if (newFilters.dateRange.to) {
-        params.set('to', format(newFilters.dateRange.to, 'yyyy-MM-dd'));
+    if (!isValidTimeFormat(value)) return;
+
+    updateFilters(
+      {
+        startDate: date?.from ? format(date.from, DATE_FORMAT.API) : "",
+        endDate: date?.to ? format(date.to, DATE_FORMAT.API) : date?.from ? format(date.from, DATE_FORMAT.API) : ""
+      },
+      {
+        startTime: newTimeRange.startTime || "00:00",
+        endTime: newTimeRange.endTime || "23:59"
       }
-    }
-
-    if (newFilters.startTime) {
-      params.set('startTime', newFilters.startTime);
-    }
-    if (newFilters.endTime) {
-      params.set('endTime', newFilters.endTime);
-    }
-    router.push(`${pathname}?${params.toString()}`);
+    );
   };
 
-  const handleQuickSelect = (value: string) => {
-    const dateRange = getQuickSelectRange(value);
-    const newFilters = {
-      ...filters,
-      dateRange,
-      quickSelect: value,
-      startTime: value !== 'CUSTOM' ? '00:00' : filters.startTime,
-      endTime: value !== 'CUSTOM' ? '23:59' : filters.endTime,
-    };
-
-    setFilters(newFilters);
-    updateUrl(newFilters);
-  };
-
-  const handleDateChange = (dateRange: DateRange | undefined) => {
-    const newFilters = { ...filters, dateRange, quickSelect: 'CUSTOM' };
-    setFilters(newFilters);
-    updateUrl(newFilters);
-  };
-
-  const handleTimeChange = (field: 'startTime' | 'endTime', value: string) => {
-    const newFilters = { ...filters, [field]: value, quickSelect: 'CUSTOM' };
-    setFilters(newFilters);
-    updateUrl(newFilters);
-  };
-  const clearFilters = () => {
-    const newFilters = {
-      dateRange: undefined,
-      startTime: '',
-      endTime: '',
-      quickSelect: 'CUSTOM',
-    };
-    setFilters(newFilters);
+  const handleClearFilter = () => {
+    setDate(undefined);
+    setTimeRange({ startTime: "", endTime: "" });
+    setQuickSelect("CUSTOM");
     setCalendarOpen(false);
-    router.push(pathname);
+    updateFilters(
+      { startDate: "", endDate: "" },
+      { startTime: "", endTime: "" }
+    );
   };
 
-  const formatDateRange = () => {
-    if (!filters.dateRange?.from) {
-      return 'Επιλέξτε ημερομηνίες';
-    }
+  const FilterContent = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-4 sm:gap-5">
+      <div className="w-full sm:col-span-1 lg:w-40">
+        <Label className="text-sm sm:text-base font-medium">Γρήγορη επιλογή</Label>
+        <Select value={quickSelect} onValueChange={handleQuickSelectChange}>
+          <SelectTrigger className="mt-2 h-11 sm:h-12 text-sm sm:text-base">
+            <SelectValue placeholder="Επιλέξτε περίοδο" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(QUICK_SELECT_OPTIONS).map(([key, label]) => (
+              <SelectItem key={key} value={key} className="text-sm sm:text-base py-2">
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-    const from = format(filters.dateRange.from, 'dd/MM/yyyy');
-    const to = filters.dateRange.to ? format(filters.dateRange.to, 'dd/MM/yyyy') : from;
+      <div className="w-full sm:col-span-1 lg:w-52 xl:w-60">
+        <Label className="text-sm sm:text-base font-medium">Εύρος ημερομηνιών</Label>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full mt-2 h-11 sm:h-12 justify-start text-left font-normal text-sm sm:text-base",
+                !date?.from && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, DATE_FORMAT.DISPLAY)} -{" "}
+                    {format(date.to, DATE_FORMAT.DISPLAY)}
+                  </>
+                ) : (
+                  format(date.from, DATE_FORMAT.DISPLAY)
+                )
+              ) : (
+                "Επιλέξτε ημερομηνίες"
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from || new Date()}
+              selected={date}
+              onSelect={handleDateChange}
+              numberOfMonths={window.innerWidth < 768 ? 1 : 2}
+              locale={el}
+              className="p-3 sm:p-4 scale-100"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
-    return from === to ? from : `${from} - ${to}`;
-  };
-  return (
-    <div className="bg-muted/50 rounded-lg border">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Filter className="text-muted-foreground h-4 w-4" />
-          <span className="font-medium">Φίλτρα</span>
+      <div className="flex gap-4 w-full sm:col-span-2 lg:w-auto lg:flex-none">
+        <div className="flex-1 lg:w-24">
+          <Label className="text-sm sm:text-base font-medium">Από ώρα</Label>
+          <Input
+            type="text"
+            placeholder="HH:mm"
+            value={timeRange.startTime}
+            onChange={(e) => handleTimeChange("startTime", e.target.value)}
+            className={cn(
+              "mt-2 h-11 sm:h-12 text-sm sm:text-base",
+              timeRange.startTime && !isValidTimeFormat(timeRange.startTime) && "border-red-500"
+            )}
+          />
         </div>
-        <Button variant="ghost" onClick={() => setIsOpen(!isOpen)} className="h-9 px-3">
-          {isOpen ? 'Απόκρυψη' : 'Εμφάνιση'}
+
+        <div className="flex-1 lg:w-24">
+          <Label className="text-sm sm:text-base font-medium">Έως ώρα</Label>
+          <Input
+            type="text"
+            placeholder="HH:mm"
+            value={timeRange.endTime}
+            onChange={(e) => handleTimeChange("endTime", e.target.value)}
+            className={cn(
+              "mt-2 h-11 sm:h-12 text-sm sm:text-base",
+              timeRange.endTime && !isValidTimeFormat(timeRange.endTime) && "border-red-500"
+            )}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-end mt-2 sm:col-span-2 lg:col-span-1">
+        <Button
+          variant="outline"
+          onClick={handleClearFilter}
+          className="h-11 sm:h-12 text-sm sm:text-base flex items-center gap-2 px-4"
+        >
+          <X className="h-4 w-4 sm:h-5 sm:w-5" />
+          Καθαρισμός
         </Button>
       </div>
-      {isOpen && (
-        <div className="space-y-4 p-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <Label>Γρήγορη επιλογή</Label>
-              <Select value={filters.quickSelect} onValueChange={handleQuickSelect}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(QUICK_OPTIONS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    </div>
+  );
 
-            <div>
-              <Label>Εύρος ημερομηνιών</Label>
-              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'mt-2 w-full justify-start text-left font-normal',
-                      !filters.dateRange?.from && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formatDateRange()}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={filters.dateRange}
-                    onSelect={handleDateChange}
-                    numberOfMonths={2}
-                    locale={el}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div>
-              <Label>Από ώρα</Label>
-              <Input
-                type="time"
-                value={filters.startTime}
-                onChange={e => handleTimeChange('startTime', e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            <div>
-              <Label>Έως ώρα</Label>
-              <Input
-                type="time"
-                value={filters.endTime}
-                onChange={e => handleTimeChange('endTime', e.target.value)}
-                className="mt-2"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={clearFilters} className="flex items-center gap-2">
-              <X className="h-4 w-4" />
-              Καθαρισμός
-            </Button>
-          </div>
+  return (
+    <div className="bg-muted/50 rounded-lg border overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b flex justify-between items-center">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <span className="text-sm sm:text-base font-medium">Φίλτρα</span>
+        </div>
+        <Button
+          variant="ghost"
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+          className="h-9 sm:h-10 px-3 sm:px-4 text-sm sm:text-base min-w-[100px]"
+        >
+          {isFilterOpen ? "Απόκρυψη" : "Εμφάνιση"}
+        </Button>
+      </div>
+      {isFilterOpen && (
+        <div className="p-4 sm:p-5">
+          <FilterContent />
         </div>
       )}
     </div>

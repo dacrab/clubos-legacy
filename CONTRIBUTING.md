@@ -1,9 +1,9 @@
-# 🤝 Contributing to Modern POS System
+# 🤝 Contributing to clubOS
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-First off, thank you for considering contributing to POS system. It's people like you that make POS Systems such a great tool.
+Thank you for your interest in contributing to clubOS! This document provides guidelines and instructions for contributing to this project.
 
 ## 📋 Table of Contents
 
@@ -18,15 +18,20 @@ First off, thank you for considering contributing to POS system. It's people lik
 
 ## 📜 Code of Conduct
 
-This project and everyone participating in it is governed by the [POS System Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [vkavouras@proton.me](mailto:vkavouras@proton.me).
+By participating in this project, you agree to abide by our code of conduct:
+
+- Be respectful and inclusive of all contributors
+- Provide constructive feedback
+- Focus on the best outcomes for the project
+- Be open to different viewpoints and experiences
 
 ## 🔧 Development Setup
 
 1. **Fork and clone the repository:**
 
    ```bash
-   git clone https://github.com/dacrab/clubos.git
-   cd clubos
+   git clone https://github.com/dacrab/clubOS.git
+   cd clubOS
    ```
 
 2. **Install dependencies:**
@@ -58,45 +63,44 @@ This project and everyone participating in it is governed by the [POS System Cod
 ```text
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── actions/            # Server actions
-│   ├── api/                # API routes
-│   ├── dashboard/          # Dashboard routes and pages
-│   │   ├── history/
-│   │   ├── overview/
-│   │   ├── products/
-│   │   ├── register-closings/
-│   │   ├── statistics/
-│   │   └── users/
-│   ├── fonts/              # Custom fonts
-│   ├── layout.tsx          # Root layout
-│   └── page.tsx            # Landing page
-├── components/             # React components
-│   ├── auth/               # Authentication components
-│   ├── dashboard/          # Dashboard-specific components
-│   │   ├── appointments/
-│   │   ├── bookings/
-│   │   ├── inventory/
-│   │   ├── layout/
-│   │   ├── overview/
-│   │   ├── products/
-│   │   ├── register/
-│   │   ├── sales/
-│   │   ├── statistics/
-│   │   └── users/
-│   ├── layout/             # General layout components
-│   ├── providers/          # Context providers
-│   └── ui/                 # UI components from shadcn/ui
-├── hooks/                  # Custom React hooks
-│   ├── auth/               # Authorization hooks
-│   ├── data/               # Data fetching hooks
-│   ├── features/           # Hooks for specific features
-│   └── utils/              # Utility hooks
-├── lib/                    # Shared libraries and utilities
-│   ├── supabase/           # Supabase client instances
-│   ├── utils/              # Utility functions
-│   └── ...                 # Other helpers and constants
-├── middleware.ts           # Next.js middleware
-└── types/                  # TypeScript type definitions
+│   ├── actions/           # Server actions
+│   ├── api/               # API routes
+│   ├── dashboard/         # Dashboard routes
+│   │   ├── codes/        # Product code management
+│   │   ├── history/      # Sales history tracking
+│   │   ├── overview/     # Dashboard overview
+│   │   ├── register-closings/ # Register closing records
+│   │   ├── statistics/   # Sales analytics and statistics
+│   │   └── users/        # User management
+│   ├── loading/          # Loading state components
+│   └── fonts/            # Custom fonts
+├── components/            # React components
+│   ├── auth/             # Authentication components
+│   ├── dashboard/        # Dashboard-specific components
+│   │   ├── codes/       # Product code management components
+│   │   ├── inventory/   # Inventory management components
+│   │   ├── register/    # Register management components
+│   │   ├── sales/       # Sales-related components
+│   │   ├── statistics/  # Statistics visualization components
+│   │   └── users/       # User management components
+│   ├── layout/          # Layout components
+│   ├── providers/       # Context providers
+│   └── ui/              # UI components
+├── hooks/                # Custom React hooks
+│   ├── usePolling.ts    # Data polling hook
+│   ├── useSales.ts      # Sales management hook
+│   └── useSaleActions.ts # Sale action handlers
+├── lib/                  # Shared libraries and utilities
+│   ├── utils/           # Utility functions
+│   ├── constants.ts     # Application constants
+│   ├── supabase.ts      # Supabase client
+│   └── utils.ts         # Helper functions
+├── types/                # TypeScript types
+│   ├── supabase.ts      # Supabase database types
+│   ├── sales.ts         # Sales-related types
+│   ├── register.ts      # Register-related types
+│   └── appointments.ts  # Appointment types
+└── middleware.ts        # Next.js middleware
 ```
 
 ## 💻 Coding Guidelines
@@ -200,4 +204,4 @@ If you have questions or encounter any problems:
 
 ---
 
-By contributing to Custom POS System, you agree that your contributions will be licensed under the MIT License.
+By contributing to clubOS, you agree that your contributions will be licensed under the MIT License.

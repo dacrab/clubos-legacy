@@ -1,13 +1,24 @@
-import { memo } from 'react';
-import { ChevronDown, ChevronUp, CreditCard, Euro, Gift } from 'lucide-react';
+import { memo, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Euro, CreditCard, Gift, ChevronDown, ChevronUp } from "lucide-react";
+import { formatDateWithGreekAmPm } from '@/lib/utils/date';
+import { cn, formatPrice } from "@/lib/utils";
+import { ClosingDetails, calculateTransactionTotals } from "./ClosingDetails";
+import { 
+  ListItem,
+  ActiveSessionTotals,
+  calculateActiveSessionTotals, 
+} from '@/types/register';
+import { CARD_DISCOUNT } from "@/lib/constants";
 
-import type { ListItem, Order } from '@/types/register';
-import { CARD_DISCOUNT } from '@/lib/constants';
-import { cn, formatDateWithGreekAmPm, formatPrice } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-
-import { ClosingDetails } from './ClosingDetails';
+// Type Definitions
+interface TransactionSummaryProps {
+  finalAmount: number;
+  discountCount: number;
+  treatsCount: number;
+  treatsAmount: number;
+}
 
 interface RegisterItemCardProps {
   item: ListItem;
@@ -15,102 +26,133 @@ interface RegisterItemCardProps {
   onToggle: (id: string) => void;
 }
 
+interface SummaryItemProps {
+  label: string;
+  value: string;
+  subValue?: string;
+  subValueClassname?: string;
+  icon: React.ReactNode;
+}
+
+// Memoized components for better performance
+const SummaryItem = memo(function SummaryItem({ 
+  label, 
+  value, 
+  subValue, 
+  subValueClassname, 
+  icon 
+}: SummaryItemProps) {
+  return (
+    <div className="flex flex-col gap-1 items-center justify-center min-w-16 sm:min-w-24">
+      <span className="flex items-center gap-1 text-muted-foreground text-xs">
+        {icon}
+        {label}
+      </span>
+      <div className="flex flex-col items-center">
+        <span className="text-sm sm:text-md font-semibold">{value}</span>
+        {subValue && (
+          <span className={`text-xs ${subValueClassname}`}>
+            {subValue}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+const TransactionSummary = memo(function TransactionSummary({ 
+  finalAmount, 
+  discountCount, 
+  treatsCount, 
+  treatsAmount 
+}: TransactionSummaryProps) {
+  const discountAmount = +(discountCount * CARD_DISCOUNT).toFixed(2);
+  const actualFinalAmount = Math.max(0, +(finalAmount - discountAmount).toFixed(2));
+  
+  return (
+    <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2">
+      <SummaryItem 
+        label="Τελικό Ποσό" 
+        value={formatPrice(actualFinalAmount)} 
+        icon={<Euro className="h-3 w-3 text-green-500" />} 
+      />
+      <SummaryItem 
+        label="Κουπόνια" 
+        value={`${discountCount}x`} 
+        subValue={discountCount > 0 ? `-${formatPrice(discountAmount)}` : undefined} 
+        subValueClassname="text-red-500" 
+        icon={<CreditCard className="h-3 w-3 text-blue-500" />} 
+      />
+      <SummaryItem 
+        label="Κεράσματα" 
+        value={`${treatsCount}x`} 
+        subValue={treatsCount > 0 ? formatPrice(treatsAmount) : undefined} 
+        subValueClassname="text-green-500" 
+        icon={<Gift className="h-3 w-3 text-red-500" />} 
+      />
+    </div>
+  );
+});
+
+// Main component with optimization
 function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps) {
   const isActive = item.type === 'active';
   const id = isActive ? item.id : item.session.id;
   const date = new Date(isActive ? item.opened_at : item.created_at);
-
-  // Calculate totals with proper types
-  const orders: Order[] = item.orders || [];
-  let totalAmount = 0;
-  let cardDiscounts = 0;
-  let treats = 0;
-  let treatsAmount = 0;
-
-  orders.forEach(order => {
-    // Properly typed order calculations
-    totalAmount += parseFloat(order.finalAmount?.toString() || '0');
-    cardDiscounts += order.cardDiscountCount || 0;
-
-    // Calculate treats from sales data
-    if (order.sales) {
-      order.sales.forEach(sale => {
-        if (sale.isTreat) {
-          treats += sale.quantity;
-          treatsAmount += parseFloat(sale.totalPrice?.toString() || '0');
-        }
-      });
+  
+  // Use memoized calculations to prevent unnecessary recalculations
+  const itemTotals = useMemo(() => {
+    if (isActive) {
+      return calculateActiveSessionTotals(item.orders) || { 
+        totalBeforeDiscounts: 0, 
+        cardDiscounts: 0, 
+        treats: 0, 
+        treatsAmount: 0 
+      } as ActiveSessionTotals;
     }
-  });
-
-  const discountAmount = cardDiscounts * CARD_DISCOUNT;
-  const finalAmount = Math.max(0, totalAmount - discountAmount);
+    return item.orders && item.orders.length 
+      ? calculateTransactionTotals(item.orders) 
+      : { 
+          totalBeforeDiscounts: 0, 
+          cardDiscounts: 0, 
+          discount: 0, 
+          treats: 0, 
+          treatsAmount: 0 
+        };
+  }, [item, isActive]);
+  
+  const handleToggle = () => onToggle(id);
+  
   return (
-    <Card
-      className={cn(
-        'w-full p-4 transition-colors',
-        isActive && 'border-primary/20',
-        isExpanded && 'bg-muted/50'
-      )}
-    >
-      <div
-        role="button"
-        tabIndex={0}
-        className="flex cursor-pointer items-center justify-between"
-        onClick={() => onToggle(id)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggle(id);
-          }
-        }}
+    <Card className={cn(
+      "p-3 sm:p-4 transition-colors w-full",
+      isActive && "border-primary/20",
+      isExpanded && "bg-muted/50"
+    )}>
+      <div 
+        className="flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer"
+        onClick={handleToggle}
       >
         <div className="flex-1">
-          <div className="mb-3 flex items-center justify-between">
-            <Badge
-              variant={isActive ? 'outline' : 'secondary'}
-              className={isActive ? 'border-primary text-primary' : ''}
-            >
-              {isActive ? 'Ενεργό Ταμείο' : `Έκλεισε από: ${item.closed_by_name}`}
-            </Badge>
-            <span className="text-muted-foreground text-sm">{formatDateWithGreekAmPm(date)}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
+            <div className="flex items-center gap-2">
+              <Badge variant={isActive ? "outline" : "secondary"} className={isActive ? "border-primary text-primary" : ""}>
+                {isActive ? "Ενεργό Ταμείο" : `Έκλεισε από: ${item.closed_by_name}`}
+              </Badge>
+            </div>
+            <span className="text-xs sm:text-sm text-muted-foreground">{formatDateWithGreekAmPm(date)}</span>
           </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col items-center">
-              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
-                <Euro className="h-3 w-3 text-green-500" />
-                Τελικό Ποσό
-              </div>
-              <span className="font-semibold">{formatPrice(finalAmount)}</span>
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
-                <CreditCard className="h-3 w-3 text-blue-500" />
-                Κουπόνια
-              </div>
-              <span className="font-semibold">{cardDiscounts}x</span>
-              {cardDiscounts > 0 && (
-                <span className="text-xs text-red-500">-{formatPrice(discountAmount)}</span>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center">
-              <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
-                <Gift className="h-3 w-3 text-amber-500" />
-                Κεράσματα
-              </div>
-              <span className="font-semibold">{treats}x</span>
-              {treats > 0 && (
-                <span className="text-xs text-amber-500">{formatPrice(treatsAmount)}</span>
-              )}
-            </div>
-          </div>
+          
+          <TransactionSummary 
+            finalAmount={itemTotals.totalBeforeDiscounts}
+            discountCount={itemTotals.cardDiscounts || 0}
+            treatsCount={itemTotals.treats || 0}
+            treatsAmount={itemTotals.treatsAmount || 0}
+          />
         </div>
-
-        <div className="ml-4">
-          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 sm:relative sm:right-auto sm:top-auto sm:transform-none sm:ml-4">
+          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </div>
 
@@ -118,11 +160,12 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
         <ClosingDetails
           session={isActive ? item : item.session}
           closing={isActive ? null : item}
-          orders={orders}
+          orders={item.orders}
         />
       )}
     </Card>
   );
 }
 
-export default memo(RegisterItemCard);
+// Export a memoized version to prevent unnecessary re-renders
+export default memo(RegisterItemCard); 

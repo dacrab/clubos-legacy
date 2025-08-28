@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRef, useEffect } from "react";
 
 interface VirtualizedMobileListProps<T> {
   items: T[];
@@ -8,20 +8,20 @@ interface VirtualizedMobileListProps<T> {
   estimateSize?: (item: T) => number;
 }
 
-export function VirtualizedMobileList<T>({
-  items,
+export function VirtualizedMobileList<T>({ 
+  items, 
   renderItem,
   className,
-  estimateSize = () => 110,
+  estimateSize = () => 110
 }: VirtualizedMobileListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: index => estimateSize(items[index]),
+    estimateSize: (index) => estimateSize(items[index]),
     overscan: 5,
-    measureElement: element => element.getBoundingClientRect().height,
+    measureElement: (element) => element.getBoundingClientRect().height
   });
 
   // Recalculate sizes when items change
@@ -45,7 +45,7 @@ export function VirtualizedMobileList<T>({
           position: 'relative',
         }}
       >
-        {virtualizer.getVirtualItems().map(virtualItem => (
+        {virtualizer.getVirtualItems().map((virtualItem) => (
           <div
             key={virtualItem.key}
             data-index={virtualItem.index}
@@ -64,4 +64,4 @@ export function VirtualizedMobileList<T>({
       </div>
     </div>
   );
-}
+} 

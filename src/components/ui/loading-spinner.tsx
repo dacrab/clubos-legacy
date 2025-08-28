@@ -1,19 +1,19 @@
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
 const sizes = {
-  sm: 'h-4 w-4',
-  md: 'h-6 w-6',
-  lg: 'h-8 w-8',
+  sm: "h-4 w-4",
+  md: "h-6 w-6",
+  lg: "h-8 w-8"
 };
 
-export function LoadingSpinner({ className, size = 'md' }: LoadingSpinnerProps) {
+export function LoadingSpinner({ className, size = "md" }: LoadingSpinnerProps) {
   return (
-    <div className={cn('relative', sizes[size], className)}>
+    <div className={cn("relative", sizes[size], className)}>
       <svg
         className="animate-spin"
         viewBox="0 0 24 24"
@@ -36,4 +36,4 @@ export function LoadingSpinner({ className, size = 'md' }: LoadingSpinnerProps) 
       </svg>
     </div>
   );
-}
+} 

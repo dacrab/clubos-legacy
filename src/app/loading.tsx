@@ -1,5 +1,5 @@
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { PageWrapper } from "@/components/ui/page-wrapper";
 
 export default function Loading() {
-  return <LoadingAnimation />;
-}
+  return <PageWrapper isLoading>{null}</PageWrapper>;
+} 

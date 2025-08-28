@@ -1,52 +1,118 @@
-'use client';
+"use client";
 
-import { TrendingUp } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Sale } from "@/types/sales";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendingUp } from "lucide-react";
+import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
+import { useMemo } from "react";
+import { CARD_DISCOUNT } from "@/lib/constants";
 
-import type { SaleWithDetails } from '@/types/sales';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// Simplified chart configuration
+const CHART_CONFIG = {
+  margins: { top: 10, right: 20, left: 0, bottom: 5 },
+  bar: {
+    fill: CHART_STYLES.colors.primary,
+    radius: [4, 4, 0, 0] as [number, number, number, number]
+  }
+};
 
-interface RevenueChartProps {
-  sales: SaleWithDetails[];
-}
-
-export default function RevenueChart({ sales }: RevenueChartProps) {
-  // Group sales by date and calculate daily revenue
-  const chartData = sales.reduce(
-    (acc, sale) => {
-      const date = new Date(sale.createdAt).toLocaleDateString();
-      const revenue = parseFloat(sale.totalPrice) || 0;
-
-      if (!acc[date]) {
-        acc[date] = 0;
+export default function RevenueChart({ sales }: { sales: Sale[] }) {
+  // Calculate net revenue after applying coupon discounts
+  const netSales = useMemo(() => {
+    // Group sales by order to properly apply discounts
+    const salesByOrder = sales.reduce((acc, sale) => {
+      if (sale.is_treat || sale.is_deleted) return acc; // Skip treats and deleted items
+      
+      const orderId = sale.order?.id || 'unknown';
+      if (!acc[orderId]) {
+        acc[orderId] = {
+          sales: [],
+          order: sale.order,
+          totalPrice: 0
+        };
       }
-      acc[date] += revenue;
-
+      acc[orderId].sales.push(sale);
+      acc[orderId].totalPrice += sale.total_price;
       return acc;
-    },
-    {} as Record<string, number>
-  );
+    }, {} as Record<string, { sales: Sale[], order: Sale['order'], totalPrice: number }>);
 
-  // Convert to array format for chart
-  const data = Object.entries(chartData).map(([date, revenue]) => ({
-    date,
-    revenue,
-  }));
+    // Apply discounts per order and distribute proportionally with exact precision
+    return Object.values(salesByOrder).flatMap(({ sales, order, totalPrice }) => {
+      // If no order or no discount, return sales unchanged
+      if (!order || !order.card_discount_count) return sales;
+      
+      // Calculate discount with exact precision
+      const orderDiscount = +(order.card_discount_count * CARD_DISCOUNT).toFixed(2);
+      
+      // Apply discount proportionally to each sale
+      return sales.map(sale => {
+        // Calculate sale's portion of the total order with exact precision
+        const saleRatio = +(sale.total_price / totalPrice).toFixed(6);
+        // Calculate sale's portion of discount with exact precision
+        const saleDiscount = +(orderDiscount * saleRatio).toFixed(2);
+        
+        // Create a new sale object with adjusted total_price
+        return {
+          ...sale,
+          // Store original price in a new field
+          original_total_price: sale.total_price,
+          // Adjust the total_price to reflect the discount with exact precision
+          total_price: Math.max(0, +(sale.total_price - saleDiscount).toFixed(2))
+        };
+      });
+    });
+  }, [sales]);
+
+  // Use the adjusted sales for the chart
+  const data = aggregateSalesByDate(netSales, 'total_price');
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base font-medium">Καθαρά Έσοδα ανά Ημέρα</CardTitle>
-        <TrendingUp className="text-muted-foreground h-4 w-4" />
+        <CardTitle className="text-base font-medium">
+          Καθαρά Έσοδα ανά Ημέρα
+        </CardTitle>
+        <TrendingUp className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div className="h-[350px]">
           <ResponsiveContainer>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis tickFormatter={value => `${value}€`} />
-              <Tooltip formatter={(value: number) => `${value.toFixed(2)}€`} />
-              <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <BarChart data={data} margin={CHART_CONFIG.margins}>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))"
+                vertical={false}
+              />
+              <XAxis 
+                dataKey="date" 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `${value}€`}
+              />
+              <Tooltip 
+                formatter={(value: number) => `${value.toFixed(2)}€`}
+                contentStyle={{
+                  backgroundColor: CHART_STYLES.tooltip.background,
+                  border: `1px solid ${CHART_STYLES.tooltip.border}`,
+                  borderRadius: '6px',
+                  padding: '8px 12px'
+                }}
+                cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
+              />
+              <Bar 
+                dataKey="revenue" 
+                fill={CHART_CONFIG.bar.fill}
+                radius={CHART_CONFIG.bar.radius}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

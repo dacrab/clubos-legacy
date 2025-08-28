@@ -1,78 +1,136 @@
-import type { Product } from '@/types/products';
-import { stackServerApp } from '@/lib/auth';
-import { logger } from '@/lib/utils/logger';
-import { hasUnlimitedStock } from '@/lib/utils/product';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import LowStockCard from '@/components/dashboard/overview/LowStockCard';
-import RecentSales from '@/components/dashboard/sales/RecentSales';
-import StatsCards from '@/components/dashboard/statistics/StatsCards';
-import { deleteSale } from '@/app/actions/deleteSale';
-import { getRecentSalesData } from '@/app/actions/fetchSalesData';
+"use client";
 
-export default async function OverviewPage() {
-  // Check authentication
-  const user = await stackServerApp.getUser();
-  if (!user) {
-    return null;
+import { useEffect, useState } from "react";
+import { createClientSupabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { cn } from "@/lib/utils";
+import { DEFAULT_USER_ROLE, UNLIMITED_CATEGORY_ID, LOW_STOCK_THRESHOLD } from "@/lib/constants";
+import { PageWrapper } from "@/components/ui/page-wrapper";
+import type { Database } from "@/types/supabase";
+
+type Code = Database['public']['Tables']['codes']['Row'] & {
+  name: string;
+  code: string;
+  price: number;
+  stock: number;
+  category_id: string;
+  category?: {
+    id: string;
+    name: string;
+    description: string | null;
+  } | null;
+};
+
+const hasUnlimitedStock = (categoryId: string | null) => {
+  return categoryId === UNLIMITED_CATEGORY_ID;
+};
+
+export default function OverviewPage() {
+  const [codes, setCodes] = useState<Code[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const supabase = createClientSupabase();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          router.push('/');
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          router.push('/');
+          return;
+        }
+
+        if (profile.role !== DEFAULT_USER_ROLE) {
+          router.push('/dashboard');
+          return;
+        }
+
+        const { data: codesData, error: codesError } = await supabase
+          .from('codes')
+          .select(`
+            *,
+            category:category_id (
+              name,
+              description
+            )
+          `)
+          .order('category(name)', { ascending: true })
+          .order('code', { ascending: true })
+          .returns<Code[]>();
+
+        if (codesError) throw codesError;
+        setCodes(codesData || []);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router, supabase]);
+
+  if (isLoading) {
+    return <LoadingAnimation />;
   }
-
-  // Fetch data using server actions
-  const { sales, error: salesError } = await getRecentSalesData(20);
-
-  // Fetch products using Drizzle service
-  const { getProducts } = await import('@/lib/db/services/products');
-  let products: Product[] = [];
-  let productsError = null;
-
-  try {
-    products = await getProducts();
-  } catch (error) {
-    productsError = error instanceof Error ? error.message : 'Failed to fetch products';
-  }
-
-  if (productsError && process.env.NODE_ENV === 'development') {
-    logger.error('Error fetching low stock products:', productsError);
-  }
-
-  if (salesError && process.env.NODE_ENV === 'development') {
-    logger.error('Error fetching sales:', salesError);
-  }
-
-  const lowStockProducts = products?.filter(p => !hasUnlimitedStock(p.categoryId)) || [];
 
   return (
-    <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Επισκόπηση</h1>
-          <p className="text-muted-foreground">Γενική εικόνα των πωλήσεων και αποθεμάτων</p>
+    <PageWrapper>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Διαθέσιμοι Κωδικοί</h1>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {codes?.map((code) => (
+            <div key={code.id} className="p-4 bg-card rounded-lg border">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold">{code.code}</h3>
+                  <p className="text-sm text-muted-foreground">{code.category?.name}</p>
+                  <p className="text-2xl font-bold mt-2">{code.price}€</p>
+                </div>
+                <div className={cn(
+                  "px-2 py-1 rounded text-sm",
+                  hasUnlimitedStock(code.category_id)
+                    ? "bg-green-100 text-green-700"
+                    : code.stock > LOW_STOCK_THRESHOLD 
+                      ? "bg-green-100 text-green-700" 
+                      : code.stock > 0 
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-700"
+                )}>
+                  {hasUnlimitedStock(code.category_id) ? "Απεριόριστο" : `${code.stock} τεμ.`}
+                </div>
+              </div>
+              {code.stock <= LOW_STOCK_THRESHOLD && code.stock > 0 && (
+                <p className="text-sm text-yellow-600 mt-2">
+                  Χαμηλό απόθεμα
+                </p>
+              )}
+              {code.stock === 0 && (
+                <p className="text-sm text-red-600 mt-2">
+                  Εκτός αποθέματος
+                </p>
+              )}
+            </div>
+          ))}
         </div>
-
-        <StatsCards sales={sales} />
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <RecentSales initialSales={sales} onDeleteClick={deleteSale} />
+        {!codes?.length && (
+          <div className="text-center text-muted-foreground py-8">
+            Δεν υπάρχουν διαθέσιμοι κωδικοί
           </div>
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Χαμηλό Απόθεμα</CardTitle>
-                <CardDescription>Προϊόντα που τελειώνουν σύντομα.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {lowStockProducts.length > 0 ? (
-                  lowStockProducts.map(product => (
-                    <LowStockCard key={product.id} product={product} />
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">Δεν υπάρχουν προϊόντα με χαμηλό απόθεμα.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        )}
       </div>
-    </div>
+    </PageWrapper>
   );
-}
+} 

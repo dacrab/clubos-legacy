@@ -1,9 +1,9 @@
-import React from 'react';
-
-import FooterClient from './_FooterClient';
+import React from "react";
 
 export function Footer() {
-  const year = new Date().getFullYear();
-
-  return <FooterClient year={year} />;
-}
+  return (
+    <div className="border-t w-full text-center py-2 text-xs text-muted-foreground/60">
+      Copyright © {new Date().getFullYear()} clubOS - Powered By MediaVaultBoost | Webees
+    </div>
+  );
+} 

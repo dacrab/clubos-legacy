@@ -1,57 +1,83 @@
-import { Suspense } from 'react';
-import { notFound } from 'next/navigation';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import type { Sale } from '@/types/sales';
+import type { Database } from '@/types/supabase';
+import { PageWrapper } from "@/components/ui/page-wrapper";
+import { ALLOWED_USER_ROLES } from "@/lib/constants";
+import StatisticsWrapper from "@/components/dashboard/statistics/StatisticsWrapper";
 
-import type { SaleWithDetails } from '@/types/sales';
-import { stackServerApp } from '@/lib/auth';
-import { getSalesWithDetails } from '@/lib/db/services/sales';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
-import StatisticsServerDisplay from '@/components/dashboard/statistics/_components/StatisticsServerDisplay';
-import StatisticsWrapper from '@/components/dashboard/statistics/StatisticsWrapper';
+export const dynamic = 'force-dynamic'
 
 export default async function StatisticsPage() {
-  const user = await stackServerApp.getUser();
-
-  if (!user) {
-    return notFound();
-  }
-
-  // Fetch sales with order and product details using Drizzle service
-  let sales: SaleWithDetails[] = [];
-  let salesError = null;
-
-  try {
-    sales = await getSalesWithDetails();
-  } catch (error) {
-    salesError = error instanceof Error ? error.message : 'Failed to fetch sales';
-  }
-
-  if (salesError) {
-    if (process.env.NODE_ENV === 'development') {
-      (await import('@/lib/utils/logger')).logger.error('Error fetching sales:', salesError);
+  const cookieStore = await cookies();
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value ?? '';
+        },
+      },
     }
-    return notFound();
+  );
+
+  // Authentication check
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) redirect('/');
+
+  // Get user role
+  const { data: userData, error: userDataError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (userDataError || !userData || userData.role !== ALLOWED_USER_ROLES[0]) {
+    redirect('/dashboard');
+  }
+
+  // Fetch sales data with full code details
+  const { data: salesData, error: salesError } = await supabase
+    .from('sales')
+    .select(`
+      *,
+      code:codes (
+        name,
+        price,
+        image_url,
+        category:categories (
+          id,
+          name
+        )
+      ),
+      order:orders (
+        id,
+        total_amount,
+        final_amount,
+        card_discount_count,
+        created_at,
+        created_by
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (salesError || !salesData) {
+    return (
+      <PageWrapper>
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center text-destructive">
+            Σφάλμα κατά την ανάκτηση των στατιστικών
+          </div>
+        </div>
+      </PageWrapper>
+    );
   }
 
   return (
-    <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-      <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Στατιστικά</h1>
-          <p className="text-muted-foreground">Αναλυτικά στοιχεία πωλήσεων και απόδοσης</p>
-        </div>
-
-        <Suspense fallback={<LoadingAnimation />}>
-          {sales.length > 0 ? (
-            <StatisticsServerDisplay sales={sales} />
-          ) : (
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">Δεν υπάρχουν δεδομένα πωλήσεων για εμφάνιση</p>
-            </div>
-          )}
-        </Suspense>
-
-        <StatisticsWrapper initialSales={sales} />
-      </div>
-    </div>
+    <PageWrapper>
+      <StatisticsWrapper initialSales={salesData as Sale[]} />
+    </PageWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import { Button } from './button';
+import { Button } from "./button";
 
 interface MobileSortButtonProps {
   active: boolean;
@@ -18,4 +18,4 @@ export function MobileSortButton({ active, label, onClick, sortOrder }: MobileSo
       {label} {active && (sortOrder === 'asc' ? '↑' : '↓')}
     </Button>
   );
-}
+} 

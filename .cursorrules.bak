@@ -1,0 +1,118 @@
+# clubOS Project Guidelines
+
+## Project Overview
+- Medical practice management web application built with Next.js, TypeScript, and Supabase
+- Focus on server-side rendering, type safety, and modern UI/UX with shadcn/ui
+- **IMPORTANT**: This is NOT a todo application - understand the codebase before modifications
+
+## Rule Citation
+When implementing features or making changes, reference specific rules being followed at the beginning of your response:
+- Example: "Following rules: Component Reuse, TypeScript, Error Handling"
+- Abbreviate rule descriptions to single words or phrases when appropriate
+
+## Core Principles
+- KISS: Keep It Simple, Stupid - favor simplicity over complexity
+- Avoid breaking changes
+- Always understand existing code before modifications
+
+## Tech Stack
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+- Supabase
+- React Server Components
+
+## Code Organization
+
+### Directory Structure
+```
+src/
+├── app/           # Next.js App Router pages and API routes
+│   ├── actions/   # Server actions
+│   ├── api/       # API routes
+│   ├── dashboard/ # Dashboard pages
+│   │   ├── statistics/     # Statistics and analytics pages
+│   │   ├── users/         # User management pages
+│   │   ├── register-closings/ # Register closing pages
+│   │   ├── codes/        # Code management pages
+│   │   ├── history/      # History tracking pages
+│   │   └── overview/     # Dashboard overview pages
+│   └── fonts/     # Font assets
+├── components/    # Shared React components
+│   ├── auth/      # Authentication components
+│   ├── client-wrappers/ # Client-side wrapper components
+│   ├── dashboard/ # Dashboard-specific components
+│   │   ├── sales/       # Sales related components
+│   │   ├── register/    # Register management components
+│   │   ├── statistics/  # Statistics visualization components
+│   │   ├── codes/       # Code management components
+│   │   ├── users/       # User management components
+│   │   └── inventory/   # Inventory management components
+│   ├── layout/    # Layout components
+│   ├── providers/ # Context providers
+│   └── ui/        # UI components
+├── hooks/         # Custom React hooks
+├── types/         # TypeScript types
+└── lib/           # Shared libraries and utilities
+```
+
+### Naming Conventions
+- Directories: lowercase with dashes (components/dashboard)
+- Components: PascalCase (AppointmentForm.tsx)
+- Utilities: camelCase (dateUtils.ts)
+- Prefer named exports
+
+## Development Standards
+
+### Component Development
+- Reuse existing components, hooks, and utilities before creating new ones
+- Extract common UI patterns to shared components (src/components/ui)
+- Extract business logic to custom hooks (src/hooks)
+- Use composition over inheritance
+- Implement proper prop interfaces for flexibility
+
+### TypeScript Usage
+- Use TypeScript for all code
+- Prefer interfaces over types
+- Use const objects with 'as const' instead of enums
+- Use functional components with TypeScript interfaces
+- Use absolute imports with @/ prefix
+- Use explicit return types for all functions
+
+### UI and Styling
+- Use Shadcn UI as primary component library
+- Implement Tailwind CSS for styling
+- Follow web accessibility standards
+- Document new shadcn component installations
+
+### State Management
+- Use React Context for global state when needed
+- Implement state persistence with Supabase
+- Proper cleanup in useEffect hooks
+- Use server components for data fetching when possible
+
+### Code Quality
+- Write concise, technical code
+- Use functional and declarative patterns
+- Prefer iteration over duplication
+- Use descriptive variable names (isLoading, hasError)
+- Proper error handling with user-friendly messages
+- Follow consistent formatting with ESLint/Prettier
+
+### Git Practices
+- Use prefixes: fix:, feat:, perf:, docs:, style:, refactor:, test:, chore:
+- Keep commit messages concise and lowercase
+- Reference issue numbers when applicable
+- Document rule changes with "rules:" prefix
+
+### Documentation
+- Maintain clear README and setup instructions
+- Document component props and interfaces
+- Document environment variables
+- Avoid unnecessary comments except for complex logic
+
+## Rule Maintenance
+- Update this file when adding new components or patterns
+- Document rule changes in pull requests
+- Review rules periodically for relevance

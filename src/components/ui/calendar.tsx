@@ -1,105 +1,183 @@
-'use client';
+"use client"
 
-import * as React from 'react';
-import { el } from 'date-fns/locale/el';
-import { DayPicker, type DateRange } from 'react-day-picker';
+import * as React from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { 
+  addDays,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfMonth,
+  isSameMonth,
+  isSameDay,
+  setDay
+} from "date-fns"
+import { format } from 'date-fns-tz'
+import { el } from 'date-fns/locale/el'
+import { cn } from "@/lib/utils"
+import type { DateRange } from "react-day-picker"
 
-import { cn } from '@/lib/utils';
-
-// Re-export DateRange for other components
-export type { DateRange };
-
-// Base props shared between all modes
-interface CalendarBaseProps {
-  className?: string;
-  defaultMonth?: Date;
-  numberOfMonths?: number;
-  locale?: typeof el;
-  initialFocus?: boolean;
+// Types
+interface CalendarProps {
+  mode?: "single" | "range"
+  selected?: Date | DateRange | undefined
+  onSelect?: ((date: DateRange | undefined) => void) | ((date: Date | undefined) => void)
+  className?: string
+  defaultMonth?: Date
+  numberOfMonths?: number
+  locale?: typeof el
+  initialFocus?: boolean
 }
 
-// Single mode props
-interface CalendarSingleProps extends CalendarBaseProps {
-  mode?: 'single';
-  selected?: Date | undefined;
-  onSelect?: (date: Date | undefined) => void;
+// Helpers
+const formatWithLocale = (date: Date, formatStr: string) => {
+  switch (formatStr) {
+    case 'EE':
+      return new Intl.DateTimeFormat('el', { weekday: 'short' }).format(date)
+    case 'LLLL yyyy':
+      return new Intl.DateTimeFormat('el', { month: 'long', year: 'numeric' }).format(date)
+    case 'd':
+      return new Intl.DateTimeFormat('el', { day: 'numeric' }).format(date)
+    default:
+      return format(date, formatStr) // fallback to date-fns format
+  }
 }
 
-// Range mode props
-interface CalendarRangeProps extends CalendarBaseProps {
-  mode: 'range';
-  selected?: DateRange | undefined;
-  onSelect?: (date: DateRange | undefined) => void;
-}
-
-// Union type for all calendar props
-type CalendarProps = CalendarSingleProps | CalendarRangeProps;
-
-export function Calendar({
-  className,
-  mode = 'single',
+export function Calendar({ 
+  mode = "single",
   selected,
   onSelect,
-  numberOfMonths = 1,
-  locale = el,
+  className,
   defaultMonth,
-  initialFocus,
-  ...props
 }: CalendarProps) {
-  const classNames = {
-    months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-    month: 'space-y-4',
-    caption: 'flex justify-center pt-1 relative items-center',
-    caption_label: 'text-sm font-medium',
-    nav: 'space-x-1 flex items-center',
-    nav_button: cn('h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'),
-    nav_button_previous: 'absolute left-1',
-    nav_button_next: 'absolute right-1',
-    table: 'w-full border-collapse space-y-1',
-    head_row: 'flex',
-    head_cell: 'text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1 text-center',
-    row: 'flex w-full mt-2',
-    cell: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20',
-    day: cn(
-      'h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none rounded-md'
-    ),
-    day_selected:
-      'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-    day_today: 'bg-accent text-accent-foreground',
-    day_outside: 'text-muted-foreground opacity-50',
-    day_disabled: 'text-muted-foreground opacity-50',
-    day_hidden: 'invisible',
-  };
+  // State
+  const [currentMonth, setCurrentMonth] = React.useState(defaultMonth || new Date())
+  const today = new Date()
 
-  if (mode === 'range') {
-    return (
-      <DayPicker
-        mode="range"
-        selected={selected as DateRange | undefined}
-        onSelect={onSelect as (date: DateRange | undefined) => void}
-        numberOfMonths={numberOfMonths}
-        locale={locale}
-        defaultMonth={defaultMonth}
-        initialFocus={initialFocus}
-        className={cn('p-3', className)}
-        classNames={classNames}
-        {...props}
-      />
-    );
+  // Calendar calculations
+  const firstDayOfMonth = startOfMonth(currentMonth)
+  const lastDayOfMonth = endOfMonth(currentMonth)
+  
+  const daysInMonth: Date[] = []
+  let currentDate = new Date(firstDayOfMonth)
+  while (currentDate <= lastDayOfMonth) {
+    daysInMonth.push(new Date(currentDate))
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  const monday = setDay(new Date(2024, 0, 1), 1)
+  const weekDays = Array.from({ length: 7 }, (_, i: number) => {
+    const date = addDays(monday, i)
+    return formatWithLocale(date, "EE")
+  })
+
+  const firstDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7
+  const emptyCells = Array(firstDayOfWeek).fill(null)
+
+  // Handlers
+  const handlePreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
+  const handleNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
+  
+  const handleSelectDate = (date: Date) => {
+    if (mode === "single") {
+      (onSelect as ((date: Date | undefined) => void))?.(date)
+      return
+    }
+    
+    const range = selected as DateRange | undefined
+    
+    if (!range?.from) {
+      (onSelect as ((date: DateRange | undefined) => void))?.(
+        { from: date, to: undefined }
+      )
+    } else if (!range.to) {
+      (onSelect as ((date: DateRange | undefined) => void))?.(
+        date < range.from 
+          ? { from: date, to: range.from }
+          : { from: range.from, to: date }
+      )
+    } else {
+      (onSelect as ((date: DateRange | undefined) => void))?.(
+        { from: date, to: undefined }
+      )
+    }
+  }
+
+  const isDateSelected = (date: Date) => {
+    if (!selected) return false
+    
+    if (mode === "single") {
+      return isSameDay(date, selected as Date)
+    }
+    
+    const range = selected as DateRange
+    if (!range?.from) return false
+    if (!range.to) return isSameDay(date, range.from)
+    return (date >= range.from && date <= range.to)
   }
 
   return (
-    <DayPicker
-      mode="single"
-      selected={selected as Date | undefined}
-      onSelect={onSelect as (date: Date | undefined) => void}
-      numberOfMonths={numberOfMonths}
-      locale={locale}
-      defaultMonth={defaultMonth}
-      initialFocus={initialFocus}
-      className={cn('p-3', className)}
-      classNames={classNames}
-      {...props}
-    />
-  );
+    <div className={cn("p-3 space-y-4 bg-background rounded-lg shadow-sm", className)}>
+      {/* Header */}
+      <div className="relative flex items-center justify-center">
+        <button
+          onClick={handlePreviousMonth}
+          className="absolute left-1 p-1 rounded-md hover:bg-accent"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="text-sm font-medium">
+          {formatWithLocale(currentMonth, "LLLL yyyy")}
+        </div>
+        <button
+          onClick={handleNextMonth}
+          className="absolute right-1 p-1 rounded-md hover:bg-accent"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {/* Week day headers */}
+        {weekDays.map((day: string, i: number) => (
+          <div
+            key={i}
+            className="h-8 flex items-center justify-center text-sm text-muted-foreground"
+          >
+            {day}
+          </div>
+        ))}
+
+        {/* Empty cells */}
+        {emptyCells.map((_, i: number) => (
+          <div key={`empty-${i}`} className="h-9" />
+        ))}
+
+        {/* Days */}
+        {daysInMonth.map((day: Date) => {
+          const isSelected = isDateSelected(day)
+          const isToday = isSameDay(day, today)
+          const isCurrentMonth = isSameMonth(day, currentMonth)
+
+          return (
+            <button
+              key={day.toString()}
+              onClick={() => handleSelectDate(day)}
+              className={cn(
+                "h-9 w-9 rounded-md flex items-center justify-center text-sm transition-colors",
+                "hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                !isSelected && isToday && "border border-primary/50 text-foreground",
+                !isCurrentMonth && "text-muted-foreground opacity-50"
+              )}
+            >
+              {formatWithLocale(day, "d")}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

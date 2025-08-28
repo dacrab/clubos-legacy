@@ -30,7 +30,7 @@ Use semantic HTML elements that clearly describe their meaning:
   </section>
 </main>
 <footer>
-  <p>© 2025 Custom POS</p>
+  <p>© 2023 clubOS</p>
 </footer>
 
 // Avoid: Non-semantic divs

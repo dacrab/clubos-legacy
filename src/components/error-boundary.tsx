@@ -1,8 +1,6 @@
-'use client';
+"use client";
 
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-
-import { logger } from '@/lib/utils/logger';
+import { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -15,18 +13,15 @@ interface State {
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false,
+    hasError: false
   };
 
-  public static getDerivedStateFromError(): State {
+  public static getDerivedStateFromError(_: Error): State {
     return { hasError: true };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to error reporting service in production
-    if (process.env.NODE_ENV === 'development') {
-      logger.error('Uncaught error:', { error, errorInfo });
-    }
+    console.error('Uncaught error:', error, errorInfo);
   }
 
   public render() {
@@ -36,4 +31,4 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
-}
+} 

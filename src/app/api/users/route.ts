@@ -1,59 +1,117 @@
 import { NextResponse } from 'next/server';
-
-import { stackServerApp } from '@/lib/auth';
-import { createUser, getUsers } from '@/lib/db/services/users';
+import { 
+  API_ERROR_MESSAGES, 
+  USER_MESSAGES, 
+  DEFAULT_USER_ROLE, 
+  ALLOWED_USER_ROLES 
+} from '@/lib/constants';
+import { 
+  createAdminClient, 
+  createApiClient, 
+  checkAdminAccess, 
+  errorResponse, 
+  successResponse, 
+  handleApiError 
+} from '@/lib/api-utils';
 
 export async function POST(request: Request) {
   try {
-    // Check if user is authenticated and is admin
-    const user = await stackServerApp.getUser();
+    const { email, password, username, role = DEFAULT_USER_ROLE } = await request.json();
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!email || !password || !username) {
+      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, 400);
     }
 
-    const { username, password, role = 'employee', email } = await request.json();
-
-    if (!username || !password || !email) {
-      return NextResponse.json({ error: 'Username, email and password required' }, { status: 400 });
+    if (!ALLOWED_USER_ROLES.includes(role)) {
+      return errorResponse(API_ERROR_MESSAGES.INVALID_ROLE, 400);
     }
 
-    // Create user with Stack Auth
-    const newStackUser = await stackServerApp.createUser({
-      primaryEmail: email,
-      displayName: username,
-      password,
-    });
+    // Use admin client for user creation
+    const adminClient = createAdminClient();
 
-    // Create user record in our database
-    const newUser = await createUser({
-      id: newStackUser.id,
+    // Create user with admin client
+    const { data, error: createUserError } = await adminClient.auth.admin.createUser({
       email,
-      username,
-      role: role as 'admin' | 'employee' | 'secretary',
+      password,
+      email_confirm: true,
+      user_metadata: { username, role }
     });
 
-    return NextResponse.json(newUser);
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    const status = message.includes('already exists') ? 409 : 500;
-    return NextResponse.json({ error: message }, { status });
+    if (createUserError || !data.user) {
+      console.error('User creation error:', createUserError);
+      return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
+    }
+
+    // Check if user already exists in public.users (created by trigger)
+    const { data: existingUser } = await adminClient
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    if (existingUser) {
+      // Update the existing user with the correct role instead of inserting
+      const { error: updateError } = await adminClient
+        .from('users')
+        .update({
+          username,
+          role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', data.user.id);
+
+      if (updateError) {
+        console.error('Profile update error:', updateError);
+        await adminClient.auth.admin.deleteUser(data.user.id);
+        return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
+      }
+    } else {
+      // Create profile if it doesn't exist
+      const { error: profileError } = await adminClient
+        .from('users')
+        .insert({
+          id: data.user.id,
+          username,
+          role,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        await adminClient.auth.admin.deleteUser(data.user.id);
+        return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, 400);
+      }
+    }
+
+    return successResponse(null, USER_MESSAGES.CREATE_SUCCESS);
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
 export async function GET() {
   try {
-    // Check if user is authenticated
-    const user = await stackServerApp.getUser();
+    const adminAccess = await checkAdminAccess();
+    
+    if (!adminAccess) {
+      return errorResponse('Unauthorized', 403);
+    }
+    
+    const supabase = await createApiClient();
+    
+    // Get all users
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (usersError) {
+      return errorResponse('Error fetching users', 500, usersError);
     }
 
-    const users = await getUsers();
-    return NextResponse.json({ users });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return successResponse(users);
+  } catch (error) {
+    return handleApiError(error);
   }
 }

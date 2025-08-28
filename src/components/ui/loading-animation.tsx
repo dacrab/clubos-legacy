@@ -1,23 +1,44 @@
-import { Coffee } from 'lucide-react';
+"use client";
 
-import { cn } from '@/lib/utils';
+import { motion } from "framer-motion";
+import { Coffee } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { loadingVariants, transitions } from "@/lib/animations";
 
 export function LoadingAnimation({ className }: { className?: string }) {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={transitions.smooth}
       className={cn(
-        'bg-background/80 animate-fade-in fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm',
+        "fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm",
         className
       )}
     >
       <div className="relative flex flex-col items-center gap-2">
-        <div className="animate-spin">
-          <Coffee className="text-primary h-8 w-8" />
-        </div>
-        <div className="bg-primary/20 h-1 w-24 overflow-hidden rounded-full">
-          <div className="bg-primary h-full animate-pulse rounded-full" />
-        </div>
+        <motion.div
+          variants={loadingVariants.icon}
+          initial="initial"
+          animate="animate"
+        >
+          <Coffee className="h-8 w-8 text-primary" />
+        </motion.div>
+        <motion.div
+          variants={loadingVariants.bar}
+          initial="initial"
+          animate="animate"
+          className="h-1 bg-primary/20 rounded-full overflow-hidden w-24"
+        >
+          <motion.div
+            variants={loadingVariants.progress}
+            initial="initial"
+            animate="animate"
+            className="h-full w-full bg-primary"
+          />
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
-}
+} 
