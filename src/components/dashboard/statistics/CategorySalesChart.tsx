@@ -51,8 +51,8 @@ export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
         return;
       }
 
-      const mainCategories = data.filter(cat => !cat.parent_id);
-      const subCategoriesMap = data.reduce((acc, cat) => {
+      const mainCategories = data.filter((cat: Category) => !cat.parent_id);
+      const subCategoriesMap = data.reduce((acc: Record<string, Category[]>, cat: Category) => {
         if (cat.parent_id) {
           if (!acc[cat.parent_id]) acc[cat.parent_id] = [];
           acc[cat.parent_id].push(cat);

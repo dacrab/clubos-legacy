@@ -71,7 +71,7 @@ export default function Header({ user, profile }: HeaderProps) {
         {/* Left Section - Logo and Welcome Message */}
         <div className="flex items-center gap-1 xs:gap-2 sm:gap-6">
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             width={50}
             height={50}
             alt="Company Logo"

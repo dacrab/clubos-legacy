@@ -21,7 +21,7 @@ function Header() {
         <LockKeyhole className="h-5 w-5 text-primary" />
       </div>
       <Image
-        src="/logo.png"
+        src="/logo.svg"
         alt="Logo"
         width={50}
         height={60}
