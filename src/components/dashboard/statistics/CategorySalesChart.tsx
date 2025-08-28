@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { STATISTICS, CATEGORY_SALES_CHART, API_ERROR_MESSAGES } from '@/lib/constants';
+import { CATEGORY_SALES_CHART, API_ERROR_MESSAGES } from '@/lib/constants';
 import { Sale } from "@/types/sales";
 import { Database } from "@/types/supabase";
 import { cn } from "@/lib/utils";

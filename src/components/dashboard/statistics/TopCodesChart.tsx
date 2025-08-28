@@ -8,15 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart as PieChartIcon, Medal } from "lucide-react";
-import { aggregateSalesByCode, ChartDataItem, MEDAL_COLORS } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils";
+import { PieChart as PieChartIcon } from "lucide-react";
+import { aggregateSalesByCode } from "@/lib/utils/chart-utils";
 
 interface TopCodesChartProps {
   sales: Sale[];
 }
 
-// Using colors from chart-utils for consistency
 const COLORS = [
   'hsl(var(--primary))',
   'hsl(142.1 76.2% 36.3%)', 
@@ -24,31 +22,6 @@ const COLORS = [
   'hsl(0 84.2% 60.2%)',
   'hsl(217.2 91.2% 59.8%)'
 ];
-
-const CHART_CONFIG = {
-  pieConfig: {
-    cx: "50%",
-    cy: "45%",
-    outerRadius: 100,
-    labelRadius: 60,
-    minPercentForLabel: 0.05
-  },
-  styles: {
-    tooltip: {
-      background: 'hsl(var(--background))',
-      border: '1px solid hsl(var(--border))',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      color: 'hsl(var(--foreground))'
-    },
-    legend: {
-      fontSize: '11px',
-      padding: '4px 8px',
-      borderRadius: '9999px',
-      background: 'hsl(var(--muted)/0.5)'
-    }
-  }
-};
 
 export default function TopCodesChart({ sales }: TopCodesChartProps) {
   const [topCount, setTopCount] = useState<number>(STATISTICS.DEFAULT_TOP_CODES_COUNT);
@@ -58,19 +31,20 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
     return aggregateSalesByCode(sales, topCount, showAll);
   }, [sales, topCount, showAll]);
 
-  const renderLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
-    if (percent <= CHART_CONFIG.pieConfig.minPercentForLabel) return null;
+  const renderLabel = ({ cx, cy, midAngle, percent, outerRadius }: any) => {
+    if (percent <= 0.05) return null;
 
+    const radius = outerRadius * 0.6;
     const radian = Math.PI / 180;
-    const x = cx + CHART_CONFIG.pieConfig.labelRadius * Math.cos(-midAngle * radian);
-    const y = cy + CHART_CONFIG.pieConfig.labelRadius * Math.sin(-midAngle * radian);
+    const x = cx + radius * Math.cos(-midAngle * radian);
+    const y = cy + radius * Math.sin(-midAngle * radian);
   
     return (
       <text
         x={x}
         y={y}
-        fill="hsl(var(--background))"
-        textAnchor={x > cx ? 'start' : 'end'}
+        fill="white"
+        textAnchor="middle"
         dominantBaseline="central"
         className="text-xs font-medium"
       >
@@ -138,13 +112,12 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
             <PieChart>
               <Pie
                 data={data}
-                cx={CHART_CONFIG.pieConfig.cx}
-                cy={CHART_CONFIG.pieConfig.cy}
+                cx="50%"
+                cy="45%"
                 labelLine={false}
                 label={renderLabel}
-                outerRadius={CHART_CONFIG.pieConfig.outerRadius}
+                outerRadius={100}
                 dataKey="value"
-                paddingAngle={2}
               >
                 {data.map((_, index) => (
                   <Cell 
@@ -157,20 +130,21 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
               </Pie>
               <Tooltip
                 formatter={(value: number, name: string) => [`${value} τεμ.`, name]}
-                contentStyle={CHART_CONFIG.styles.tooltip}
+                contentStyle={{
+                  background: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  color: 'hsl(var(--foreground))'
+                }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
               />
               <Legend
                 verticalAlign="bottom"
                 align="center"
                 iconType="circle"
-                formatter={(_, entry: any, index: number) => (
-                  <span 
-                    className="text-[11px] md:text-xs"
-                    style={{ 
-                      ...CHART_CONFIG.styles.legend,
-                      color: COLORS[index % COLORS.length]
-                    }}
-                  >
+                formatter={(_, entry: any) => (
+                  <span className="text-[11px] md:text-xs text-foreground">
                     {entry.payload.name} ({entry.payload.value} τεμ.)
                   </span>
                 )}

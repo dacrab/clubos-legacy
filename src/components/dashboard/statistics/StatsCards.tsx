@@ -4,87 +4,108 @@ import { CreditCard, BarChart2, Gift } from "lucide-react";
 import type { Sale } from "@/types/sales";
 import { calculateSalesStats } from "@/lib/utils/chart-utils";
 import { formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import type { ElementType } from "react";
 
 interface StatsCardsProps {
   sales: Sale[];
 }
 
+type StatDetail = {
+  label: string;
+  value?: string;
+  className?: string;
+  valueClassName?: string;
+};
+
+type CardData = {
+  title: string;
+  icon: ElementType;
+  iconClassName?: string;
+  value: string;
+  details: StatDetail[];
+};
+
 export default function StatsCards({ sales }: StatsCardsProps) {
-  const stats = useMemo(() => {
-    return calculateSalesStats(sales);
-  }, [sales]);
+  const stats = useMemo(() => calculateSalesStats(sales), [sales]);
+
+  const cards: CardData[] = [
+    {
+      title: "Συνολικά Έσοδα",
+      icon: BarChart2,
+      value: formatPrice(stats.totalRevenue),
+      details: [
+        { label: "Υποσύνολο", value: formatPrice(stats.totalBeforeDiscounts) },
+        ...(stats.cardDiscountCount > 0 ? [{
+          label: `Κουπόνια (${stats.cardDiscountCount}x)`,
+          value: `-${formatPrice(stats.cardDiscountAmount)}`,
+          className: "text-primary"
+        }] : []),
+        ...(stats.treatCount > 0 ? [{
+          label: `Κεράσματα (${stats.treatCount}x)`,
+          value: `(${formatPrice(stats.treatsAmount)})`,
+          className: "text-amber-500"
+        }] : []),
+        {
+          label: "Σύνολο",
+          value: formatPrice(stats.totalRevenue),
+          className: "font-medium pt-1 border-t mt-1"
+        }
+      ]
+    },
+    {
+      title: "Μέση Αξία Παραγγελίας",
+      icon: CreditCard,
+      value: formatPrice(stats.averageOrderValue),
+      details: [
+        { label: `Συνολικές πωλήσεις: ${stats.totalSales} τεμ.` },
+        { label: `Μοναδικοί κωδικοί: ${stats.uniqueCodes}` }
+      ]
+    },
+    {
+      title: "Κεράσματα",
+      icon: Gift,
+      iconClassName: "text-amber-500",
+      value: `${stats.treatCount} τεμ.`,
+      details: stats.treatsAmount > 0 ? [
+        {
+          label: "Αξία",
+          value: formatPrice(stats.treatsAmount),
+          valueClassName: "text-amber-500"
+        }
+      ] : []
+    }
+  ];
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Συνολικά Έσοδα
-          </CardTitle>
-          <BarChart2 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatPrice(stats.totalRevenue)}</div>
-          <div className="text-xs text-muted-foreground space-y-0.5 mt-2">
-            <div className="flex justify-between">
-              <span>Υποσύνολο:</span>
-              <span>{formatPrice(stats.totalBeforeDiscounts)}</span>
-            </div>
-            {stats.cardDiscountCount > 0 && (
-              <div className="flex justify-between text-primary">
-                <span>Κουπόνια ({stats.cardDiscountCount}x):</span>
-                <span>-{formatPrice(stats.cardDiscountAmount)}</span>
+      {cards.map((card, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {card.title}
+            </CardTitle>
+            <card.icon className={`h-4 w-4 ${card.iconClassName || "text-muted-foreground"}`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{card.value}</div>
+            {card.details.length > 0 && (
+              <div className="text-xs text-muted-foreground space-y-0.5 mt-2">
+                {card.details.map((detail, detailIndex) => (
+                  'value' in detail ? (
+                    <div key={detailIndex} className={cn("flex justify-between", detail.className)}>
+                      <span>{detail.label}:</span>
+                      <span className={detail.valueClassName || ''}>{detail.value}</span>
+                    </div>
+                  ) : (
+                    <p key={detailIndex}>{detail.label}</p>
+                  )
+                ))}
               </div>
             )}
-            {stats.treatCount > 0 && (
-              <div className="flex justify-between text-amber-500">
-                <span>Κεράσματα ({stats.treatCount}x):</span>
-                <span>({formatPrice(stats.treatsAmount)})</span>
-              </div>
-            )}
-            <div className="flex justify-between font-medium pt-1 border-t mt-1">
-              <span>Σύνολο:</span>
-              <span>{formatPrice(stats.totalRevenue)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Μέση Αξία Παραγγελίας
-          </CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatPrice(stats.averageOrderValue)}</div>
-          <div className="text-xs text-muted-foreground space-y-0.5 mt-2">
-            <p>Συνολικές πωλήσεις: {stats.totalSales} τεμ.</p>
-            <p>Μοναδικοί κωδικοί: {stats.uniqueCodes}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Κεράσματα
-          </CardTitle>
-          <Gift className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.treatCount} τεμ.</div>
-          {stats.treatsAmount > 0 && (
-            <div className="text-xs text-muted-foreground space-y-0.5 mt-2">
-              <div className="flex justify-between">
-                <span>Αξία:</span>
-                <span className="text-amber-500">{formatPrice(stats.treatsAmount)}</span>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

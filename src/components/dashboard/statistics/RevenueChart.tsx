@@ -64,8 +64,8 @@ export default function RevenueChart({ sales }: { sales: Sale[] }) {
     });
   }, [sales]);
 
-  // Use the adjusted sales for the chart
-  const data = aggregateSalesByDate(netSales, 'total_price');
+  // Use the adjusted sales for the chart with Greek label
+  const data = aggregateSalesByDate(netSales, 'total_price', 'Καθαρα Εσοδα');
 
   return (
     <Card>
@@ -109,7 +109,7 @@ export default function RevenueChart({ sales }: { sales: Sale[] }) {
                 cursor={{ fill: 'hsl(var(--muted)/0.1)' }}
               />
               <Bar 
-                dataKey="revenue" 
+                dataKey="Καθαρα Εσοδα" 
                 fill={CHART_CONFIG.bar.fill}
                 radius={CHART_CONFIG.bar.radius}
               />

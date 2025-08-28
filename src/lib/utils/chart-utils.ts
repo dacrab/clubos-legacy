@@ -79,8 +79,9 @@ export function filterSalesByDateRange(
  */
 export function aggregateSalesByDate(
   sales: Sale[], 
-  valueKey: 'quantity' | 'total_price'
-): Array<{ date: string; revenue?: number; quantity?: number }> {
+  valueKey: 'quantity' | 'total_price',
+  dataKey?: string
+): Array<{ date: string; [key: string]: number | string | undefined }> {
   // Filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
   
@@ -101,7 +102,7 @@ export function aggregateSalesByDate(
   return Object.entries(aggregated)
     .map(([date, value]) => ({ 
       date, 
-      [valueKey === 'total_price' ? 'revenue' : 'quantity']: value 
+      [dataKey || (valueKey === 'total_price' ? 'revenue' : 'quantity')]: value 
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-STATISTICS.DEFAULT_DAYS_TO_SHOW);

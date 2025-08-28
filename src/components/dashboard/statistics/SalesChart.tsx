@@ -2,52 +2,30 @@
 
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Sale } from "@/types/sales";
-import { STATISTICS } from "@/lib/constants";
+import { Sale } from "@/types/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart as LineChartIcon } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
 
 interface SalesChartProps {
   sales: Sale[];
 }
 
+// Simplified chart configuration
 const CHART_CONFIG = {
-  margin: { top: 10, right: 30, left: 0, bottom: 20 },
+  margins: { top: 10, right: 20, left: 0, bottom: 5 },
   line: {
     stroke: CHART_STYLES.colors.primary,
     strokeWidth: 2,
-    dot: { r: 4 },
-    activeDot: { r: 6 }
-  },
-  grid: {
-    stroke: CHART_STYLES.grid.stroke
-  },
-  axis: {
-    stroke: CHART_STYLES.axis.stroke,
-    fontSize: CHART_STYLES.axis.fontSize
-  },
-  tooltip: {
-    background: CHART_STYLES.tooltip.background,
-    border: CHART_STYLES.tooltip.border,
-    text: CHART_STYLES.tooltip.text
+    dot: { r: 3 },
+    activeDot: { r: 5 }
   }
-} as const;
+};
 
 export default function SalesChart({ sales }: SalesChartProps) {
   const data = useMemo(() => {
-    return aggregateSalesByDate(sales, 'quantity');
+    return aggregateSalesByDate(sales, 'quantity', 'Πωλήσεις');
   }, [sales]);
-
-  if (!data.length) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-[300px] text-muted-foreground">
-          Δεν υπάρχουν δεδομένα για προβολή
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -55,45 +33,44 @@ export default function SalesChart({ sales }: SalesChartProps) {
         <CardTitle className="text-base font-medium">
           Πωλήσεις ανά Ημέρα
         </CardTitle>
-        <LineChartIcon className="h-4 w-4 text-muted-foreground" />
+        <TrendingUp className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[350px]">
           <ResponsiveContainer>
-            <LineChart data={data} margin={CHART_CONFIG.margin}>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_CONFIG.grid.stroke} vertical={false} />
+            <LineChart data={data} margin={CHART_CONFIG.margins}>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))"
+                vertical={false}
+              />
               <XAxis 
-                dataKey="date"
-                angle={-45}
-                textAnchor="end" 
-                height={60}
-                interval={0}
-                stroke={CHART_CONFIG.axis.stroke}
-                fontSize={CHART_CONFIG.axis.fontSize}
+                dataKey="date" 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
-              <YAxis
-                stroke={CHART_CONFIG.axis.stroke}
-                fontSize={CHART_CONFIG.axis.fontSize}
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${value} τεμ.`}
               />
-              <Tooltip
-                formatter={(value: number) => [`${value} τεμ.`, 'Ποσότητα']}
+              <Tooltip 
+                formatter={(value: number) => [`${value} τεμ.`, 'Πωλήσεις']}
                 contentStyle={{
-                  backgroundColor: CHART_CONFIG.tooltip.background,
-                  border: `1px solid ${CHART_CONFIG.tooltip.border}`,
+                  backgroundColor: CHART_STYLES.tooltip.background,
+                  border: `1px solid ${CHART_STYLES.tooltip.border}`,
                   borderRadius: '6px',
                   padding: '8px 12px'
                 }}
-                itemStyle={{ color: CHART_CONFIG.tooltip.text }}
-                cursor={{ stroke: 'hsl(var(--muted))' }}
+                cursor={{ stroke: 'hsl(var(--muted)/0.1)' }}
               />
               <Line
                 type="monotone"
-                dataKey="quantity"
+                dataKey="Πωλήσεις"
                 {...CHART_CONFIG.line}
               />
             </LineChart>
