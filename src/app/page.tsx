@@ -61,7 +61,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
+    <div className="fixed inset-0 flex items-center justify-center bg-background bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/10 via-background to-background">
       <div className="w-full max-w-sm mx-auto px-3">
         <div className="p-3 sm:p-4 bg-card rounded-xl border shadow-soft hover:shadow-soft-hover flex flex-col gap-3 sm:gap-4 transition-all duration-300">
           <Header />

@@ -32,7 +32,7 @@ export default function LowStockCard({ code }: LowStockCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 sm:gap-5">
             {code.image_url ? (
-              <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-md overflow-hidden border bg-white flex-shrink-0">
+              <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-md overflow-hidden border bg-white shrink-0">
                 <Image
                   src={code.image_url}
                   alt={code.name}
@@ -42,7 +42,7 @@ export default function LowStockCard({ code }: LowStockCardProps) {
                 />
               </div>
             ) : (
-              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-md bg-muted flex items-center justify-center shrink-0">
                 <Package className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground" />
               </div>
             )}
@@ -53,7 +53,7 @@ export default function LowStockCard({ code }: LowStockCardProps) {
               </p>
             </div>
           </div>
-          <div className="text-right flex flex-col items-end gap-2 ml-3 flex-shrink-0">
+          <div className="text-right flex flex-col items-end gap-2 ml-3 shrink-0">
             <Badge variant="outline" className={cn(getStockColor(), "text-sm sm:text-md px-3 sm:px-4 py-1.5")}>
               {code.stock} τεμ.
             </Badge>

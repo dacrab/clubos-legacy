@@ -170,7 +170,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                                         selected={formData.date}
                                         onSelect={(date: Date | undefined) => setFormData(prev => ({ ...prev, date }))}
                                         initialFocus
-                                        className="rounded-md border shadow p-2 sm:p-3"
+                                        className="rounded-md border shadow-sm p-2 sm:p-3"
                                     />
                                 </PopoverContent>
                             </Popover>

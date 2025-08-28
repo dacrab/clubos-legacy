@@ -94,7 +94,7 @@ export default function Header({ user, profile }: HeaderProps) {
             size="sm"
             onClick={handleSignOut}
             disabled={isLoading}
-            className="h-8 sm:h-9 gap-1 sm:gap-2 px-1.5 xs:px-2 sm:px-4 hover:bg-destructive/10 group transition-colors duration-200 focus:outline-none text-destructive text-xs sm:text-sm"
+            className="h-8 sm:h-9 gap-1 sm:gap-2 px-1.5 xs:px-2 sm:px-4 hover:bg-destructive/10 group transition-colors duration-200 focus:outline-hidden text-destructive text-xs sm:text-sm"
           >
             {isLoading ? (
               <>

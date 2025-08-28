@@ -100,7 +100,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
       <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
         {/* Add Sale Card */}
         <div className="group relative overflow-hidden rounded-xl border bg-card hover:shadow-xl transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="rounded-full bg-primary/10 p-2.5">
@@ -116,7 +116,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
 
         {/* Close Register Card */}
         <div className="group relative overflow-hidden rounded-xl border bg-card hover:shadow-xl transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="rounded-full bg-primary/10 p-2.5">

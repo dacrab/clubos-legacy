@@ -104,9 +104,9 @@ const CategoryButton = memo(({
     onClick={onClick}
     className={cn(
       "w-full px-3 py-2 rounded-md text-sm font-medium transition-colors",
-      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
       isSelected 
-        ? "bg-primary text-primary-foreground shadow-sm" 
+        ? "bg-primary text-primary-foreground shadow-xs" 
         : "hover:bg-muted/80 text-foreground"
     )}
   >
@@ -130,7 +130,7 @@ const SubcategoryButton = memo(({
     className={cn(
       "w-full text-left px-3 py-1.5 rounded-md text-sm",
       "transition-colors duration-200",
-      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
       isSelected
         ? "text-primary bg-primary/10 font-medium"
         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -247,12 +247,12 @@ const ProductSection = memo(({
 }: ProductSectionProps) => {
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-2 p-3 border-b flex-shrink-0">
+      <div className="flex items-center gap-2 p-3 border-b shrink-0">
         {isMobile && onShowCategories && (
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 flex-shrink-0"
+            className="h-9 w-9 shrink-0"
             onClick={onShowCategories}
           >
             <Menu className="h-5 w-5" />
@@ -328,7 +328,7 @@ const CartSection = memo(({
 }: CartSectionProps) => {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-card w-full">
-      <div className="flex items-center justify-between p-3 border-b flex-shrink-0">
+      <div className="flex items-center justify-between p-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           {isMobile && onShowProducts && (
             <Button 
@@ -597,7 +597,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-full w-screen h-screen p-0 overflow-hidden rounded-none border-0">
-        <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
+        <DialogHeader className="px-4 py-3 border-b shrink-0">
           <DialogTitle className="text-xl font-bold">Νέα Παραγγελία</DialogTitle>
         </DialogHeader>
         
@@ -609,7 +609,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
             // Desktop layout - three-column display
             <>
               {/* Left column - Categories */}
-              <div className="w-64 border-r h-full flex-shrink-0">
+              <div className="w-64 border-r h-full shrink-0">
                 <CategorySection
                   categories={categories}
                   categoriesMap={categoriesMap}
@@ -636,7 +636,7 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
               </div>
               
               {/* Right column - Cart */}
-              <div className="w-96 border-l h-full flex-shrink-0">
+              <div className="w-96 border-l h-full shrink-0">
                 <CartSection
                   orderItems={orderItems}
                   onRemove={removeItem}

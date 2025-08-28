@@ -20,7 +20,7 @@ export function ProductCard({ code, onClick, className }: ProductCardProps) {
       onClick={() => onClick(code)}
       className={cn(
         "relative flex flex-col overflow-hidden rounded-md border bg-card p-3 h-full",
-        "hover:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "hover:border-primary focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
         "portrait:aspect-square landscape:aspect-auto sm:aspect-auto",
         className
       )}

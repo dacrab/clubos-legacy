@@ -75,7 +75,7 @@ export function OrderItem({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-md border bg-card shadow-sm",
+        "relative overflow-hidden rounded-md border bg-card shadow-xs",
         "mb-3 transition-colors duration-150 w-full",
         isTreat && "bg-primary/5 border-primary/20"
       )}
@@ -88,10 +88,10 @@ export function OrderItem({
                 src={image_url}
                 alt={code.name}
                 size="sm"
-                className="h-10 w-10 portrait:h-12 portrait:w-12 rounded-md flex-shrink-0"
+                className="h-10 w-10 portrait:h-12 portrait:w-12 rounded-md shrink-0"
               />
             ) : (
-              <div className="h-10 w-10 portrait:h-12 portrait:w-12 flex items-center justify-center rounded-md bg-primary/5 flex-shrink-0">
+              <div className="h-10 w-10 portrait:h-12 portrait:w-12 flex items-center justify-center rounded-md bg-primary/5 shrink-0">
                 <span className="text-sm font-bold text-primary">{code.name.substring(0, 2).toUpperCase()}</span>
               </div>
             )}
@@ -115,7 +115,7 @@ export function OrderItem({
           </div>
         </div>
 
-        <div className="flex portrait:flex-row landscape:flex-row sm:flex-col justify-between items-center gap-1 portrait:gap-3 portrait:p-2 landscape:p-1 sm:p-2 portrait:border-l landscape:border-l sm:border-t-0 sm:border-l portrait:bg-muted/5 landscape:bg-muted/5 sm:bg-muted/5 landscape:px-1.5 sm:px-2 flex-shrink-0">
+        <div className="flex portrait:flex-row landscape:flex-row sm:flex-col justify-between items-center gap-1 portrait:gap-3 portrait:p-2 landscape:p-1 sm:p-2 portrait:border-l landscape:border-l sm:border-t-0 sm:border-l portrait:bg-muted/5 landscape:bg-muted/5 sm:bg-muted/5 landscape:px-1.5 sm:px-2 shrink-0">
           {isHotDrink && (
             <ActionButton
               icon={<Coffee className="h-4 w-4 portrait:h-5 portrait:w-5" />}

@@ -514,7 +514,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
 
   return (
     <Card className={cn(
-      "group relative hover:shadow-sm transition-all",
+      "group relative hover:shadow-xs transition-all",
       isDeleted && "opacity-75 bg-muted/40 border-dashed"
     )}>
       <CardContent className="p-3">
