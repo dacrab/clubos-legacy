@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import { type NextRequest } from 'next/server';
+
 import {
   checkAdminAccess,
   createApiClient,
@@ -7,7 +7,8 @@ import {
   successResponse,
   handleApiError
 } from '@/lib/api-utils';
-import { RouteHandler } from '@/types/route';
+import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import { type RouteHandler } from '@/types/route';
 
 type Params = {
   userId: string;
@@ -19,8 +20,6 @@ export const PATCH: RouteHandler<Params> = async (
 ) => {
   try {
     const { userId } = await params;
-    console.log('=== Starting role update request ===');
-    console.log('Request params:', { userId });
 
     // Check admin access
     const adminAccess = await checkAdminAccess();
@@ -30,7 +29,6 @@ export const PATCH: RouteHandler<Params> = async (
 
     // Parse request body
     const body = await request.json();
-    console.log('Request body:', body);
 
     // Validate role
     const { role } = body;
@@ -43,8 +41,7 @@ export const PATCH: RouteHandler<Params> = async (
     }
 
     // Update the user's role
-    const supabase = await createApiClient();
-    console.log('Attempting role update:', { userId, newRole: role });
+    const supabase = await createApiClient() as any;
     const { error: updateError } = await supabase
       .from('users')
       .update({ role })
@@ -71,11 +68,6 @@ export const PATCH: RouteHandler<Params> = async (
         details: verifyError?.message,
       });
     }
-
-    console.log('Role update successful:', {
-      userId: updatedProfile.id,
-      newRole: updatedProfile.role,
-    });
 
     return successResponse(updatedProfile, 'Role updated successfully');
   } catch (error) {

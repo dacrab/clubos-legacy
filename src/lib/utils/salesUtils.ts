@@ -1,5 +1,5 @@
-import { Sale, Order } from "@/types/sales";
 import { CARD_DISCOUNT } from "@/lib/constants";
+import { type Sale } from "@/types/sales";
 
 /**
  * Interface for grouped sales by order
@@ -51,12 +51,12 @@ export function calculateFinalAmount(nonTreatSubtotal: number, discountAmount: n
  * Group sales into orders for display purposes
  */
 export function groupSalesIntoOrders(sales: Sale[] | null | undefined): GroupedSale[] {
-  if (!sales?.length) return [];
+  if (!sales?.length) {return [];}
   
   const orderMap = new Map<string, GroupedSale>();
 
   sales.forEach((sale) => {
-    if (!sale?.order_id || !sale.order) return;
+    if (!sale.order_id || !sale.order) {return;}
     
     if (!orderMap.has(sale.order_id)) {
       orderMap.set(sale.order_id, {
@@ -117,7 +117,7 @@ export function getActiveItemsCount(sales: Sale[]): number {
  * Filter sales by search query
  */
 export function filterSalesBySearchQuery(sales: Sale[], searchQuery: string): Sale[] {
-  if (!searchQuery) return sales;
+  if (!searchQuery) {return sales;}
   
   const query = searchQuery.toLowerCase();
   return sales.filter(sale => 

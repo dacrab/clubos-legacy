@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+
 import { API_ERROR_MESSAGES } from '@/lib/constants';
 
 interface PollingConfig<T = void> {
@@ -33,85 +34,53 @@ export function usePolling<T = void>({
   const isActiveRef = useRef(true);
   const isPollingRef = useRef(false);
   
+  const handleSuccess = useCallback((result: T) => {
+    errorCountRef.current = 0;
+    if (onSuccess) {
+      onSuccess(result);
+    }
+  }, [onSuccess]);
+
+  const handleError = useCallback((error: any) => {
+    errorCountRef.current++;
+    const errorObj = error instanceof Error 
+      ? error 
+      : new Error(errorMessage || (typeof error === 'string' ? error : API_ERROR_MESSAGES.SERVER_ERROR));
+    
+    console.error('Polling error:', errorObj.message, { errorCount: errorCountRef.current, originalError: error });
+    if (onError) {
+      onError(errorObj);
+    }
+    if (showToast && errorCountRef.current <= maxErrors) {
+      toast.error(errorObj.message);
+    }
+  }, [errorMessage, onError, showToast, maxErrors]);
+
   // Safe polling function that prevents re-entrancy
   const pollFn = useCallback(async () => {
-    // Prevent re-entrancy - don't start a new poll if one is already running
-    if (isPollingRef.current || !isActiveRef.current) return;
+    if (isPollingRef.current || !isActiveRef.current) {return;}
     
     isPollingRef.current = true;
     
     try {
       const result = await onPoll();
-      
-      // Reset error count on successful poll
-      errorCountRef.current = 0;
-      
-      // Only proceed if still active
-      if (!isActiveRef.current) return;
-      
-      // Call success callback if provided
-      if (onSuccess && result !== undefined) {
-        onSuccess(result);
-      }
+      handleSuccess(result);
     } catch (error) {
-      // Only proceed if still active
-      if (!isActiveRef.current) return;
-      
-      errorCountRef.current++;
-      
-      // Ensure we have a proper Error object with message
-      const errorObj = error instanceof Error 
-        ? error 
-        : new Error(
-            errorMessage || 
-            (typeof error === 'string' ? error : API_ERROR_MESSAGES.SERVER_ERROR)
-          );
-            
-      // Log error but prevent empty error logs
-      console.error('Polling error:', errorObj.message || API_ERROR_MESSAGES.SERVER_ERROR, {
-        errorCount: errorCountRef.current,
-        originalError: error
-      });
-      
-      // Handle error callback
-      if (onError) {
-        onError(errorObj);
+      handleError(error);
+    } finally {
+      isPollingRef.current = false;
+      // Schedule next poll with backoff
+      const backoff = errorCountRef.current > 0 
+        ? Math.min(interval * Math.pow(2, errorCountRef.current - 1), maxBackoff) 
+        : interval;
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
 
-      // Show toast if enabled and under max errors
-      if (showToast && errorCountRef.current <= maxErrors) {
-        toast.error(errorObj.message || API_ERROR_MESSAGES.SERVER_ERROR);
-      }
-    } finally {
-      // Clear the polling status flag
-      isPollingRef.current = false;
-      
-      // Schedule next poll if still active - outside of try/catch to ensure it always runs
-      if (isActiveRef.current) {
-        // Calculate backoff if there are errors
-        const backoff = errorCountRef.current > 0 
-          ? Math.min(interval * Math.pow(2, errorCountRef.current - 1), maxBackoff) 
-          : interval;
-          
-        // Clear any existing timeout to prevent memory leaks
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        
-        // Set up next poll
-        timeoutRef.current = setTimeout(pollFn, backoff);
-      }
+      timeoutRef.current = setTimeout(() => { void pollFn(); }, backoff);
     }
-  }, [
-    interval, 
-    onPoll, 
-    onSuccess, 
-    onError, 
-    showToast, 
-    maxErrors, 
-    maxBackoff, 
-    errorMessage
-  ]);
+  }, [onPoll, handleSuccess, handleError, interval, maxBackoff]);
 
   useEffect(() => {
     // Reset state when dependencies change
@@ -123,14 +92,14 @@ export function usePolling<T = void>({
       timeoutRef.current = undefined;
     }
     
-    if (!enabled) return;
+    if (!enabled) {return;}
 
     // Initial poll with optional delay
     if (initialDelay > 0) {
-      timeoutRef.current = setTimeout(pollFn, initialDelay);
+      timeoutRef.current = setTimeout(() => { void pollFn(); }, initialDelay);
     } else {
       // Start immediately but asynchronously to prevent render phase side effects
-      const immediateTimeout = setTimeout(pollFn, 0);
+      const immediateTimeout = setTimeout(() => { void pollFn(); }, 0);
       timeoutRef.current = immediateTimeout;
     }
 

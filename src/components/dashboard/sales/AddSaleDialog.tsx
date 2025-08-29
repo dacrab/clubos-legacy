@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Database } from "@/types/supabase";
-import { toast } from 'sonner';
-import { Search, Euro } from "lucide-react";
-import { PAYMENT_METHOD_LABELS, SALES_MESSAGES, UNLIMITED_STOCK } from "@/lib/constants";
-import { useLoading } from "@/components/providers/loading-provider";
 import { motion, AnimatePresence } from "framer-motion";
+import { Search, Euro } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { toast } from 'sonner';
+
+import { useLoading } from "@/components/providers/loading-provider";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { dialogVariants, transitions } from "@/lib/animations";
+import { type PAYMENT_METHOD_LABELS, SALES_MESSAGES, UNLIMITED_STOCK } from "@/lib/constants";
+import { type Database } from "@/types/supabase";
+
+
+
 
 // ------------------------------------------------------------
 // Type Definitions
@@ -71,7 +75,7 @@ export default function AddSaleDialog({ open, onOpenChange }: AddSaleDialogProps
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
 
   // State
   const [codes, setCodes] = useState<Code[]>([]);
@@ -94,9 +98,9 @@ export default function AddSaleDialog({ open, onOpenChange }: AddSaleDialogProps
         .or('stock.gt.0,stock.eq.-1')
         .order('name');
 
-      if (error) throw error;
+      if (error) {throw error;}
       setCodes(data || []);
-    } catch (error) {
+    } catch {
       toast.error("Σφάλμα φόρτωσης προϊόντων");
     } finally {
       setLoading(false);
@@ -104,7 +108,7 @@ export default function AddSaleDialog({ open, onOpenChange }: AddSaleDialogProps
   }, [supabase]);
 
   useEffect(() => {
-    if (open) fetchCodes();
+    if (open) {void fetchCodes();}
   }, [open, fetchCodes]);
 
   // Filtered codes based on search query
@@ -117,10 +121,10 @@ export default function AddSaleDialog({ open, onOpenChange }: AddSaleDialogProps
     setIsLoading(true);
     try {
       const validItems = orderItems.filter(item => item.code);
-      if (!validItems.length) throw new Error("Δεν έχουν επιλεγεί προϊόντα");
+      if (!validItems.length) {throw new Error("Δεν έχουν επιλεγεί προϊόντα");}
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error(SALES_MESSAGES.NO_USER_ERROR);
+      if (userError || !user) {throw new Error(SALES_MESSAGES.NO_USER_ERROR);}
 
       // Get active register session
       const { data: activeSession } = await supabase

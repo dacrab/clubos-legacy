@@ -1,12 +1,13 @@
 "use client";
 
-import * as React from "react";
 import { Coffee, Gift, Trash2, Euro } from "lucide-react";
-import { OrderItem as OrderItemType } from "@/types/sales";
+import * as React from "react";
+
 import { Button } from "@/components/ui/button";
 import { ProductImage } from "@/components/ui/product-image";
-import { cn } from "@/lib/utils";
 import { EXTRA_SHOT_PRICE } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { type OrderItem as OrderItemType } from "@/types/sales";
 
 // ------------------------------------------------------------
 // Type Definitions
@@ -63,8 +64,6 @@ export function OrderItem({
   onTreatToggle,
   onDosageIncrease
 }: OrderItemProps) {
-  if (!item.code) return null;
-
   const { code, id, isTreat, dosageCount = 1 } = item;
   const { category, image_url, price } = code;
 

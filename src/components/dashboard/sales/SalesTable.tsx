@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, useMemo, useCallback, memo } from "react";
 import { Gift, ChevronDown, CreditCard, Search, History } from "lucide-react";
+import { useState, useMemo, useCallback, memo } from "react";
+
 import { Input } from "@/components/ui/input";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSalesData, type SalesFilters } from "@/hooks/useSalesData";
 import { cn, formatPrice } from "@/lib/utils";
 import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import type { Sale } from "@/types/sales";
 import { 
-  GroupedSale,
+  type GroupedSale,
   calculateGroupTotals,
 } from "@/lib/utils/salesUtils";
-import { useSalesData, SalesFilters } from "@/hooks/useSalesData";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+import type { Sale } from "@/types/sales";
+
 import EditableSaleCard from "./EditableSaleCard";
 
 interface SalesTableProps {
@@ -109,7 +111,7 @@ EmptyState.displayName = 'EmptyState';
 // Group sales by order_id
 const useGroupedSales = (sales: Sale[] | undefined) => {
   return useMemo(() => {
-    if (!sales?.length) return [];
+    if (!sales?.length) {return [];}
     
     const groups = sales.reduce((map, sale) => {
       if (!sale.order) {
@@ -123,8 +125,8 @@ const useGroupedSales = (sales: Sale[] | undefined) => {
         total: 0,
         items: [],
         treats_count: 0,
-        final_amount: sale.order?.final_amount || 0,
-        card_discount_count: sale.order?.card_discount_count || 0
+        final_amount: sale.order.final_amount || 0,
+        card_discount_count: sale.order.card_discount_count || 0
       };
 
       group.items.push(sale);
@@ -205,8 +207,8 @@ export default function SalesTable({
   }, []);
 
   // Placeholder for delete functionality
-  const handleDeleteClick = useCallback((id: string) => {
-    console.log(`Delete request for sale ${id} - not implemented in SalesTable`);
+  const handleDeleteClick = useCallback((_id: string) => {
+    // This is a placeholder, actual implementation would be in a parent component
   }, []);
 
   return (

@@ -1,20 +1,17 @@
 'use client';
 
-import React from 'react';
 import { Calendar } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
+import React from 'react';
+
+import AppointmentForm from "@/components/dashboard/appointments/AppointmentForm";
+import AppointmentsList from "@/components/dashboard/appointments/AppointmentsList";
+import FootballFieldBookingForm from "@/components/dashboard/football/FootballFieldBookingForm";
+import FootballFieldBookingsList from "@/components/dashboard/football/FootballFieldBookingsList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Components
-import AppointmentForm from './AppointmentForm';
-import FootballFieldBookingForm from './FootballFieldBookingForm';
-import AppointmentsList from './AppointmentsList';
-import FootballFieldBookingsList from './FootballFieldBookingsList';
-
-// Constants
 import { APPOINTMENT_MESSAGES, FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
 
-// Component Types
+import type { User } from '@supabase/supabase-js';
+
 interface EmptyStateProps {
   icon: React.ElementType;
   message: string;
@@ -61,7 +58,7 @@ const TabButton = ({ value, label }: { value: string; label: string }) => (
   </TabsTrigger>
 );
 
-export default function SecretariatDashboard({ user }: { user: User }) {
+export default function SecretariatDashboard({ user: _user }: { user: User }) {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-4 sm:py-8">

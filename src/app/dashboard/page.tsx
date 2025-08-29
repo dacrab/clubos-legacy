@@ -1,11 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Database } from '@/types/supabase';
-import AdminDashboard from '@/components/dashboard/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/EmployeeDashboard';
+
+import AdminDashboard from '@/components/dashboard/dashboards/AdminDashboard';
+import EmployeeDashboard from '@/components/dashboard/dashboards/EmployeeDashboard';
 import type { Sale, Code as SaleCode } from '@/types/sales';
-import type { PaymentMethodType } from '@/types/supabase';
+import { type Database , type PaymentMethodType } from '@/types/supabase';
 
 interface OrderSale {
   id: string;
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
         },
       },
     }
-  );
+  ) as any;
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {

@@ -1,11 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { getVisibleNavItems } from "./navigation";
+
 import { mobileNavVariants } from "@/lib/animations";
+import { cn } from "@/lib/utils";
+
+import { getVisibleNavItems } from "./navigation";
+
 
 // Types
 interface MobileSidebarProps {

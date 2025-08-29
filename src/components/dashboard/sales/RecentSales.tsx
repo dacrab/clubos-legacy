@@ -1,20 +1,22 @@
 "use client";
 
-import { useState, useCallback, memo, useMemo } from 'react';
 import { History, ChevronDown, CreditCard, Gift } from "lucide-react";
 import Link from "next/link";
+import { useState, useCallback, memo, useMemo } from 'react';
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { useSalesData } from "@/hooks/useSalesData";
 import { cn, formatPrice } from "@/lib/utils";
 import { formatDateWithGreekAmPm } from '@/lib/utils/date';
-import type { Sale } from "@/types/sales";
-import EditableSaleCard from "./EditableSaleCard";
 import { 
-  GroupedSale, 
+  type GroupedSale, 
   calculateGroupTotals,
   groupSalesIntoOrders,
 } from "@/lib/utils/salesUtils";
-import { useSalesData } from "@/hooks/useSalesData";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
+import type { Sale } from "@/types/sales";
+
+import EditableSaleCard from "./EditableSaleCard";
 
 // Types
 interface RecentSalesProps {
@@ -113,15 +115,15 @@ export default function RecentSales({ initialSales = [], onDeleteClick, limit = 
   
   // Use our optimized hook with a limit
   const { 
-    sales, 
+    sales: _sales, 
     isLoading 
   } = useSalesData({ limit });
   
   // Use initial data if provided and we're still loading
   const displaySales = useMemo(() => {
-    if (isLoading && initialSales.length > 0) return initialSales;
-    return sales;
-  }, [sales, initialSales, isLoading]);
+    if (isLoading && initialSales.length > 0) {return initialSales;}
+    return _sales;
+  }, [_sales, initialSales, isLoading]);
   
   // Memoize our grouped orders
   const groupedOrders = useMemo(() => 

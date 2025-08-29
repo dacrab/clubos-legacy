@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import { cn } from "@/lib/utils";
-import { CloseRegisterButton } from "./register/CloseRegisterButton";
-import { isUserAuthorized, getVisibleNavItems, NavigationItem } from "./navigation";
+
+import { CloseRegisterButton } from "../register/CloseRegisterButton";
+
+import { isUserAuthorized, getVisibleNavItems, type NavigationItem } from "./navigation";
 
 // Types
 interface SidebarProps {

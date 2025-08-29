@@ -1,18 +1,13 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
-import { useRouter } from "next/navigation";
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { toast } from "sonner";
 import { Trash2, Edit2, PackageX } from "lucide-react";
-import { usePolling } from "@/hooks/usePolling";
+import { useRouter } from "next/navigation";
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
+import { toast } from "sonner";
 
-// Database and types
-import { createClientSupabase } from "@/lib/supabase";
-import type { Database } from "@/types/supabase";
-
-// UI Components
 import { Button } from "@/components/ui/button";
+import { CodeImage } from "@/components/ui/code-image";
 import { 
   Dialog,
   DialogContent, 
@@ -21,28 +16,30 @@ import {
   DialogDescription,
   DialogFooter 
 } from "@/components/ui/dialog";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { CodeImage } from "@/components/ui/code-image";
-import { StockStatusBadge } from "@/components/ui/stock-status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { StockStatusBadge } from "@/components/ui/stock-status-badge";
 import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
-
-// Local components
-import EditCodeDialog from "./EditCodeDialog";
-import StockManagementDialog from "../inventory/StockManagementDialog";
-
-// Utils and constants
-import { deleteCode } from "@/app/actions/deleteCode";
-import { cn } from "@/lib/utils";
+import { usePolling } from "@/hooks/usePolling";
+// Database and types
 import { 
   UNLIMITED_STOCK,
   CODE_MESSAGES,
   STOCK_MESSAGES,
   LOW_STOCK_THRESHOLD,
   BUTTON_LABELS,
-  API_ERROR_MESSAGES,
-  DIALOG_MESSAGES
+  API_ERROR_MESSAGES
 } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import type { Database } from "@/types/supabase";
+
+// UI Components
+
+// Local components
+import EditCodeDialog from "./EditCodeDialog";
+
+// Utils and constants
 
 // Types
 type Code = Database['public']['Tables']['codes']['Row'] & {
@@ -70,7 +67,7 @@ interface TableRowProps {
 const hasUnlimitedStock = (code: Code) => code.stock === UNLIMITED_STOCK;
 
 const formatCategoryPath = (code: Code) => {
-  if (!code.category) return '';
+  if (!code.category) {return '';}
   return code.category.parent?.name 
     ? `${code.category.parent.name}/${code.category.name}`
     : code.category.name;
@@ -245,7 +242,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   // State
   const [codes, setCodes] = useState<Code[]>(initialCodes);
   const [editingCode, setEditingCode] = useState<Code | null>(null);
-  const [managingStock, setManagingStock] = useState<Code | null>(null);
+  const [_managingStock, _setManagingStock] = useState<Code | null>(null);
   const [loading, setLoading] = useState(false);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -253,7 +250,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   const [codeToDelete, setCodeToDelete] = useState<Code | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState(0);
+  const [_height, setHeight] = useState(0);
   const router = useRouter();
   const supabase = createClientSupabase();
 
@@ -291,11 +288,10 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
             )
           )
         `)
-        .order('name')
-        .returns<Code[]>();
+        .order('name');
 
-      if (error) throw error;
-      setCodes(data || []);
+      if (error) {throw error;}
+      setCodes(data);
     } catch (error) {
       console.error('Error fetching codes:', error);
     }
@@ -321,11 +317,17 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   }, [sortField]);
 
   const handleDelete = useCallback(async () => {
-    if (!codeToDelete) return;
+    if (!codeToDelete) {return;}
 
     setLoading(true);
     try {
-      await deleteCode(codeToDelete.id);
+      const { error } = await supabase
+        .from('codes')
+        .delete()
+        .eq('id', codeToDelete.id);
+
+      if (error) {throw error;}
+      
       toast.success(CODE_MESSAGES.DELETE_SUCCESS);
       router.refresh();
     } catch (error) {
@@ -336,7 +338,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
       setDeleteDialogOpen(false);
       setCodeToDelete(null);
     }
-  }, [codeToDelete, router]);
+  }, [codeToDelete, router, supabase]);
 
   // Sorting
   const sortedCodes = useMemo(() => {

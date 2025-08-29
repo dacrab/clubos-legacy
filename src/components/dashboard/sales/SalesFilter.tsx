@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { el } from 'date-fns/locale/el';
 import { CalendarIcon, X, Filter } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useCallback } from "react";
+import { type DateRange } from "react-day-picker";
+
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface SalesDateRange {
   startDate: string;
@@ -67,11 +68,11 @@ const getDateRangeForQuickSelect = (value: string): { start: Date, end: Date } |
     }
   };
 
-  return ranges[value as keyof typeof ranges] || null;
+  return ranges[value as keyof typeof ranges];
 };
 
 const isValidTimeFormat = (time: string) => {
-  if (!time) return true;
+  if (!time) {return true;}
   return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
 };
 
@@ -88,7 +89,7 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
 
   const handleQuickSelectChange = useCallback((value: string) => {
     const range = getDateRangeForQuickSelect(value);
-    if (!range) return;
+    if (!range) {return;}
 
     const { start, end } = range;
     const newTimeRange = {
@@ -117,7 +118,7 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
   }, [date, handleQuickSelectChange]);
 
   const handleDateChange = (range: DateRange | undefined) => {
-    if (!range?.from) return;
+    if (!range?.from) {return;}
     
     setDate(range);
     setQuickSelect("CUSTOM");
@@ -132,13 +133,13 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
   };
 
   const handleTimeChange = (field: keyof TimeRange, value: string) => {
-    if (value.length > 5) return;
+    if (value.length > 5) {return;}
 
     const newTimeRange = { ...timeRange, [field]: value };
     setTimeRange(newTimeRange);
     setQuickSelect("CUSTOM");
 
-    if (!isValidTimeFormat(value)) return;
+    if (!isValidTimeFormat(value)) {return;}
 
     updateFilters(
       {

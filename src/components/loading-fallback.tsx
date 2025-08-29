@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+
 import { Button } from "@/components/ui/button";
-import { DIALOG_MESSAGES } from "@/lib/constants";
 import { transitions } from "@/lib/animations";
 
 export function LoadingFallback({ variant = "default" }: { variant?: "default" | "card" | "table" }) {

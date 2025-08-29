@@ -1,10 +1,11 @@
-import { Database } from "@/types/supabase";
-import { cn } from "@/lib/utils";
 import { Package } from "lucide-react";
 import Image from "next/image";
-import { LOW_STOCK_THRESHOLD } from "@/lib/constants";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { LOW_STOCK_THRESHOLD } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { type Database } from "@/types/supabase";
 
 interface LowStockCardProps {
   code: Database['public']['Tables']['codes']['Row'] & {
@@ -21,8 +22,8 @@ interface LowStockCardProps {
 export default function LowStockCard({ code }: LowStockCardProps) {
   const stockPercentage = (code.stock / LOW_STOCK_THRESHOLD) * 100;
   const getStockColor = () => {
-    if (stockPercentage <= 30) return "text-destructive bg-destructive/10 hover:bg-destructive/20";
-    if (stockPercentage <= 60) return "text-yellow-600 bg-yellow-100/80 hover:bg-yellow-100";
+    if (stockPercentage <= 30) {return "text-destructive bg-destructive/10 hover:bg-destructive/20";}
+    if (stockPercentage <= 60) {return "text-yellow-600 bg-yellow-100/80 hover:bg-yellow-100";}
     return "text-primary bg-primary/10 hover:bg-primary/20";
   };
 

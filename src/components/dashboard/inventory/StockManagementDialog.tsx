@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Database } from "@/types/supabase";
-import { STOCK_MESSAGES, DIALOG_MESSAGES, CODE_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { STOCK_MESSAGES, DIALOG_MESSAGES, CODE_MESSAGES, UNLIMITED_CATEGORY_ID } from "@/lib/constants";
+import { type Database } from "@/types/supabase";
 
 type StockManagementDialogProps = {
   code: {
@@ -31,13 +32,13 @@ export default function StockManagementDialog({ code, open, onOpenChange }: Stoc
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
 
   useEffect(() => {
-    if (code) setStock(code.stock.toString());
+    if (code) {setStock(code.stock.toString());}
   }, [code]);
 
-  if (!code) return null;
+  if (!code) {return null;}
 
   const isUnlimited = code.category_id === UNLIMITED_CATEGORY_ID;
 
@@ -51,11 +52,11 @@ export default function StockManagementDialog({ code, open, onOpenChange }: Stoc
         .update({ stock: parseInt(stock) })
         .eq('id', code.id);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(STOCK_MESSAGES.UPDATE_SUCCESS);
       onOpenChange(false);
-      router.refresh();
+      void router.refresh();
     } catch (error) {
       console.error('Error:', error);
       toast.error(CODE_MESSAGES.GENERIC_ERROR);

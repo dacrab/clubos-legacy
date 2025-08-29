@@ -1,5 +1,5 @@
-import { Sale, Order } from "@/types/sales";
 import { STATISTICS, CARD_DISCOUNT } from "@/lib/constants";
+import { type Sale } from "@/types/sales";
 
 // Types
 export type ChartDataItem = {
@@ -62,7 +62,7 @@ export function filterSalesByDateRange(
   // First filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
   
-  if (!dateRange?.startDate || !dateRange?.endDate) return activeSales;
+  if (!dateRange?.startDate || !dateRange.endDate) {return activeSales;}
 
   return activeSales.filter(sale => {
     const saleDate = new Date(sale.created_at);
@@ -91,7 +91,7 @@ export function aggregateSalesByDate(
     if (!sale.is_treat) {
       // Use exact precision for monetary values
       if (valueKey === 'total_price') {
-        acc[date] = +((acc[date] || 0) + sale[valueKey]).toFixed(2);
+        acc[date] = ((acc[date] || 0) + sale[valueKey]);
       } else {
         acc[date] = (acc[date] || 0) + sale[valueKey];
       }
@@ -121,14 +121,12 @@ export function aggregateSalesByCode(
   
   // Group sales by code, excluding treats
   const codesSales = activeSales.reduce((acc, sale) => {
-    if (!sale.code?.name || sale.is_treat) return acc;
-    
-    const codeName = sale.code.name;
-    if (!acc[codeName]) {
-      acc[codeName] = { name: codeName, value: 0, total: 0 };
+    if (sale.code.name && !sale.is_treat) {
+      const codeName = sale.code.name;
+      acc[codeName] = acc[codeName] ?? { name: codeName, value: 0, total: 0 };
+      acc[codeName].value += sale.quantity;
+      acc[codeName].total += sale.total_price;
     }
-    acc[codeName].value += sale.quantity;
-    acc[codeName].total += sale.total_price;
     return acc;
   }, {} as Record<string, ChartDataItem>);
 
@@ -152,17 +150,15 @@ export function aggregateSalesByCategory(
   sales: Sale[],
   categoryName: string
 ): ChartDataItem[] {
-  if (!categoryName) return [];
+  if (!categoryName) {return [];}
 
   // Filter out deleted sales
   const activeSales = sales.filter(sale => !sale.is_deleted);
 
   const salesByItem = activeSales.reduce((acc, sale) => {
-    if (sale.code?.category?.name === categoryName && !sale.is_treat) {
+    if (sale.code.category && sale.code.category.name === categoryName && !sale.is_treat) {
       const itemName = sale.code.name;
-      if (!acc[itemName]) {
-        acc[itemName] = { name: itemName, value: 0, total: 0 };
-      }
+      acc[itemName] = acc[itemName] ?? { name: itemName, value: 0, total: 0 };
       acc[itemName].value += sale.quantity;
       acc[itemName].total += sale.total_price;
     }
@@ -186,17 +182,17 @@ export function calculateSalesStats(sales: Sale[]) {
   const treatSales = activeSales.filter(s => s.is_treat);
   
   // Group sales by payment type based on order's card discount count
-  const cashSales = activeSales.filter(s => !s.is_treat && (!s.order?.card_discount_count || s.order.card_discount_count === 0));
-  const cardSales = activeSales.filter(s => !s.is_treat && s.order?.card_discount_count && s.order.card_discount_count > 0);
+  const cashSales = activeSales.filter(s => !s.is_treat && !s.order?.card_discount_count);
+  const cardSales = activeSales.filter(s => !s.is_treat && s.order?.card_discount_count);
   
   // Calculate card discount based on order data
   // We need to count each order's card_discount_count only once to avoid duplicates
   const uniqueOrders = Array.from(new Set(cardSales.map(s => s.order?.id)))
     .map(id => cardSales.find(s => s.order?.id === id)?.order)
-    .filter(Boolean);
+    .filter((o): o is NonNullable<Sale['order']> => Boolean(o));
   
   const cardDiscountCount = uniqueOrders.reduce((sum, order) => 
-    sum + (order?.card_discount_count || 0), 0);
+    sum + (order.card_discount_count || 0), 0);
   // Use exact precision for card discount amount
   const cardDiscountAmount = +(cardDiscountCount * CARD_DISCOUNT).toFixed(2);
   
@@ -215,15 +211,14 @@ export function calculateSalesStats(sales: Sale[]) {
   // First, group card sales by order
   const salesByOrder = cardSales.reduce((acc, sale) => {
     const orderId = sale.order?.id || 'unknown';
-    if (!acc[orderId]) acc[orderId] = [];
-    acc[orderId].push(sale);
+    (acc[orderId] = acc[orderId] ?? []).push(sale);
     return acc;
   }, {} as Record<string, Sale[]>);
   
   // Then calculate the revenue for each order with proper discount distribution and exact precision
   const cardRevenue = +(Object.values(salesByOrder).reduce((totalRevenue, orderSales) => {
     // Skip if there are no sales or first sale has no order
-    if (!orderSales.length || !orderSales[0].order) return totalRevenue;
+    if (!orderSales.length || !orderSales[0].order) {return totalRevenue;}
     
     const order = orderSales[0].order;
     const orderTotal = +(orderSales.reduce((sum, sale) => sum + sale.total_price, 0)).toFixed(2);

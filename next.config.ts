@@ -1,5 +1,6 @@
-import type { NextConfig } from "next";
 import withBundleAnalyzer from '@next/bundle-analyzer';
+
+import type { NextConfig } from "next";
 
 // Configuration for Supabase storage
 const supabaseHostname = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').hostname;
@@ -26,12 +27,6 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration
   webpack: (config, { dev }) => {
-    // Suppress common build warnings
-    config.ignoreWarnings = [
-      { message: /Critical dependency|Required package/ },
-      { message: /the request of a dependency is an expression/ }, 
-      { message: /punycode/ },
-    ];
 
     // Production optimizations
     if (!dev) {
@@ -45,11 +40,6 @@ const nextConfig: NextConfig = {
     return config;
   },
 };
-
-// Suppress Node.js runtime warnings
-if (typeof process !== 'undefined') {
-  process.removeAllListeners('warning');
-}
 
 // Enable bundle analyzer in analyze mode
 export default withBundleAnalyzer({

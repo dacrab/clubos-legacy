@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { format } from "date-fns";
 import { el } from 'date-fns/locale/el';
 import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { type DateRange } from "react-day-picker";
+
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DATE_FORMAT } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface DateRangePickerProps {
   onFilterChange: (dateRange: { startDate: string; endDate: string }) => void;

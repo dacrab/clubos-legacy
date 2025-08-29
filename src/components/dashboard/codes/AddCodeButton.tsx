@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { AddCodeDialog } from "./AddCodeDialog";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+import { AddCodeDialog } from "./AddCodeDialog";
+
 
 export default function AddCodeButton() {
   const [open, setOpen] = useState(false);

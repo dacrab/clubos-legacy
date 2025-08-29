@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { el } from 'date-fns/locale/el';
 import { CalendarIcon, X, Filter } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useCallback } from "react";
+import { type DateRange } from "react-day-picker";
+
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { formatDateToYYYYMMDD } from "@/lib/utils/date";
 
 interface DateRangeType {
@@ -31,31 +32,43 @@ const getQuickSelectRange = (option: string): { from: Date; to: Date } => {
     case "TODAY":
       return { from: today, to: new Date() };
     case "YESTERDAY":
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return { from: yesterday, to: yesterday };
+      {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return { from: yesterday, to: yesterday };
+      }
     case "THIS_WEEK":
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() + 1);
-      return { from: weekStart, to: new Date() };
+      {
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1);
+        return { from: weekStart, to: new Date() };
+      }
     case "LAST_WEEK":
-      const lastWeekStart = new Date(today);
-      lastWeekStart.setDate(today.getDate() - today.getDay() - 6);
-      const lastWeekEnd = new Date(today);
-      lastWeekEnd.setDate(today.getDate() - today.getDay());
-      return { from: lastWeekStart, to: lastWeekEnd };
+      {
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 6);
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - today.getDay());
+        return { from: lastWeekStart, to: lastWeekEnd };
+      }
     case "THIS_MONTH":
       return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: new Date() };
     case "LAST_MONTH":
-      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-      return { from: lastMonthStart, to: lastMonthEnd };
+      {
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        return { from: lastMonthStart, to: lastMonthEnd };
+      }
     case "THIS_YEAR":
-      return { from: new Date(today.getFullYear(), 0, 1), to: new Date() };
+      {
+        return { from: new Date(today.getFullYear(), 0, 1), to: new Date() };
+      }
     case "LAST_YEAR":
-      const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
-      const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
-      return { from: lastYearStart, to: lastYearEnd };
+      {
+        const lastYearStart = new Date(today.getFullYear() - 1, 0, 1);
+        const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
+        return { from: lastYearStart, to: lastYearEnd };
+      }
     default:
       return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: new Date() };
   }
@@ -67,23 +80,23 @@ export default function StatisticsFilter({ onFilterChange }: StatisticsFilterPro
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const applyFilter = (from: Date, to: Date) => {
+  const applyFilter = useCallback((from: Date, to: Date) => {
     setSelectedRange({ from, to });
     onFilterChange({
       startDate: formatDateToYYYYMMDD(from),
       endDate: formatDateToYYYYMMDD(to)
     });
-  };
+  }, [onFilterChange]);
 
-  const handleQuickSelect = (value: string) => {
+  const handleQuickSelect = useCallback((value: string) => {
     setQuickSelect(value);
     const { from, to } = getQuickSelectRange(value);
     applyFilter(from, to);
     setIsCalendarOpen(false);
-  };
+  }, [applyFilter]);
 
   const handleDateRangeSelect = (range: DateRange | undefined) => {
-    if (!range?.from) return;
+    if (!range?.from) {return;}
     
     setSelectedRange(range);
     setQuickSelect("CUSTOM");
@@ -99,9 +112,9 @@ export default function StatisticsFilter({ onFilterChange }: StatisticsFilterPro
 
   useEffect(() => {
     if (!selectedRange) {
-      handleQuickSelect("THIS_MONTH");
+      void handleQuickSelect("THIS_MONTH");
     }
-  }, [selectedRange]);
+  }, [selectedRange, handleQuickSelect]);
 
   return (
     <div className="bg-muted/50 rounded-lg border">

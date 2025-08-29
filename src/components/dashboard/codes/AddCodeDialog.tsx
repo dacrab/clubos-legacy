@@ -1,22 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { X, ImagePlus, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClientSupabase } from "@/lib/supabase";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { X, ImagePlus, Loader2 } from "lucide-react";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { 
-  UNLIMITED_STOCK,
-  BUTTON_LABELS,
-  API_ERROR_MESSAGES
-} from "@/lib/constants";
-import Image from "next/image";
 import {
   Select,
   SelectContent,
@@ -26,6 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { 
+  UNLIMITED_STOCK,
+  API_ERROR_MESSAGES
+} from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 
 // Types
 interface Category {
@@ -117,7 +117,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   useEffect(() => {
     if (!isOpen) {
@@ -141,8 +141,8 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
           `)
           .order('name');
 
-        if (error) throw error;
-        if (!data) throw new Error('Δεν ελήφθησαν δεδομένα');
+        if (error) {throw error;}
+        if (!data) {throw new Error('Δεν ελήφθησαν δεδομένα');}
 
         const categoriesData = data.map((cat: any) => ({
           id: cat.id,
@@ -178,11 +178,11 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
       }
     };
 
-    fetchCategories();
+    void fetchCategories();
   }, [isOpen, onClose, supabase]);
 
   const handleImageUpload = async (file: File) => {
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
       throw new Error('Παρακαλώ επιλέξτε μια έγκυρη εικόνα');
     }
 
@@ -198,7 +198,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
       .from('products')
       .upload(filePath, file);
 
-    if (error) throw error;
+    if (error) {throw error;}
 
     const { data: { publicUrl } } = supabase.storage
       .from('products')
@@ -209,7 +209,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     if (!file.type.startsWith('image/')) {
       toast.error('Παρακαλώ επιλέξτε μια έγκυρη εικόνα');
@@ -250,10 +250,10 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
     try {
       const { name, price, stock, categories, isUnlimited, uploadedImage } = formData;
 
-      if (!name.trim()) throw new Error('Το όνομα είναι υποχρεωτικό');
+      if (!name.trim()) {throw new Error('Το όνομα είναι υποχρεωτικό');}
 
       const priceValue = parseFloat(price);
-      if (isNaN(priceValue) || priceValue < 0) throw new Error('Η τιμή πρέπει να είναι θετικός αριθμός');
+      if (isNaN(priceValue) || priceValue < 0) {throw new Error('Η τιμή πρέπει να είναι θετικός αριθμός');}
 
       let stockValue = isUnlimited ? UNLIMITED_STOCK : parseInt(stock);
       if (!isUnlimited && (isNaN(stockValue) || stockValue < 0)) {
@@ -261,7 +261,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Σφάλμα ταυτοποίησης');
+      if (!user) {throw new Error('Σφάλμα ταυτοποίησης');}
 
       const imageUrl = uploadedImage ? await handleImageUpload(uploadedImage) : null;
 
@@ -280,7 +280,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
           categories: categories // Store all selected categories
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {throw insertError;}
 
       toast.success('Code added successfully');
       router.refresh();

@@ -1,11 +1,12 @@
 "use client";
 
+import { TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Sale } from "@/types/sales";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
 import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
+import { type Sale } from "@/types/sales";
 
 interface SalesChartProps {
   sales: Sale[];

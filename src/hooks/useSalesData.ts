@@ -1,8 +1,9 @@
-import useSWR from 'swr';
 import { useCallback } from 'react';
+import useSWR from 'swr';
+
 import { createClientSupabase } from "@/lib/supabase";
-import type { Sale } from "@/types/sales";
 import { getSalesQuery } from "@/lib/utils/salesUtils";
+import type { Sale } from "@/types/sales";
 
 // Types for filter parameters
 export interface SalesDateRange {
@@ -24,12 +25,12 @@ export interface SalesFilters {
 
 // Function to generate a stable key for SWR based on filters
 const generateSalesKey = (filters?: SalesFilters) => {
-  if (!filters) return 'sales';
+  if (!filters) {return 'sales';}
   
   const { dateRange, timeRange, limit, searchQuery } = filters;
   let key = 'sales';
   
-  if (dateRange?.startDate && dateRange?.endDate) {
+  if (dateRange?.startDate && dateRange.endDate) {
     key += `-${dateRange.startDate}-${dateRange.endDate}`;
   }
   
@@ -59,12 +60,12 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<Sale[]> => {
     .order('created_at', { ascending: false });
   
   // Apply date range filter if provided
-  if (filters?.dateRange?.startDate && filters?.dateRange?.endDate) {
+  if (filters?.dateRange?.startDate && filters.dateRange.endDate) {
     let startDate = filters.dateRange.startDate;
     let endDate = filters.dateRange.endDate;
     
     // Apply time range if provided
-    if (filters?.timeRange) {
+    if (filters.timeRange) {
       const { startTime, endTime } = filters.timeRange;
       if (startTime) {
         startDate = `${startDate}T${startTime}:00`;
@@ -132,7 +133,7 @@ export function useSalesData(filters?: SalesFilters) {
   
   // Apply client-side search filter if needed
   const filteredSales = useCallback(() => {
-    if (!sales || !filters?.searchQuery) return sales;
+    if (!sales || !filters?.searchQuery) {return sales;}
     
     const query = filters.searchQuery.toLowerCase();
     return sales.filter(sale => 

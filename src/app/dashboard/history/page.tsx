@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import { History } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import SalesTable from '@/components/dashboard/sales/SalesTable';
+
 import SalesFilter from '@/components/dashboard/sales/SalesFilter';
-import { API_ERROR_MESSAGES } from "@/lib/constants";
+import SalesTable from '@/components/dashboard/sales/SalesTable';
 import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { API_ERROR_MESSAGES } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
 import type { Sale } from '@/types/sales';
 
 interface SalesDateRange {
@@ -37,13 +38,13 @@ export default function HistoryPage() {
           return;
         }
 
-        const { data: userData, error: userDataError } = await supabase
+        const { data: _userData, error: userDataError } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
           .single();
 
-        if (userDataError || !userData) {
+        if (userDataError) {
           console.error('User error:', userDataError);
           router.push('/');
           return;
@@ -78,10 +79,6 @@ export default function HistoryPage() {
           throw new Error(salesError.message);
         }
 
-        if (!sales) {
-          throw new Error('No sales data received');
-        }
-
         // Type assertion to handle the type mismatch from the Supabase query
         const typedSales = sales as unknown as Sale[];
         setAllSales(typedSales);
@@ -94,7 +91,7 @@ export default function HistoryPage() {
       }
     };
 
-    fetchSales();
+    void fetchSales();
   }, [router, supabase]);
 
   const handleFilterChange = (dateRange: SalesDateRange, timeRange: TimeRange) => {

@@ -1,6 +1,6 @@
 // Authentication & Authorization
 export const DEFAULT_USER_ROLE = 'admin' as const;
-export const ALLOWED_USER_ROLES = ['admin', 'employee', 'secretary'] as const;
+export const ALLOWED_USER_ROLES = ['admin', 'staff', 'secretary'] as const;
 export type UserRole = (typeof ALLOWED_USER_ROLES)[number];
 
 export const AUTH_PAGES = ['/'] as const;
@@ -8,13 +8,12 @@ export const PUBLIC_ROUTES = ['/'] as const;
 
 export const ROLE_TRANSLATIONS: Record<UserRole, string> = {
   admin: 'Διαχειριστής',
-  employee: 'Υπάλληλος', 
+  staff: 'Υπάλληλος', 
   secretary: 'Γραμματεία'
 } as const;
 
 // UI Components & Icons
 import { Search, Euro } from "lucide-react";
-import { LucideIcon } from "lucide-react";
 
 // Sales Interface Icons
 export const SALES_ICONS = {
@@ -76,6 +75,8 @@ export const QUICK_SELECT_OPTIONS = {
   LAST_YEAR: "Προηγούμενο έτος"
 } as const;
 
+export const REQUIRED_FIELDS_MESSAGE = "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
+
 // UI Messages - API Errors
 export const API_ERROR_MESSAGES = {
   UNAUTHORIZED: "Μη εξουσιοδοτημένη πρόσβαση",
@@ -97,7 +98,7 @@ export const API_ERROR_MESSAGES = {
   GENERIC_ERROR: "Κάτι πήγε στραβά",
   INVALID_IMAGE_TYPE: "Παρακαλώ επιλέξτε μια εικόνα",
   IMAGE_TOO_LARGE: "Η εικόνα δεν πρέπει να ξεπερνά τα 5MB",
-  MISSING_REQUIRED_FIELDS: "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία"
+  MISSING_REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE
 } as const;
 
 // UI Messages - Dialogs
@@ -182,7 +183,7 @@ export const APPOINTMENT_MESSAGES = {
   UPDATE_SUCCESS: 'Το παιδικό πάρτυ ενημερώθηκε με επιτυχία!',
   DELETE_SUCCESS: 'Το παιδικό πάρτυ διαγράφηκε με επιτυχία!',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το παιδικό πάρτυ;',
-  REQUIRED_FIELDS: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία',
+  REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
   INVALID_DATE: 'Παρακαλώ επιλέξτε μια έγκυρη ημερομηνία και ώρα',
   MIN_CHILDREN: 'Ο αριθμός των παιδιών πρέπει να είναι τουλάχιστον 1',
   MIN_ADULTS: 'Ο αριθμός των ενηλίκων πρέπει να είναι 0 ή μεγαλύτερος',
@@ -198,7 +199,7 @@ export const FOOTBALL_BOOKING_MESSAGES = {
   UPDATE_SUCCESS: 'Η κράτηση ενημερώθηκε με επιτυχία!',
   DELETE_SUCCESS: 'Η κράτηση διαγράφηκε με επιτυχία!',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση;',
-  REQUIRED_FIELDS: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία',
+  REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
   INVALID_DATE: 'Παρακαλώ επιλέξτε μια έγκυρη ημερομηνία και ώρα',
   MIN_PLAYERS: 'Ο αριθμός των παικτών πρέπει να είναι μεταξύ 2 και 12',
   INVALID_FIELD: 'Παρακαλώ επιλέξτε ένα έγκυρο γήπεδο (1-5)',

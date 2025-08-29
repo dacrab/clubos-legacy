@@ -1,10 +1,3 @@
-import { NextResponse } from 'next/server';
-import { 
-  API_ERROR_MESSAGES, 
-  USER_MESSAGES, 
-  DEFAULT_USER_ROLE, 
-  ALLOWED_USER_ROLES 
-} from '@/lib/constants';
 import { 
   createAdminClient, 
   createApiClient, 
@@ -13,6 +6,12 @@ import {
   successResponse, 
   handleApiError 
 } from '@/lib/api-utils';
+import { 
+  API_ERROR_MESSAGES, 
+  USER_MESSAGES, 
+  DEFAULT_USER_ROLE, 
+  ALLOWED_USER_ROLES 
+} from '@/lib/constants';
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     // Use admin client for user creation
-    const adminClient = createAdminClient();
+    const adminClient = createAdminClient() as any;
 
     // Create user with admin client
     const { data, error: createUserError } = await adminClient.auth.admin.createUser({

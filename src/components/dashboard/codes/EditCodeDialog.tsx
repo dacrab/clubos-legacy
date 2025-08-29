@@ -1,25 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { X, ImagePlus } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createClientSupabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { X, ImagePlus } from "lucide-react";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { toast } from "sonner";
-import { Database } from "@/types/supabase";
-import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { 
   UNLIMITED_STOCK,
-  DIALOG_MESSAGES,
   BUTTON_LABELS,
   API_ERROR_MESSAGES
 } from "@/lib/constants";
-import Image from "next/image";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import { type Database } from "@/types/supabase";
+
 
 // Types
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
@@ -73,7 +74,7 @@ const STYLES = {
 
 export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -87,7 +88,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
   });
 
   // Categories state
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [_categories, setCategories] = useState<Category[]>([]);
   const [groupedCategories, setGroupedCategories] = useState<GroupedCategory[]>([]);
   
   // Loading states
@@ -100,7 +101,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
       setIsLoadingCategories(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No authenticated user');
+        if (!user) {throw new Error('No authenticated user');}
 
         const { data, error } = await supabase
           .from('categories')
@@ -110,10 +111,10 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
           `)
           .order('name');
 
-        if (error) throw error;
-        if (!data) throw new Error('No data received');
+        if (error) {throw error;}
+        if (!data) {throw new Error('No data received');}
 
-        const categories = data.map(cat => ({
+        const categories = data.filter(Boolean).map((cat: Category) => ({
           ...cat,
           parent: cat.parent && !Array.isArray(cat.parent) ? cat.parent : null
         })) as Category[];
@@ -135,11 +136,11 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
       }
     };
     
-    fetchCategories();
+    void fetchCategories();
   }, [onClose, supabase]);
 
   const handleImageUpload = async (file: File) => {
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
       throw new Error('Please select a valid image');
     }
 
@@ -155,7 +156,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
       .from('products')
       .upload(filePath, file);
 
-    if (error) throw error;
+    if (error) {throw error;}
 
     const { data: { publicUrl } } = supabase.storage
       .from('products')
@@ -166,7 +167,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     if (!file.type.startsWith('image/')) {
       toast.error('Please select a valid image');
@@ -193,10 +194,10 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
     try {
       const { name, price, stock, categoryId, isUnlimited, uploadedImage } = formData;
 
-      if (!name.trim()) throw new Error('Name is required');
+      if (!name.trim()) {throw new Error('Name is required');}
 
       const priceValue = parseFloat(price);
-      if (isNaN(priceValue) || priceValue < 0) throw new Error('Price must be a positive number');
+      if (isNaN(priceValue) || priceValue < 0) {throw new Error('Price must be a positive number');}
 
       let stockValue = isUnlimited ? UNLIMITED_STOCK : parseInt(stock);
       if (!isUnlimited && (isNaN(stockValue) || stockValue < 0)) {
@@ -204,7 +205,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Authentication required');
+      if (!user) {throw new Error('Authentication required');}
 
       let imageUrl = formData.imageUrl;
       if (uploadedImage) {
@@ -223,7 +224,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
         })
         .eq('id', code.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {throw updateError;}
 
       toast.success('Code updated successfully');
       router.refresh();

@@ -1,12 +1,12 @@
-import type { Database } from './supabase';
-import type { Json } from './database';
 import { CARD_DISCOUNT } from "@/lib/constants";
 
+import { type Json } from './database';
 // Import types from other modules
-import type { 
-  Sale as SalesTypeSale, 
-  Order as SalesOrder 
+import { 
+  type Sale as SalesTypeSale, 
+  type Order as SalesOrder 
 } from './sales';
+import { type Database } from './supabase';
 
 // Re-export the Sale type for convenience
 export type Sale = SalesTypeSale;
@@ -17,7 +17,7 @@ type Tables = Database['public']['Tables'];
 /**
  * USER RELATED TYPES
  */
-export type UserRole = 'admin' | 'employee' | 'secretary';
+export type UserRole = 'admin' | 'staff' | 'secretary';
 
 export interface User extends Omit<Tables['users']['Row'], 'role'> {
   role: UserRole;
@@ -237,17 +237,17 @@ export const calculateStats = (sessions: ListItem[]): SessionStats => sessions.r
  * Calculate totals for active sessions
  */
 export const calculateActiveSessionTotals = (orders?: Order[]): ActiveSessionTotals => {
-  if (!orders) return {
+  if (!orders) {return {
     totalBeforeDiscounts: 0,
     cardDiscounts: 0,
     treats: 0,
     treatsAmount: 0
-  };
+  };}
 
   return orders.reduce((acc, order) => {
     order.sales?.forEach(sale => {
       // Skip deleted sales
-      if (sale.is_deleted) return;
+      if (sale.is_deleted) {return;}
       
       if (sale.is_treat) {
         acc.treats += sale.quantity;
@@ -313,7 +313,6 @@ export const transformSession = (session: DatabaseRegisterSession): RegisterSess
       // Process sales if they exist
       if (order.sales && Array.isArray(order.sales)) {
         processedOrder.sales = order.sales
-          .filter(sale => sale !== null)
           .map(sale => {
             const code = sale.codes ? {
               id: sale.codes.id || '',

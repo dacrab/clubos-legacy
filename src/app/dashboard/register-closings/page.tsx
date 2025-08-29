@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
 import { Calculator } from "lucide-react";
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import { RegisterClosingsList } from "@/components/dashboard/register/RegisterClosingsList";
+import { useState, useMemo, useCallback } from "react";
+
 import RegisterClosingsFilter from "@/components/dashboard/register/RegisterClosingsFilter";
+import { RegisterClosingsList } from "@/components/dashboard/register/RegisterClosingsList";
+import { PageWrapper } from "@/components/ui/page-wrapper";
 import type { DateRange } from "@/types/register";
 
 export default function RegisterClosingsPage() {

@@ -1,8 +1,9 @@
-import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
+import useSWR from 'swr';
+
+import { UNLIMITED_STOCK } from '@/lib/constants';
 import { createClientSupabase } from "@/lib/supabase";
 import type { Code } from "@/types/sales";
-import { UNLIMITED_STOCK } from '@/lib/constants';
 
 interface CategoriesMap {
   [key: string]: Array<{ id: string; name: string; description?: string; parent_id?: string | null }>;
@@ -15,9 +16,16 @@ interface CodeFilters {
   inStock?: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  parent_id?: string | null;
+}
+
 // Fetch codes from the database
 const fetchCodes = async (): Promise<{ codes: Code[], categoriesMap: CategoriesMap }> => {
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
   
   try {
     // Fetch both codes and categories in parallel
@@ -44,9 +52,9 @@ const fetchCodes = async (): Promise<{ codes: Code[], categoriesMap: CategoriesM
     }
 
     // Process categories into parent/child relationships
-    const categoriesMap = (categoriesData || []).reduce((acc: CategoriesMap, category) => {
+    const categoriesMap = (categoriesData || []).reduce((acc: CategoriesMap, category: Category) => {
       if (category.parent_id) {
-        acc[category.parent_id] = [...(acc[category.parent_id] || []), category];
+        (acc[category.parent_id] = acc[category.parent_id] ?? []).push(category);
       }
       return acc;
     }, {});
@@ -76,7 +84,7 @@ export function useCodesData(filters?: CodeFilters) {
   
   // Extract and memoize categories array
   const categories = useMemo(() => {
-    if (!data?.codes) return [];
+    if (!data?.codes) {return [];}
     
     return Array.from(new Set(
       data.codes
@@ -87,7 +95,7 @@ export function useCodesData(filters?: CodeFilters) {
   
   // Apply filters to codes
   const filteredCodes = useMemo(() => {
-    if (!data?.codes) return [];
+    if (!data?.codes) {return [];}
     
     let filtered = data.codes;
     
@@ -109,7 +117,7 @@ export function useCodesData(filters?: CodeFilters) {
     
     // Apply category filter
     if (filters?.categoryId) {
-      const subcategories = data.categoriesMap[filters.categoryId] || [];
+      const subcategories = data.categoriesMap[filters.categoryId];
       const subcategoryIds = subcategories.map(subcat => subcat.id);
       
       filtered = filtered.filter(code => 
@@ -137,7 +145,7 @@ export function useCodesData(filters?: CodeFilters) {
   
   // Function to refresh data
   const refreshData = useCallback(() => {
-    return mutate();
+    void mutate();
   }, [mutate]);
   
   return {

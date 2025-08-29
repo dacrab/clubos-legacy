@@ -1,18 +1,19 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { createClientSupabase } from "@/lib/supabase";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { toast } from "sonner";
-import { Database } from "@/types/supabase";
-import { Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DIALOG_MESSAGES, API_ERROR_MESSAGES, BUTTON_LABELS } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { type Database } from "@/types/supabase";
 
 // Types
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
@@ -52,14 +53,14 @@ const STYLES = {
 
 export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCategoriesDialogProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Record<string, Category[]>>({});
+  const [subCategories, setSubCategories] = useState<Partial<Record<string, Category[]>>>({});
   const [newCategoryName, setNewCategoryName] = useState("");
   const [parentCategoryId, setParentCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -68,16 +69,16 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
         .select('*')
         .order('name');
       
-      if (error) throw error;
-      if (!data) return;
+      if (error) {throw error;}
+      if (!data) {return;}
 
       const mainCategories = data.filter((cat: Category) => !cat.parent_id);
-      const subCategoriesMap = data.reduce((acc: Record<string, Category[]>, cat: Category) => {
+      const subCategoriesMap = data.reduce((acc: Partial<Record<string, Category[]>>, cat: Category) => {
         if (cat.parent_id) {
-          acc[cat.parent_id] = [...(acc[cat.parent_id] || []), cat];
+          acc[cat.parent_id] = [...(acc[cat.parent_id] ?? []), cat];
         }
         return acc;
-      }, {});
+      }, {} as Partial<Record<string, Category[]>>);
 
       setCategories(mainCategories);
       setSubCategories(subCategoriesMap);
@@ -89,81 +90,71 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
   }, [supabase, onOpenChange]);
 
   useEffect(() => {
-    if (open) fetchCategories();
+    if (open) {
+      void fetchCategories();
+    }
   }, [open, fetchCategories]);
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
+  const validateCategory = (name: string, parentId: string | null): boolean => {
+    if (!name.trim()) {
       toast.error(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS);
-      return;
+      return false;
     }
+    if (parentId && parentId !== 'none' && !categories.find(cat => cat.id === parentId)) {
+      toast.error('Η γονική κατηγορία δεν βρέθηκε');
+      return false;
+    }
+    return true;
+  };
 
-    if (parentCategoryId && parentCategoryId !== 'none') {
-      const parentCategory = categories.find(cat => cat.id === parentCategoryId);
-      if (!parentCategory) {
-        toast.error('Η γονική κατηγορία δεν βρέθηκε');
-        return;
-      }
+  const checkExistingCategory = async (name: string) => {
+    const { data: existingCategory, error } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', name.trim())
+      .maybeSingle();
+    if (error) {throw error;}
+    if (existingCategory) {
+      toast.error('Υπάρχει ήδη κατηγορία με αυτό το όνομα');
+      return true;
     }
+    return false;
+  };
+
+  const insertCategory = async (name: string, parentId: string | null, userId: string) => {
+    const { error } = await supabase
+      .from('categories')
+      .insert([{
+        name: name.trim(),
+        parent_id: parentId === 'none' ? null : parentId,
+        created_by: userId,
+        description: null
+      }]);
+    if (error) {throw error;}
+  };
+
+  const handleAddCategory = async () => {
+    if (!validateCategory(newCategoryName, parentCategoryId)) {return;}
 
     setLoading(true);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) throw userError;
-      
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Δεν βρέθηκε συνδεδεμένος χρήστης');
         return;
       }
+      if (await checkExistingCategory(newCategoryName)) {return;}
 
-      const { data: existingCategory, error: checkError } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('name', newCategoryName.trim())
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-
-      if (existingCategory) {
-        toast.error('Υπάρχει ήδη κατηγορία με αυτό το όνομα');
-        return;
-      }
-
-      const { data: newCategory, error: insertError } = await supabase
-        .from('categories')
-        .insert([{
-          name: newCategoryName.trim(),
-          parent_id: parentCategoryId === 'none' ? null : parentCategoryId,
-          created_by: user.id,
-          description: null
-        }])
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      if (!newCategory) {
-        throw new Error('Δεν ήταν δυνατή η δημιουργία της κατηγορίας');
-      }
+      await insertCategory(newCategoryName, parentCategoryId, user.id);
 
       toast.success('Η κατηγορία προστέθηκε επιτυχώς');
       setNewCategoryName("");
       setParentCategoryId(null);
-      fetchCategories();
+      void fetchCategories();
     } catch (error) {
       console.error('Error adding category:', error);
-      
       if (error instanceof Error) {
-        if (error.message.includes('unique_category_name')) {
-          toast.error('Υπάρχει ήδη κατηγορία με αυτό το όνομα');
-        } else if (error.message.includes('valid_parent')) {
-          toast.error('Μη έγκυρη γονική κατηγορία');
-        } else if (error.message.includes('foreign key')) {
-          toast.error('Η γονική κατηγορία δεν υπάρχει');
-        } else {
-          toast.error(`Σφάλμα: ${error.message}`);
-        }
+        toast.error(`Σφάλμα: ${error.message}`);
       } else {
         toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
       }
@@ -173,7 +164,7 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
   };
 
   const handleDeleteCategory = async () => {
-    if (!categoryToDelete) return;
+    if (!categoryToDelete) {return;}
 
     setLoading(true);
     try {
@@ -182,12 +173,12 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
         .delete()
         .eq('id', categoryToDelete.id);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success('Η κατηγορία διαγράφηκε επιτυχώς');
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
-      fetchCategories();
+      void fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
@@ -278,18 +269,21 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Υπάρχουσες Κατηγορίες</h3>
               <div className="space-y-3">
-                {categories.map((category) => (
-                  <div key={category.id}>
-                    <CategoryItem category={category} />
-                    {subCategories[category.id]?.map((subCategory) => (
-                      <CategoryItem 
-                        key={subCategory.id} 
-                        category={subCategory} 
-                        isSubCategory 
-                      />
-                    ))}
-                  </div>
-                ))}
+                {categories.map((category) => {
+                  const subcats = subCategories[category.id];
+                  return (
+                    <div key={category.id}>
+                      <CategoryItem category={category} />
+                      {subcats && subcats.map((subCategory) => (
+                        <CategoryItem
+                          key={subCategory.id}
+                          category={subCategory}
+                          isSubCategory
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -302,11 +296,19 @@ export default function ManageCategoriesDialog({ open, onOpenChange }: ManageCat
             <DialogTitle>Διαγραφή Κατηγορίας</DialogTitle>
             <DialogDescription>
               Είστε σίγουροι ότι θέλετε να διαγράψετε την κατηγορία &quot;{categoryToDelete?.name}&quot;;
-              {categoryToDelete && !categoryToDelete.parent_id && subCategories[categoryToDelete.id]?.length > 0 && (
-                <span className="block mt-2 text-destructive">
-                  Προσοχή: Η διαγραφή αυτής της κατηγορίας θα διαγράψει και όλες τις υποκατηγορίες της!
-                </span>
-              )}
+              {(() => {
+                if (categoryToDelete && !categoryToDelete.parent_id) {
+                  const subcats = subCategories[categoryToDelete.id];
+                  if (subcats && subcats.length > 0) {
+                    return (
+                      <span className="block mt-2 text-destructive">
+                        Προσοχή: Η διαγραφή αυτής της κατηγορίας θα διαγράψει και όλες τις υποκατηγορίες της!
+                      </span>
+                    );
+                  }
+                }
+                return null;
+              })()}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">

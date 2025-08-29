@@ -1,10 +1,11 @@
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, BarChart2, Gift } from "lucide-react";
-import type { Sale } from "@/types/sales";
+import { useMemo } from "react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatPrice , cn } from "@/lib/utils";
 import { calculateSalesStats } from "@/lib/utils/chart-utils";
-import { formatPrice } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import type { Sale } from "@/types/sales";
+
 import type { ElementType } from "react";
 
 interface StatsCardsProps {
@@ -26,6 +27,8 @@ type CardData = {
   details: StatDetail[];
 };
 
+const TEXT_AMBER_500 = "text-amber-500";
+
 export default function StatsCards({ sales }: StatsCardsProps) {
   const stats = useMemo(() => calculateSalesStats(sales), [sales]);
 
@@ -44,7 +47,7 @@ export default function StatsCards({ sales }: StatsCardsProps) {
         ...(stats.treatCount > 0 ? [{
           label: `Κεράσματα (${stats.treatCount}x)`,
           value: `(${formatPrice(stats.treatsAmount)})`,
-          className: "text-amber-500"
+          className: TEXT_AMBER_500
         }] : []),
         {
           label: "Σύνολο",
@@ -65,13 +68,13 @@ export default function StatsCards({ sales }: StatsCardsProps) {
     {
       title: "Κεράσματα",
       icon: Gift,
-      iconClassName: "text-amber-500",
+      iconClassName: TEXT_AMBER_500,
       value: `${stats.treatCount} τεμ.`,
       details: stats.treatsAmount > 0 ? [
         {
           label: "Αξία",
           value: formatPrice(stats.treatsAmount),
-          valueClassName: "text-amber-500"
+          valueClassName: TEXT_AMBER_500
         }
       ] : []
     }

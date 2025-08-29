@@ -1,13 +1,14 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createClientSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { useState, useEffect, useCallback } from "react";
-import { REGISTER_MESSAGES, API_ERROR_MESSAGES } from "@/lib/constants";
-import { LoadingButton } from "@/components/ui/loading-button";
+import { toast } from "sonner";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Textarea } from "@/components/ui/textarea";
+import { REGISTER_MESSAGES, API_ERROR_MESSAGES } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
 
 interface CloseRegisterDialogProps {
   open: boolean;
@@ -20,7 +21,7 @@ export default function CloseRegisterDialog({ open, onOpenChange, onRegisterClos
   const [notes, setNotes] = useState("");
   const [closedByName, setClosedByName] = useState("");
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   const getActiveRegisterSession = useCallback(async () => {
     try {
@@ -88,9 +89,8 @@ export default function CloseRegisterDialog({ open, onOpenChange, onRegisterClos
         return;
       }
 
-      console.log('Register closed successfully:', closeResult.data);
       toast.success(REGISTER_MESSAGES.CLOSE_SUCCESS);
-      router.refresh();
+      void router.refresh();
       onOpenChange(false);
       onRegisterClosed?.();
 

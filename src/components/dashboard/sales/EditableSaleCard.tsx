@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Pencil, X, Save, Trash2, Gift } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-
-import { cn, formatPrice } from "@/lib/utils";
-import { SALES_MESSAGES } from "@/lib/constants";
-import { Sale } from "@/types/sales";
-import { formatDateWithGreekAmPm } from "@/lib/utils/date";
-import { createClientSupabase } from "@/lib/supabase";
 import { useSaleActions } from "@/hooks/useSaleActions";
+import { SALES_MESSAGES } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn, formatPrice } from "@/lib/utils";
+import { formatDateWithGreekAmPm } from "@/lib/utils/date";
+import { type Sale } from "@/types/sales";
 
 // Constants
 const EDIT_WINDOW_MINUTES = 5;
@@ -161,29 +161,27 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
           `)
           .order('name');
         
-        if (error) throw error;
+        if (error) {throw error;}
         
-        if (rawData) {
-          // Use type assertion to handle the complex structure
-          const transformedData: SimpleCode[] = rawData.map((code: any) => ({
-            id: code.id,
-            name: code.name,
-            price: code.price,
-            stock: code.stock, 
-            image_url: code.image_url,
-            category_id: code.category_id,
-            created_at: code.created_at,
-            created_by: code.created_by,
-            updated_at: code.updated_at,
-            // Handle category field which might be an array or an object
-            category: Array.isArray(code.category) && code.category.length > 0 
-              ? code.category[0] 
-              : code.category || undefined
-          }));
+        // Use type assertion to handle the complex structure
+        const transformedData: SimpleCode[] = rawData.map((code: any) => ({
+          id: code.id,
+          name: code.name,
+          price: code.price,
+          stock: code.stock, 
+          image_url: code.image_url,
+          category_id: code.category_id,
+          created_at: code.created_at,
+          created_by: code.created_by,
+          updated_at: code.updated_at,
+          // Handle category field which might be an array or an object
+          category: Array.isArray(code.category) && code.category.length > 0 
+            ? code.category[0] 
+            : code.category || undefined
+        }));
 
-          setAvailableCodes(transformedData);
-          setSelectedCode(transformedData.find(code => code.id === selectedCodeId) || null);
-        }
+        setAvailableCodes(transformedData);
+        setSelectedCode(transformedData.find(code => code.id === selectedCodeId) || null);
       } catch (error) {
         console.error('Error fetching codes:', error);
         toast.error('Failed to load products');
@@ -192,12 +190,12 @@ function EditSaleForm({ sale, onSave, onCancel }: EditSaleFormProps) {
       }
     }
 
-    fetchCodes();
+    void fetchCodes();
   }, [selectedCodeId, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCode) return;
+    if (!selectedCode) {return;}
 
     try {
       await onSave({
@@ -325,12 +323,12 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
   const [timeLeft, setTimeLeft] = useState<string>('');
   
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
   
   // Use the shared sale actions hook
   const { isLoading, deleteSale, editSale } = useSaleActions({
     onSuccess: () => {
-      router.refresh();
+      void router.refresh();
     }
   });
 
@@ -466,7 +464,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
           is_edited: true,
           is_treat: !!updatedSale.is_treat,
           original_quantity: sale.quantity,
-          original_code: sale.code?.name,
+          original_code: sale.code.name,
           code: {
             id: newCode.id,
             name: newCode.name,
@@ -477,7 +475,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
             created_by: newCode.created_by,
             updated_at: newCode.updated_at,
             category: newCode.category || undefined,
-            category_id: newCode.category?.id || ''
+            category_id: newCode.category.id || ''
           }
         });
         
@@ -492,7 +490,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
     }
   };
 
-  if (!currentSale?.code?.name) {
+  if (!currentSale.code.name) {
     return (
       <Card className="bg-destructive/10">
         <CardContent className="p-3">
@@ -522,7 +520,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
           {/* Left side: Product info */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              {currentSale.code?.image_url && (
+              {currentSale.code.image_url && (
                 <div className={cn(
                   "relative h-8 w-8",
                   isDeleted && "opacity-50"
@@ -541,7 +539,7 @@ export default function EditableSaleCard({ sale, onDeleteClick }: EditableSaleCa
                 "font-medium",
                 isDeleted && "line-through text-muted-foreground"
               )}>
-                {currentSale.code?.name}
+                {currentSale.code.name}
               </p>
               
               {timeLeft && canEdit && (

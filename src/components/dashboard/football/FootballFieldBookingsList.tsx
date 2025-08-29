@@ -1,23 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import { createBrowserClient } from "@supabase/ssr";
 import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
-import useSWR from 'swr';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
+import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea';
 import { 
   FOOTBALL_BOOKING_MESSAGES,
   FORM_LABELS,
@@ -26,6 +25,7 @@ import {
   DIALOG_MESSAGES,
   DATE_FORMAT
 } from '@/lib/constants';
+import { type Database } from "@/types/supabase";
 
 interface FootballFieldBookingsListProps {
   showUpcomingOnly?: boolean;
@@ -37,7 +37,7 @@ type FootballFieldBooking = Database['public']['Tables']['football_field_booking
 const formatDateWithGreekAmPm = (dateString: string) => {
   try {
     return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, { locale: el });
-  } catch (error) {
+  } catch {
     return dateString;
   }
 };
@@ -51,9 +51,9 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
 
-  const { data: bookings = [], error, isLoading, mutate } = useSWR<FootballFieldBooking[]>(
+  const { data: bookings = [], isLoading, mutate } = useSWR<FootballFieldBooking[]>(
     'football_field_bookings',
     async () => {
       const { data, error } = await supabase
@@ -61,13 +61,13 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
         .select('*')
         .order('booking_datetime', { ascending: true });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data || [];
     }
   );
 
   const filteredBookings = React.useMemo(() => {
-    if (!showUpcomingOnly) return bookings;
+    if (!showUpcomingOnly) {return bookings;}
 
     const now = new Date();
     const threeDaysFromNow = addDays(now, 3);
@@ -100,12 +100,12 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
         .update(editForm)
         .eq('id', editingId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(FOOTBALL_BOOKING_MESSAGES.UPDATE_SUCCESS);
       setEditingId(null);
       setEditForm({});
-      mutate();
+      void mutate();
     } catch (error) {
       console.error('Error updating booking:', error);
       toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
@@ -113,7 +113,7 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedBookingId) return;
+    if (!selectedBookingId) {return;}
     setIsDeleting(true);
 
     try {
@@ -122,10 +122,10 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
         .delete()
         .eq('id', selectedBookingId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(FOOTBALL_BOOKING_MESSAGES.DELETE_SUCCESS);
-      mutate();
+      void mutate();
     } catch (error) {
       console.error('Error deleting booking:', error);
       toast.error(FOOTBALL_BOOKING_MESSAGES.GENERIC_ERROR);
@@ -134,8 +134,6 @@ export default function FootballFieldBookingsList({ showUpcomingOnly = false, em
       setDeleteDialogOpen(false);
     }
   };
-
-  if (error) return <div className="text-center py-4 text-destructive">{FOOTBALL_BOOKING_MESSAGES.FETCH_ERROR}</div>;
 
   if (isLoading) {
     return (

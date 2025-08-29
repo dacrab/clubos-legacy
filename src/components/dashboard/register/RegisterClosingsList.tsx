@@ -1,49 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, ClipboardList } from "lucide-react";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { EmptyState } from "@/components/ui/empty-state";
-import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
-import { cn } from "@/lib/utils";
-import { createClientSupabase } from "@/lib/supabase";
-import { ALLOWED_USER_ROLES, REGISTER_MESSAGES } from "@/lib/constants";
-import { ListItem } from '@/types/register';
-import { calculateStats } from '@/types/register';
-import RegisterItemCard from './RegisterItemCard';
-import { useRegisterSessions } from "@/hooks/useRegisterSessions";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
-// Constants
-const SESSION_QUERY_FIELDS = `
-  id,
-  opened_at,
-  closed_at,
-  closed_by_name,
-  notes,
-  orders (
-    id,
-    total_amount,
-    final_amount,
-    card_discount_count,
-    sales (
-      id,
-      quantity,
-      unit_price,
-      total_price,
-      is_treat,
-      is_edited,
-      is_deleted,
-      original_code,
-      original_quantity,
-      codes (
-        id,
-        name,
-        price
-      )
-    )
-  )
-`;
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
+import { useRegisterSessions } from "@/hooks/useRegisterSessions";
+import { ALLOWED_USER_ROLES, REGISTER_MESSAGES } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import { type ListItem , calculateStats } from '@/types/register';
+
+import RegisterItemCard from './RegisterItemCard';
+
 
 /**
  * Main component for displaying a list of register closings
@@ -70,7 +41,7 @@ export function RegisterClosingsList({
 
   // Hooks
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   // Use our custom hook for data fetching
   const {
@@ -115,7 +86,7 @@ export function RegisterClosingsList({
       }
     };
 
-    checkPermissions();
+    void checkPermissions();
   }, [router, supabase]);
 
   // Handle expanded item toggling
@@ -125,7 +96,7 @@ export function RegisterClosingsList({
 
   // Process sessions into display items
   const { closings, activeSessions } = useMemo(() => {
-    if (!sessions || !sessions.length) return { closings: [], activeSessions: [] };
+    if (!sessions.length) {return { closings: [], activeSessions: [] };}
 
     const active: ListItem[] = [];
     const closed: ListItem[] = [];
@@ -153,7 +124,7 @@ export function RegisterClosingsList({
               register_session_id: session.id,
               closed_by_name: session.closed_by_name || "Unknown",
               treats_count: session.orders?.reduce((sum, order) =>
-                sum + (order.sales?.filter(s => s.is_treat)?.length || 0), 0) || 0,
+                sum + (order.sales ? order.sales.filter(s => s.is_treat).length : 0), 0) || 0,
               card_count: session.orders?.reduce((sum, order) =>
                 sum + (order.card_discount_count || 0), 0) || 0,
               notes: session.notes || {},
@@ -189,13 +160,13 @@ export function RegisterClosingsList({
   const allItems = useMemo(() => [...activeSessions, ...closings], [activeSessions, closings]);
   
   // Calculate stats once with stable reference
-  const statsData = useMemo(() => calculateStats(allItems), [allItems]);
+  useMemo(() => calculateStats(allItems), [allItems]);
 
   // Remove redundant polling - useRegisterSessions already handles this
   // Instead, just call refreshData when the component mounts
   useEffect(() => {
     // Initial refresh
-    refreshData();
+    void refreshData();
     // No interval needed - it's handled by useRegisterSessions
   }, [refreshData]);
 
@@ -209,26 +180,29 @@ export function RegisterClosingsList({
     // Add throttled resize listener
     let resizeTimeout: NodeJS.Timeout | null = null;
     const handleResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
+      if (resizeTimeout) {clearTimeout(resizeTimeout);}
       resizeTimeout = setTimeout(checkMobile, 250);
     };
     
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) clearTimeout(resizeTimeout);
+      if (resizeTimeout) {clearTimeout(resizeTimeout);}
     };
   }, []);
 
   // Update expanded item height with debounce
   useEffect(() => {
-    if (!expandedId) return;
+    if (!expandedId) {return;}
 
+    const currentExpandedId = expandedId;
     const timeoutId = setTimeout(() => {
-      if (expandedItemRef.current) {
+      const el = expandedItemRef.current;
+      if (el && currentExpandedId) {
+        const height = el.getBoundingClientRect().height || 400;
         setExpandedHeight(prev => ({
           ...prev,
-          [expandedId]: expandedItemRef.current?.getBoundingClientRect()?.height || 400
+          [currentExpandedId]: height
         }));
       }
     }, 100);
@@ -238,7 +212,7 @@ export function RegisterClosingsList({
 
   // Update height calculation to use viewport units
   const getListHeight = useCallback(() => {
-    if (typeof window === 'undefined') return '70vh';
+    if (typeof window === 'undefined') {return '70vh';}
     // Use a more responsive approach based on viewport height
     return `calc(${window.innerHeight * 0.7}px - 2rem)`;
   }, []);

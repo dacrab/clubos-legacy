@@ -12,389 +12,238 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function createUser(email: string, password: string, metadata: { role: 'admin' | 'employee' | 'secretary', username: string }) {
-  try {
-    // First check if user already exists
-    const { data: existingUser } = await supabase.auth.admin.listUsers();
-    const userExists = existingUser?.users.some(u => u.email === email);
-    
-    if (userExists) {
-      console.log('User already exists:', email);
-      // Get the existing user
-      const { data: { users } } = await supabase.auth.admin.listUsers();
-      const user = users.find(u => u.email === email);
-      if (user) return user;
-    }
-
-    // Create new user if doesn't exist
-    const { data: { user }, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: metadata,
-    });
-
-    if (createError) {
-      console.error('Error creating user:', email);
-      console.error('Error details:', createError);
-      return null;
-    }
-
-    if (!user) {
-      console.error('No user returned after creation:', email);
-      return null;
-    }
-
-    console.log('Created user:', email);
-    return user;
-  } catch (error) {
-    console.error('Unexpected error creating user:', email);
-    console.error('Error details:', error);
-    return null;
+async function createUser(email: string, password: string, role: 'admin' | 'staff' | 'secretary', username: string) {
+  const { data: existingUsers } = await supabase.auth.admin.listUsers();
+  const userExists = existingUsers.users.some(u => u.email === email);
+  
+  if (userExists) {
+    console.log(`User ${email} already exists`);
+    return existingUsers.users.find(u => u.email === email);
   }
+
+  const { data: { user }, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { role, username },
+  });
+
+  if (error) {throw new Error(`Failed to create user ${email}: ${error.message}`);}
+  
+  console.log(`Created user: ${email}`);
+  return user;
 }
 
-async function createCategories(adminId: string) {
+async function seedCategories(adminId: string) {
   const categories = [
-    {
-      id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-      name: 'Καφέδες',
-      description: 'Όλα τα είδη καφέ',
-      created_by: adminId
-    },
-    {
-      id: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
-      name: 'Ζεστοί Καφέδες',
-      description: 'Ζεστοί καφέδες',
-      created_by: adminId
-    },
-    {
-      id: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
-      name: 'Κρύοι Καφέδες',
-      description: 'Κρύοι καφέδες',
-      created_by: adminId
-    },
-    {
-      id: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
-      name: 'Ροφήματα',
-      description: 'Διάφορα ροφήματα',
-      created_by: adminId
-    },
-    {
-      id: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
-      name: 'Σνακ',
-      description: 'Διάφορα σνακ',
-      created_by: adminId
-    }
+    { name: 'Καφέδες', description: 'Όλα τα είδη καφέ', created_by: adminId },
+    { name: 'Ζεστοί Καφέδες', description: 'Ζεστοί καφέδες', created_by: adminId },
+    { name: 'Κρύοι Καφέδες', description: 'Κρύοι καφέδες', created_by: adminId },
+    { name: 'Ροφήματα', description: 'Διάφορα ροφήματα', created_by: adminId },
+    { name: 'Σνακ', description: 'Διάφορα σνακ', created_by: adminId }
   ];
 
-  const { error } = await supabase.from('categories').insert(categories);
+  const { data, error } = await supabase.from('categories').insert(categories).select();
+  if (error) {throw new Error(`Failed to create categories: ${error.message}`);}
+
+  // Set parent relationships
+  const mainCategory = data.find(c => c.name === 'Καφέδες');
+  const coffeeSubcategories = data.filter(c => c.name.includes('Καφέδες') && c.name !== 'Καφέδες');
   
-  if (error) {
-    console.error('Error creating categories:', error.message);
-    return;
-  }
-
-  // Update parent_id for subcategories
-  const { error: updateError } = await supabase
-    .from('categories')
-    .update({ parent_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-    .in('id', ['8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e', 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3']);
-
-  if (updateError) {
-    console.error('Error updating category parents:', updateError.message);
-    return;
+  if (mainCategory && coffeeSubcategories.length > 0) {
+    const { error: updateError } = await supabase
+      .from('categories')
+      .update({ parent_id: mainCategory.id })
+      .in('id', coffeeSubcategories.map(c => c.id));
+    
+    if (updateError) {throw new Error(`Failed to update category parents: ${updateError.message}`);}
   }
 
   console.log('Created categories');
+  return data;
 }
 
-async function createProducts(adminId: string) {
+async function seedProducts(categories: any[], adminId: string) {
+  const hotCoffeeCategory = categories.find(c => c.name === 'Ζεστοί Καφέδες');
+  const coldCoffeeCategory = categories.find(c => c.name === 'Κρύοι Καφέδες');
+  const beverageCategory = categories.find(c => c.name === 'Ροφήματα');
+  const snackCategory = categories.find(c => c.name === 'Σνακ');
+
   const products = [
     // Hot Coffees
-    {
-      id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a',
-      name: 'Espresso',
-      price: 2.00,
-      stock: -1,
-      category_id: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
-      created_by: adminId
-    },
-    {
-      id: 'b2c3d4e5-f6a7-4b6c-8d1e-123456789abc',
-      name: 'Cappuccino',
-      price: 3.00,
-      stock: -1,
-      category_id: '8f9c5f9d-14e2-4e8c-a92d-3a96d18e2c0e',
-      created_by: adminId
-    },
+    { name: 'Espresso', price: 2.00, stock_quantity: -1, category_id: hotCoffeeCategory?.id, created_by: adminId },
+    { name: 'Cappuccino', price: 3.00, stock_quantity: -1, category_id: hotCoffeeCategory?.id, created_by: adminId },
+    { name: 'Latte', price: 3.50, stock_quantity: -1, category_id: hotCoffeeCategory?.id, created_by: adminId },
+    
     // Cold Coffees
-    {
-      id: 'c3d4e5f6-a7b8-4c7d-91ef-234567890abc',
-      name: 'Freddo Espresso',
-      price: 3.00,
-      stock: -1,
-      category_id: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
-      created_by: adminId
-    },
-    {
-      id: 'd4e5f6a7-b8c9-4d8e-a2f3-345678901abc',
-      name: 'Freddo Cappuccino',
-      price: 3.50,
-      stock: -1,
-      category_id: 'd5f3c4e2-6a8b-4e1c-9f2d-7c8e5d98b1a3',
-      created_by: adminId
-    },
+    { name: 'Freddo Espresso', price: 3.00, stock_quantity: -1, category_id: coldCoffeeCategory?.id, created_by: adminId },
+    { name: 'Freddo Cappuccino', price: 3.50, stock_quantity: -1, category_id: coldCoffeeCategory?.id, created_by: adminId },
+    { name: 'Iced Latte', price: 4.00, stock_quantity: -1, category_id: coldCoffeeCategory?.id, created_by: adminId },
+    
     // Beverages
-    {
-      id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc',
-      name: 'Σοκολάτα',
-      price: 3.50,
-      stock: -1,
-      category_id: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
-      created_by: adminId
-    },
-    {
-      id: 'f6a7b8c9-d0e1-4f0a-c4b5-567890123abc',
-      name: 'Τσάι',
-      price: 2.50,
-      stock: -1,
-      category_id: 'c6e8f9d2-3b7a-4c6d-9e5f-8a2d1b4c7e3a',
-      created_by: adminId
-    },
+    { name: 'Σοκολάτα', price: 3.50, stock_quantity: -1, category_id: beverageCategory?.id, created_by: adminId },
+    { name: 'Τσάι', price: 2.50, stock_quantity: -1, category_id: beverageCategory?.id, created_by: adminId },
+    { name: 'Χυμός Πορτοκάλι', price: 3.00, stock_quantity: -1, category_id: beverageCategory?.id, created_by: adminId },
+    
     // Snacks
-    {
-      id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc',
-      name: 'Κρουασάν',
-      price: 2.00,
-      stock: 20,
-      category_id: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
-      created_by: adminId
-    },
-    {
-      id: 'b8c9d0e1-f2a3-4b2c-e6d7-789012345abc',
-      name: 'Σάντουιτς',
-      price: 3.50,
-      stock: 15,
-      category_id: 'b7d6e5c4-2a9f-4b8e-8d7c-6f5e4d3c2b1a',
-      created_by: adminId
-    }
+    { name: 'Κρουασάν', price: 2.00, stock_quantity: 20, category_id: snackCategory?.id, created_by: adminId },
+    { name: 'Σάντουιτς', price: 3.50, stock_quantity: 15, category_id: snackCategory?.id, created_by: adminId },
+    { name: 'Τοστ', price: 2.50, stock_quantity: 25, category_id: snackCategory?.id, created_by: adminId }
   ];
 
-  const { error } = await supabase.from('codes').insert(products);
-  
-  if (error) {
-    console.error('Error creating products:', error.message);
-    return;
-  }
+  const { data, error } = await supabase.from('products').insert(products).select();
+  if (error) {throw new Error(`Failed to create products: ${error.message}`);}
 
   console.log('Created products');
+  return data;
 }
 
-async function createRegisterSession() {
-  const { data: session, error } = await supabase
+async function seedRegisterSession(adminId: string) {
+  const { data, error } = await supabase
     .from('register_sessions')
-    .insert({
-      id: 'e9d8c7b6-a5f4-4e3d-b2c1-1a2b3c4d5e6f'
-    })
+    .insert({ opened_by: adminId })
     .select()
     .single();
 
-  if (error) {
-    console.error('Error creating register session:', error.message);
-    return null;
-  }
+  if (error) {throw new Error(`Failed to create register session: ${error.message}`);}
 
   console.log('Created register session');
-  return session;
+  return data;
 }
 
-async function createSales(staffId: string) {
-  // Create an order first
+async function seedOrders(session: any, products: any[], staffId: string) {
+  const espresso = products.find(p => p.name === 'Espresso');
+  const chocolate = products.find(p => p.name === 'Σοκολάτα');
+  const croissant = products.find(p => p.name === 'Κρουασάν');
+
+  // Create order
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
-      id: 'f8e7d6c5-b4a3-4e2f-91b2-890123456def',
-      register_session_id: 'e9d8c7b6-a5f4-4e3d-b2c1-1a2b3c4d5e6f',
-      total_amount: 7.50,    // Sum of all original prices (2.00 + 3.50 + 2.00)
-      final_amount: 3.50,    // After all discounts (7.50 - 4.00)
-      card_discount_count: 1, // One €2 card discount used
+      session_id: session.id,
+      total_amount: 7.50,
+      payment_method: 'cash',
       created_by: staffId
     })
     .select()
     .single();
 
-  if (orderError) {
-    console.error('Error creating order:', orderError.message);
-    return;
-  }
+  if (orderError) {throw new Error(`Failed to create order: ${orderError.message}`);}
 
-  // Create sales linked to the order
-  const sales = [
+  // Create order items
+  const orderItems = [
     {
-      id: 'f8e7d6c5-b4a3-4e2f-91b2-890123456abc',
       order_id: order.id,
-      code_id: 'a1b2c3d4-e5f6-4a5b-9c8d-7e6f5d4c3b2a', // Espresso
+      product_id: espresso?.id,
       quantity: 1,
-      unit_price: 2.00,
-      total_price: 2.00,     // Now storing actual price, UI will show "Δωρεάν"
+      unit_price: espresso?.price,
       is_treat: true
     },
     {
-      id: 'a7f6e5d4-c3b2-4a3f-82e1-901234567abc',
       order_id: order.id,
-      code_id: 'e5f6a7b8-c9d0-4e9f-b3a4-456789012abc', // Chocolate
+      product_id: chocolate?.id,
       quantity: 1,
-      unit_price: 3.50,
-      total_price: 3.50,     // Original price (discount is handled at order level)
+      unit_price: chocolate?.price,
       is_treat: false
     },
     {
-      id: 'b6a5f4e3-d2c1-4b3a-92f1-012345678abc',
       order_id: order.id,
-      code_id: 'a7b8c9d0-e1f2-4a1b-d5c6-678901234abc', // Chips
+      product_id: croissant?.id,
       quantity: 1,
-      unit_price: 2.00,
-      total_price: 2.00,     // Original price
+      unit_price: croissant?.price,
       is_treat: false
     }
   ];
 
-  const { error } = await supabase.from('sales').insert(sales);
-  
-  if (error) {
-    console.error('Error creating sales:', error.message);
-    return;
-  }
+  const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+  if (itemsError) {throw new Error(`Failed to create order items: ${itemsError.message}`);}
 
-  console.log('Created order and sales');
+  console.log('Created sample order');
 }
 
-async function createAppointments(staffId: string) {
+async function seedAppointments(staffId: string) {
   const appointments = [
     {
-      id: 'c5b4a3f2-e1d0-4c3b-a2a1-123456789abc',
-      who_booked: 'Μαρία Παπαδοπούλου',
-      date_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 14 * 60 * 60 * 1000), // 2 days + 14 hours
-      contact_details: '6912345678',
+      customer_name: 'Μαρία Παπαδοπούλου',
+      contact_info: '6912345678',
+      appointment_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       num_children: 3,
       num_adults: 2,
       notes: 'Γενέθλια παιδιού',
-      user_id: staffId
+      created_by: staffId
     },
     {
-      id: 'd4c3b2a1-f0e9-4d3c-b2b1-234567890abc',
-      who_booked: 'Γιώργος Δημητρίου',
-      date_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 16 * 60 * 60 * 1000), // 3 days + 16 hours
-      contact_details: '6923456789',
+      customer_name: 'Γιώργος Δημητρίου',
+      contact_info: '6923456789',
+      appointment_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       num_children: 5,
       num_adults: 3,
       notes: 'Σχολική εκδρομή',
-      user_id: staffId
+      created_by: staffId
     }
   ];
 
   const { error } = await supabase.from('appointments').insert(appointments);
-  
-  if (error) {
-    console.error('Error creating appointments:', error.message);
-    return;
-  }
+  if (error) {throw new Error(`Failed to create appointments: ${error.message}`);}
 
   console.log('Created appointments');
 }
 
-async function createFootballBookings(staffId: string) {
+async function seedFootballBookings(staffId: string) {
   const bookings = [
     {
-      id: 'e3d2c1b0-a9f8-4e3d-c2c1-345678901abc',
-      who_booked: 'Νίκος Αντωνίου',
-      booking_datetime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000), // 1 day + 18 hours
-      contact_details: '6934567890',
+      customer_name: 'Νίκος Αντωνίου',
+      contact_info: '6934567890',
+      booking_datetime: new Date(Date.now() + 24 * 60 * 60 * 1000),
       field_number: 1,
       num_players: 10,
       notes: 'Εβδομαδιαίο παιχνίδι',
-      user_id: staffId
+      created_by: staffId
     },
     {
-      id: 'f2e1d0c9-b8a7-4f3e-d2d1-456789012abc',
-      who_booked: 'Κώστας Νικολάου',
-      booking_datetime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000), // 2 days + 19 hours
-      contact_details: '6945678901',
+      customer_name: 'Κώστας Νικολάου',
+      contact_info: '6945678901',
+      booking_datetime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       field_number: 2,
       num_players: 8,
       notes: 'Φιλικό παιχνίδι',
-      user_id: staffId
+      created_by: staffId
     }
   ];
 
-  const { error } = await supabase.from('football_field_bookings').insert(bookings);
-  
-  if (error) {
-    console.error('Error creating football bookings:', error.message);
-    return;
-  }
+  const { error } = await supabase.from('football_bookings').insert(bookings);
+  if (error) {throw new Error(`Failed to create football bookings: ${error.message}`);}
 
   console.log('Created football bookings');
 }
 
-async function seedDatabase() {
+async function main() {
   try {
     console.log('Starting database seeding...');
 
     // Create users
-    console.log('Creating admin user...');
-    const admin = await createUser('admin@example.com', 'admin123', { role: 'admin', username: 'Admin User' });
-    if (!admin) {
-      throw new Error('Failed to create admin user');
+    const admin = await createUser('admin@example.com', 'admin123', 'admin', 'Admin User');
+    const staff = await createUser('staff@example.com', 'staff123', 'staff', 'Staff User');
+    const secretary = await createUser('secretary@example.com', 'secretary123', 'secretary', 'Secretary User');
+
+    if (!admin || !staff || !secretary) {
+      throw new Error('Failed to create required users');
     }
 
-    console.log('Creating staff user...');
-    const staff = await createUser('staff@example.com', 'staff123', { role: 'employee', username: 'Staff One' });
-    if (!staff) {
-      throw new Error('Failed to create staff user');
-    }
-
-    console.log('Creating secretary user...');
-    const secretary = await createUser('secretary@example.com', 'secretary123', { role: 'secretary', username: 'Secretary User' });
-    if (!secretary) {
-      throw new Error('Failed to create secretary user');
-    }
-
-    // Create other data
-    console.log('Creating categories...');
-    await createCategories(admin.id);
+    // Seed data
+    const categories = await seedCategories(admin.id);
+    const products = await seedProducts(categories, admin.id);
+    const session = await seedRegisterSession(admin.id);
     
-    console.log('Creating products...');
-    await createProducts(admin.id);
-    
-    console.log('Creating register session...');
-    const session = await createRegisterSession();
-    if (!session) {
-      throw new Error('Failed to create register session');
-    }
-    
-    console.log('Creating sales...');
-    await createSales(staff.id);
-    
-    console.log('Creating appointments...');
-    await createAppointments(staff.id);
-    
-    console.log('Creating football bookings...');
-    await createFootballBookings(staff.id);
+    await seedOrders(session, products, staff.id);
+    await seedAppointments(staff.id);
+    await seedFootballBookings(staff.id);
 
     console.log('Database seeding completed successfully!');
   } catch (error) {
-    console.error('Error seeding database:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', error.message);
-      console.error('Stack trace:', error.stack);
-    }
-  } finally {
-    // Add a small delay before exiting to ensure all console logs are printed
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    process.exit(0);
+    console.error('Seeding failed:', error);
+    process.exit(1);
   }
 }
 
-seedDatabase();
+main();

@@ -1,11 +1,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { Sale } from '@/types/sales';
-import type { Database } from '@/types/supabase';
+
+import StatisticsWrapper from "@/components/dashboard/statistics/StatisticsWrapper";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { ALLOWED_USER_ROLES } from "@/lib/constants";
-import StatisticsWrapper from "@/components/dashboard/statistics/StatisticsWrapper";
+import type { Sale } from '@/types/sales';
+import type { Database } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic'
 
@@ -21,11 +22,11 @@ export default async function StatisticsPage() {
         },
       },
     }
-  );
+  ) as any;
 
   // Authentication check
   const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) redirect('/');
+  if (userError || !user) {redirect('/');}
 
   // Get user role
   const { data: userData, error: userDataError } = await supabase

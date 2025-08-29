@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { FolderTree } from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
 import ManageCategoriesDialog from "./ManageCategoriesDialog";
 
 // Constants

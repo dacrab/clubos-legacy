@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
+
 import { LoadingAnimation } from '@/components/ui/loading-animation';
 
 interface LoadingContextType {

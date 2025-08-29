@@ -1,73 +1,59 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
+import { createBrowserClient } from "@supabase/ssr";
 import { addDays, isWithinInterval, formatDistanceToNow, parseISO, format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Pencil, Trash2, X, Check } from 'lucide-react';
-import useSWR from 'swr';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
+import useSWR from 'swr';
 
-// UI Components
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent } from "@/components/ui/card";
-
-// Constants
+import { Textarea } from '@/components/ui/textarea';
 import { 
   APPOINTMENT_MESSAGES,
   FORM_LABELS,
-  BUTTON_LABELS, 
+  BUTTON_LABELS,
   PLACEHOLDERS,
   DIALOG_MESSAGES,
   DATE_FORMAT
 } from '@/lib/constants';
+import { type Appointment, type AppointmentUpdate } from "@/types/appointments";
+import { type Database } from "@/types/supabase";
 
-// Types
 interface AppointmentsListProps {
   showUpcomingOnly?: boolean;
   emptyState?: React.ReactNode;
 }
 
-type Appointment = {
-  id: number;
-  who_booked: string;
-  date_time: string;
-  contact_details: string;
-  num_children: number;
-  num_adults: number;
-  notes?: string;
-  created_at: string;
-};
-
 // Utility functions
 const formatDateWithGreekAmPm = (dateString: string): string => {
   try {
     return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, { locale: el });
-  } catch (error) {
+  } catch {
     return dateString;
   }
 };
 
 export default function AppointmentsList({ showUpcomingOnly = false, emptyState }: AppointmentsListProps) {
   // State
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Appointment>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<AppointmentUpdate>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
   // Initialize Supabase client
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
 
   // Data fetching
   const { data: appointments = [], error, isLoading, mutate } = useSWR<Appointment[]>(
@@ -78,14 +64,14 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
         .select('*')
         .order('date_time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data || [];
     }
   );
 
   // Filter appointments based on props
-  const filteredAppointments = useMemo(() => {
-    if (!showUpcomingOnly) return appointments;
+  const filteredAppointments = React.useMemo(() => {
+    if (!showUpcomingOnly) {return appointments;}
 
     const now = new Date();
     const threeDaysFromNow = addDays(now, 3);
@@ -119,12 +105,12 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
         .update(editForm)
         .eq('id', editingId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(APPOINTMENT_MESSAGES.UPDATE_SUCCESS);
       setEditingId(null);
       setEditForm({});
-      mutate();
+      void mutate();
     } catch (error) {
       console.error('Error updating appointment:', error);
       toast.error(APPOINTMENT_MESSAGES.GENERIC_ERROR);
@@ -132,7 +118,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedAppointmentId) return;
+    if (!selectedAppointmentId) {return;}
     setIsDeleting(true);
 
     try {
@@ -141,10 +127,10 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
         .delete()
         .eq('id', selectedAppointmentId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(APPOINTMENT_MESSAGES.DELETE_SUCCESS);
-      mutate();
+      void mutate();
     } catch (error) {
       console.error('Error deleting appointment:', error);
       toast.error(APPOINTMENT_MESSAGES.GENERIC_ERROR);
@@ -159,13 +145,13 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
     setEditForm({});
   };
 
-  const handleOpenDeleteDialog = (appointmentId: number) => {
+  const handleOpenDeleteDialog = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setDeleteDialogOpen(true);
   };
 
   // Render states
-  if (error) return <div className="text-center py-4 text-destructive">{APPOINTMENT_MESSAGES.FETCH_ERROR}</div>;
+  if (error) {return <div className="text-center py-4 text-destructive">{APPOINTMENT_MESSAGES.FETCH_ERROR}</div>;}
 
   if (isLoading) {
     return (
@@ -185,7 +171,7 @@ export default function AppointmentsList({ showUpcomingOnly = false, emptyState 
   }
 
   // Render appointment edit form
-  const renderEditForm = (appointment: Appointment) => (
+  const renderEditForm = (_appointment: Appointment) => (
     <div className="space-y-3 sm:space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-1.5 sm:space-y-2">

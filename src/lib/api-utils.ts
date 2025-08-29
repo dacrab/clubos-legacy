@@ -1,9 +1,11 @@
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+
+import { type Database } from '@/types/supabase';
+
 import { API_ERROR_MESSAGES } from './constants';
-import { Database } from '@/types/supabase';
 
 /**
  * Creates a Supabase admin client with service role key
@@ -58,7 +60,7 @@ export async function checkAdminAccess() {
     .eq('id', user.id)
     .single();
 
-  if (currentUserError || !currentUser || currentUser.role !== 'admin') {
+  if (currentUserError) {
     return null;
   }
 

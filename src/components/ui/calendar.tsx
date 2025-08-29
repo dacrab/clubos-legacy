@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { 
   addDays,
   addMonths,
@@ -12,9 +10,13 @@ import {
   isSameDay,
   setDay
 } from "date-fns"
+import { type el } from 'date-fns/locale/el'
 import { format } from 'date-fns-tz'
-import { el } from 'date-fns/locale/el'
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import * as React from "react"
+
 import { cn } from "@/lib/utils"
+
 import type { DateRange } from "react-day-picker"
 
 // Types
@@ -80,39 +82,39 @@ export function Calendar({
   
   const handleSelectDate = (date: Date) => {
     if (mode === "single") {
-      (onSelect as ((date: Date | undefined) => void))?.(date)
+      (onSelect as (date: Date | undefined) => void)(date)
       return
     }
     
     const range = selected as DateRange | undefined
     
     if (!range?.from) {
-      (onSelect as ((date: DateRange | undefined) => void))?.(
+      (onSelect as (date: DateRange | undefined) => void)(
         { from: date, to: undefined }
       )
     } else if (!range.to) {
-      (onSelect as ((date: DateRange | undefined) => void))?.(
+      (onSelect as (date: DateRange | undefined) => void)(
         date < range.from 
           ? { from: date, to: range.from }
           : { from: range.from, to: date }
       )
     } else {
-      (onSelect as ((date: DateRange | undefined) => void))?.(
+      (onSelect as (date: DateRange | undefined) => void)(
         { from: date, to: undefined }
       )
     }
   }
 
   const isDateSelected = (date: Date) => {
-    if (!selected) return false
+    if (!selected) {return false}
     
     if (mode === "single") {
       return isSameDay(date, selected as Date)
     }
     
     const range = selected as DateRange
-    if (!range?.from) return false
-    if (!range.to) return isSameDay(date, range.from)
+    if (!range.from) {return false}
+    if (!range.to) {return isSameDay(date, range.from)}
     return (date >= range.from && date <= range.to)
   }
 

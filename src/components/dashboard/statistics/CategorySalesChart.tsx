@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
 import { createBrowserClient } from "@supabase/ssr";
 import { Medal, BarChart3 } from "lucide-react";
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from "sonner";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { CATEGORY_SALES_CHART, API_ERROR_MESSAGES } from '@/lib/constants';
-import { Sale } from "@/types/sales";
-import { Database } from "@/types/supabase";
 import { cn } from "@/lib/utils";
 import { aggregateSalesByCategory, MEDAL_COLORS } from "@/lib/utils/chart-utils";
+import { type Sale } from "@/types/sales";
+import { type Database } from "@/types/supabase";
 
 interface Category {
   id: string;
@@ -32,7 +32,7 @@ interface CategorySalesItem {
 export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Record<string, Category[]>>({});
+  const [subCategories, setSubCategories] = useState<Partial<Record<string, Category[]>>>({});
 
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,23 +52,22 @@ export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
       }
 
       const mainCategories = data.filter((cat: Category) => !cat.parent_id);
-      const subCategoriesMap = data.reduce((acc: Record<string, Category[]>, cat: Category) => {
+      const subCategoriesMap = data.reduce((acc: Partial<Record<string, Category[]>>, cat: Category) => {
         if (cat.parent_id) {
-          if (!acc[cat.parent_id]) acc[cat.parent_id] = [];
-          acc[cat.parent_id].push(cat);
+          (acc[cat.parent_id] = acc[cat.parent_id] ?? []).push(cat);
         }
         return acc;
-      }, {} as Record<string, Category[]>);
+      }, {} as Partial<Record<string, Category[]>>);
 
       setCategories(mainCategories);
       setSubCategories(subCategoriesMap);
     }
 
-    fetchCategories();
+    void fetchCategories();
   }, [supabase]);
 
   const categoryData = useMemo((): CategorySalesItem[] => {
-    if (!selectedCategory) return [];
+    if (!selectedCategory) {return [];}
     
     const data = aggregateSalesByCategory(sales, selectedCategory);
     
@@ -95,16 +94,19 @@ export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
             <SelectValue placeholder={CATEGORY_SALES_CHART.UI.CATEGORY_SELECT_PLACEHOLDER} />
           </SelectTrigger>
           <SelectContent>
-            {categories.map(category => (
-              <SelectGroup key={category.id}>
-                <SelectItem value={category.name}>{category.name}</SelectItem>
-                {subCategories[category.id]?.map(sub => (
-                  <SelectItem key={sub.id} value={sub.name} className="pl-6 text-sm text-muted-foreground">
-                    ↳ {sub.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
+            {categories.map(category => {
+              const subcats = subCategories[category.id];
+              return (
+                <SelectGroup key={category.id}>
+                  <SelectItem value={category.name}>{category.name}</SelectItem>
+                  {subcats && subcats.map(sub => (
+                    <SelectItem key={sub.id} value={sub.name} className="pl-6 text-sm text-muted-foreground">
+                      ↳ {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              );
+            })}
           </SelectContent>
         </Select>
 

@@ -1,12 +1,11 @@
 "use client";
 
+import { createBrowserClient } from "@supabase/ssr";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
-import { transitions } from "@/lib/animations";
+
 import { Button } from "@/components/ui/button";
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "@/types/supabase";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { transitions } from "@/lib/animations";
 import { USER_MESSAGES } from "@/lib/constants";
+import { type Database } from "@/types/supabase";
 
 interface ResetPasswordDialogProps {
   open: boolean;
@@ -39,7 +40,7 @@ export default function ResetPasswordDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId) {return;}
 
     setLoading(true);
 
@@ -48,7 +49,7 @@ export default function ResetPasswordDialog({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(USER_MESSAGES.PASSWORD_RESET_SUCCESS);
       onOpenChange(false);

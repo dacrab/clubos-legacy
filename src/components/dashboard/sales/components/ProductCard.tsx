@@ -1,9 +1,11 @@
 
-import { Code } from "@/types/sales";
+import Image from "next/image";
+import * as React from "react";
+
 import { SALES_ICONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import * as React from "react";
-import Image from "next/image";
+import { type Code } from "@/types/sales";
+
 
 interface ProductCardProps {
   code: Code;

@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 import { Coffee } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import { loadingVariants, transitions } from "@/lib/animations";
+import { cn } from "@/lib/utils";
 
 export function LoadingAnimation({ className }: { className?: string }) {
   return (

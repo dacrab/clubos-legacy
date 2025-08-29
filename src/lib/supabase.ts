@@ -1,6 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { Database } from "@/types/supabase";
-import { Sale as SaleType } from "@/types/sales";
+
+import { type Sale as SaleType } from "@/types/sales";
+import { type Database } from "@/types/supabase";
 
 // Define common types
 export type Tables = Database['public']['Tables']

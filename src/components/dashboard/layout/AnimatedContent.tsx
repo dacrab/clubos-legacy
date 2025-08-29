@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
+
 import { pageVariants, transitions } from "@/lib/animations";
 
 export default function AnimatedContent({ children }: { children: React.ReactNode }) {

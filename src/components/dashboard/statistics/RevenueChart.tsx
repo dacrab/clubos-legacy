@@ -1,12 +1,13 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Sale } from "@/types/sales";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
-import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
 import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CARD_DISCOUNT } from "@/lib/constants";
+import { aggregateSalesByDate, CHART_STYLES } from "@/lib/utils/chart-utils";
+import { type Sale } from "@/types/sales";
 
 // Simplified chart configuration
 const CHART_CONFIG = {
@@ -22,25 +23,25 @@ export default function RevenueChart({ sales }: { sales: Sale[] }) {
   const netSales = useMemo(() => {
     // Group sales by order to properly apply discounts
     const salesByOrder = sales.reduce((acc, sale) => {
-      if (sale.is_treat || sale.is_deleted) return acc; // Skip treats and deleted items
+      if (sale.is_treat || sale.is_deleted) {return acc;} // Skip treats and deleted items
       
       const orderId = sale.order?.id || 'unknown';
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          sales: [],
-          order: sale.order,
-          totalPrice: 0
-        };
-      }
-      acc[orderId].sales.push(sale);
-      acc[orderId].totalPrice += sale.total_price;
+      const orderData = acc[orderId] ?? {
+        sales: [],
+        order: sale.order,
+        totalPrice: 0
+      };
+      
+      orderData.sales.push(sale);
+      orderData.totalPrice += sale.total_price;
+      acc[orderId] = orderData;
       return acc;
     }, {} as Record<string, { sales: Sale[], order: Sale['order'], totalPrice: number }>);
 
     // Apply discounts per order and distribute proportionally with exact precision
     return Object.values(salesByOrder).flatMap(({ sales, order, totalPrice }) => {
       // If no order or no discount, return sales unchanged
-      if (!order || !order.card_discount_count) return sales;
+      if (!order || !order.card_discount_count) {return sales;}
       
       // Calculate discount with exact precision
       const orderDiscount = +(order.card_discount_count * CARD_DISCOUNT).toFixed(2);

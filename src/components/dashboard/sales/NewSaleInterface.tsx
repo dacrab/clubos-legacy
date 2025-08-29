@@ -1,39 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useCallback, memo, useState, useRef } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { X, Search, ShoppingCart, Gift, Menu, ChevronLeft, Tag } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
+import { v4 as uuidv4 } from 'uuid';
 
-// UI Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  Search,
-  X,
-  Filter,
-  ShoppingCart,
-  Tag,
-  Gift
-} from "lucide-react";
-
-// Custom Components
-import { ProductCard } from "./components/ProductCard";
-import { OrderItem } from "./components/OrderItem";
-
-// Hooks and Utilities
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useSales } from "@/hooks/useSales";
-import { cn } from "@/lib/utils";
 import { SALES_ICONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import type { Code, OrderItem as OrderItemType } from "@/types/sales";
 
-// Types
-import type { OrderItem as OrderItemType } from "@/types/sales";
-import type { Code } from "@/types/sales";
+import { OrderItem } from "./components/OrderItem";
+import { ProductCard } from "./components/ProductCard";
 
 // ------------------------------------------------------------
 // Type Definitions
@@ -46,7 +29,7 @@ interface NewSaleInterfaceProps {
 
 interface CategorySectionProps {
   categories: string[];
-  categoriesMap: Record<string, any[]>;
+  categoriesMap: Partial<Record<string, any[]>>;
   selectedCategory: string | null;
   selectedSubcategory: string | null;
   onCategorySelect: (category: string | null) => void;
@@ -187,16 +170,21 @@ const CategorySection = memo(({
               
               {selectedCategory === category && (
                 <div className="ml-2 space-y-1 mt-1">
-                  {categoriesMap[codes.find(code => 
-                    code.category?.name === category
-                  )?.category?.id || '']?.map(subcat => (
-                    <SubcategoryButton 
-                      key={subcat.id}
-                      name={subcat.name}
-                      isSelected={selectedSubcategory === subcat.name}
-                      onClick={() => onSubcategorySelect(subcat.name)}
-                    />
-                  ))}
+                  {(() => {
+                    const foundCode = codes.find(code => code.category?.name === category);
+                    if (foundCode?.category) {
+                      const subcats = categoriesMap[foundCode.category.id];
+                      return subcats?.map(subcat => (
+                        <SubcategoryButton 
+                          key={subcat.id}
+                          name={subcat.name}
+                          isSelected={selectedSubcategory === subcat.name}
+                          onClick={() => onSubcategorySelect(subcat.name)}
+                        />
+                      ));
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
             </div>
@@ -475,25 +463,28 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   
   // Fetch data when dialog opens
   useEffect(() => {
-    if (open && !codes.length) fetchCodes();
+    if (open && !codes.length) {
+      void fetchCodes();
+    }
   }, [open, fetchCodes, codes.length]);
   
   // Filter codes by category/subcategory
   const displayedCodes = useMemo(() => {
-    if (!selectedCategory) return filteredCodes;
+    if (!selectedCategory) {return filteredCodes;}
     
     return filteredCodes.filter(code => {
-      if (selectedSubcategory) return code.category?.name === selectedSubcategory;
+      if (selectedSubcategory) {return code.category?.name === selectedSubcategory;}
       
       const categoryId = codes.find(c => 
         c.category?.name === selectedCategory
       )?.category?.id;
       
-      if (!categoryId) return false;
+      if (!categoryId) {return false;}
       
+      const subcats = categoriesMap[categoryId] ?? [];
       return (
         code.category?.name === selectedCategory ||
-        categoriesMap[categoryId]?.some(subcat => 
+        subcats.some(subcat => 
           subcat.name === code.category?.name
         )
       );
@@ -523,16 +514,16 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
   const handleCategorySelect = useCallback((category: string | null) => {
     setSelectedCategory(category);
     setSelectedSubcategory(null);
-    if (isMobile) setActiveView('products');
+    if (isMobile) {setActiveView('products');}
   }, [setSelectedCategory, setSelectedSubcategory, isMobile]);
   
   const handleSubcategorySelect = useCallback((subcategory: string) => {
     setSelectedSubcategory(subcategory);
-    if (isMobile) setActiveView('products');
+    if (isMobile) {setActiveView('products');}
   }, [setSelectedSubcategory, isMobile]);
   
   const handleCashPayment = useCallback(() => {
-    handlePayment('cash');
+    void handlePayment('cash');
   }, [handlePayment]);
   
   // Render mobile view

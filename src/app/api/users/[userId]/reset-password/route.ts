@@ -1,15 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { 
-  PASSWORD_MIN_LENGTH, 
-  USER_MESSAGES,
-  API_ERROR_MESSAGES
-} from '@/lib/constants';
+import { type NextRequest } from 'next/server';
+
 import {
   createAdminClient,
   errorResponse,
   successResponse,
   handleApiError
 } from '@/lib/api-utils';
+import { 
+  PASSWORD_MIN_LENGTH, 
+  USER_MESSAGES,
+  API_ERROR_MESSAGES
+} from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 

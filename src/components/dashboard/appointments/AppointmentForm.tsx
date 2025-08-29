@@ -1,13 +1,10 @@
-'use client';
-
-import React, { useState } from 'react';
-import { toast } from 'sonner';
-import { format } from "date-fns";
-import { el } from 'date-fns/locale';
-import { CalendarIcon } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { format } from "date-fns";
+import { el } from "date-fns/locale";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
-// UI Components
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -15,19 +12,17 @@ import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-
-// Utils and Types
-import { cn } from "@/lib/utils";
-import { Database } from '@/types/supabase';
-import type { AppointmentFormData } from '@/types/appointments';
 import { 
   APPOINTMENT_MESSAGES, 
-  FORM_LABELS, 
-  PLACEHOLDERS,
+  FORM_LABELS,
   BUTTON_LABELS,
+  PLACEHOLDERS,
   DIALOG_MESSAGES,
   DATE_FORMAT
-} from '@/lib/constants';
+} from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import type { AppointmentFormData } from "@/types/appointments";
+import { type Database } from "@/types/supabase";
 
 interface AppointmentFormProps {
   onSuccess?: () => void;
@@ -50,7 +45,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
 
   const validateForm = () => {
     if (!formData.who_booked || !formData.date || !formData.time || !formData.contact_details || !formData.num_children) {
@@ -86,7 +81,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting) {return;}
     setIsSubmitting(true);
 
     try {
@@ -97,7 +92,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
         .from('appointments')
         .insert([appointmentData]);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success(APPOINTMENT_MESSAGES.CREATE_SUCCESS);
       setFormData(initialFormData);

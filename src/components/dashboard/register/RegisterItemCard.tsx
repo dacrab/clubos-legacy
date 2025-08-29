@@ -1,16 +1,18 @@
-import { memo, useMemo } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Euro, CreditCard, Gift, ChevronDown, ChevronUp } from "lucide-react";
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
+import { memo, useMemo } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { CARD_DISCOUNT } from "@/lib/constants";
 import { cn, formatPrice } from "@/lib/utils";
-import { ClosingDetails, calculateTransactionTotals } from "./ClosingDetails";
+import { formatDateWithGreekAmPm } from '@/lib/utils/date';
 import { 
-  ListItem,
-  ActiveSessionTotals,
+  type ListItem,
   calculateActiveSessionTotals, 
 } from '@/types/register';
-import { CARD_DISCOUNT } from "@/lib/constants";
+
+import { ClosingDetails, calculateTransactionTotals } from "./ClosingDetails";
+
 
 // Type Definitions
 interface TransactionSummaryProps {
@@ -103,12 +105,7 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
   // Use memoized calculations to prevent unnecessary recalculations
   const itemTotals = useMemo(() => {
     if (isActive) {
-      return calculateActiveSessionTotals(item.orders) || { 
-        totalBeforeDiscounts: 0, 
-        cardDiscounts: 0, 
-        treats: 0, 
-        treatsAmount: 0 
-      } as ActiveSessionTotals;
+      return calculateActiveSessionTotals(item.orders);
     }
     return item.orders && item.orders.length 
       ? calculateTransactionTotals(item.orders) 
@@ -122,6 +119,12 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
   }, [item, isActive]);
   
   const handleToggle = () => onToggle(id);
+  const handleToggleKey: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onToggle(id);
+    }
+  };
   
   return (
     <Card className={cn(
@@ -131,12 +134,15 @@ function RegisterItemCard({ item, isExpanded, onToggle }: RegisterItemCardProps)
     )}>
       <div 
         className="flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer"
+        role="button"
+        tabIndex={0}
         onClick={handleToggle}
+        onKeyDown={handleToggleKey}
       >
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
             <div className="flex items-center gap-2">
-              <Badge variant={isActive ? "outline-solid" : "secondary"} className={isActive ? "border-primary text-primary" : ""}>
+              <Badge variant={isActive ? "outline" : "secondary"} className={isActive ? "border-primary text-primary" : ""}>
                 {isActive ? "Ενεργό Ταμείο" : `Έκλεισε από: ${item.closed_by_name}`}
               </Badge>
             </div>

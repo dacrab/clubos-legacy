@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Eye, EyeOff, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 // UI Components
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Card, CardContent } from "@/components/ui/card";
-
 // Constants & Types
 import { 
   API_ERROR_MESSAGES, 
@@ -21,8 +20,12 @@ import {
   VALIDATION,
   PASSWORD_MIN_LENGTH 
 } from "@/lib/constants";
-import { Database } from "@/types/supabase";
 import { cn } from "@/lib/utils";
+import { type Database } from "@/types/supabase";
+
+const VERIFICATION_FAILED_MSG = 'Profile verification failed';
+const INVALID_CREDENTIALS_MSG = 'Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης';
+const DASHBOARD_PATH = '/dashboard';
 
 interface FormState {
   username: string;
@@ -74,22 +77,22 @@ export default function LoginForm() {
       .eq('id', userId)
       .single();
 
-    if (error || !profile) throw new Error('Profile verification failed');
+    if (error) {throw new Error(VERIFICATION_FAILED_MSG);}
     return profile;
   }, [supabase]);
 
   const validateForm = () => {
     const isValid = formState.username.length >= VALIDATION.USERNAME_MIN_LENGTH &&
                    formState.password.length >= PASSWORD_MIN_LENGTH;
-    if (!isValid) toast.error(API_ERROR_MESSAGES.INVALID_REQUEST);
+    if (!isValid) {toast.error(API_ERROR_MESSAGES.INVALID_REQUEST);}
     return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {return;}
 
-    setFormState(prev => ({ ...prev, loading: true }));
+    setFormState((prev: FormState) => ({ ...prev, loading: true }));
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -97,9 +100,9 @@ export default function LoginForm() {
         password: formState.password,
       });
 
-      if (error || !data?.session) throw error || new Error('No session');
+      if (error) {throw error;}
 
-      const { data: userData, error: userError } = await supabase
+      const { data: _userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', data.session.user.id)
@@ -110,32 +113,28 @@ export default function LoginForm() {
         throw userError;
       }
 
-      if (!userData) {
-        throw new Error('User not found');
-      }
-
       try {
         await verifyUserProfile(data.session.user.id);
       } catch (verifyError) {
         console.error('Verification error:', verifyError);
         // Sign out the user if verification fails
-        await supabase.auth.signOut();
-        throw new Error('Profile verification failed');
+        void supabase.auth.signOut();
+        throw new Error(VERIFICATION_FAILED_MSG);
       }
       
       toast.success("Επιτυχής σύνδεση");
       
       // Add a small delay before redirecting to ensure session is established
       await new Promise(resolve => setTimeout(resolve, 500));
-      router.replace("/dashboard");
+      router.replace(DASHBOARD_PATH);
     } catch (error) {
       console.error('Login error:', error);
       const message = error instanceof Error && error.message.includes('Invalid login credentials')
-        ? 'Λανθασμένο όνομα χρήστη ή κωδικός πρόσβασης'
+        ? INVALID_CREDENTIALS_MSG
         : API_ERROR_MESSAGES.SERVER_ERROR;
       toast.error(message);
     } finally {
-      setFormState(prev => ({ ...prev, loading: false }));
+      setFormState((prev: FormState) => ({ ...prev, loading: false }));
     }
   };
 
@@ -143,9 +142,9 @@ export default function LoginForm() {
     const checkSession = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) return;
+        if (error || !user) {return;}
         await verifyUserProfile(user.id);
-        router.replace('/dashboard');
+        router.replace(DASHBOARD_PATH);
       } catch (error) {
         console.error('Session check error:', error);
       } finally {
@@ -153,12 +152,12 @@ export default function LoginForm() {
       }
     };
 
-    checkSession();
+    void checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event) => {
-        if (event === 'SIGNED_IN') router.replace('/dashboard');
-        if (event === 'SIGNED_OUT') router.replace('/');
+        if (event === 'SIGNED_IN') {router.replace(DASHBOARD_PATH);}
+        if (event === 'SIGNED_OUT') {router.replace('/');}
       }
     );
 
@@ -186,7 +185,7 @@ export default function LoginForm() {
                 type="text"
                 placeholder="Εισάγετε το όνομα χρήστη" 
                 value={formState.username}
-                onChange={(e) => setFormState(prev => ({ ...prev, username: e.target.value.trim() }))}
+                onChange={(e) => setFormState((prev: FormState) => ({ ...prev, username: e.target.value.trim() }))}
                 disabled={formState.loading}
                 className={STYLES.form.field.input.base}
                 required
@@ -213,7 +212,7 @@ export default function LoginForm() {
                 type={formState.showPassword ? "text" : "password"}
                 placeholder="Εισάγετε τον κωδικό σας"
                 value={formState.password}
-                onChange={(e) => setFormState(prev => ({ ...prev, password: e.target.value.trim() }))}
+                onChange={(e) => setFormState((prev: FormState) => ({ ...prev, password: e.target.value.trim() }))}
                 disabled={formState.loading}
                 className={STYLES.form.field.input.withIcon}
                 required
@@ -229,7 +228,7 @@ export default function LoginForm() {
                   variant="ghost"
                   size="sm"
                   className={cn("h-6 px-2", STYLES.icon.button)}
-                  onClick={() => setFormState(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                  onClick={() => setFormState((prev: FormState) => ({ ...prev, showPassword: !prev.showPassword }))}
                   disabled={formState.loading}
                 >
                   {formState.showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

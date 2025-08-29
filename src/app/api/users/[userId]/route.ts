@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
+
 import { 
   checkAdminAccess,
   createApiClient,
@@ -6,7 +7,7 @@ import {
   successResponse,
   handleApiError
 } from '@/lib/api-utils';
-import { RouteHandler } from '@/types/route';
+import { type RouteHandler } from '@/types/route';
 
 type Params = {
   userId: string;

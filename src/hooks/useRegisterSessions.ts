@@ -1,13 +1,13 @@
-import useSWR from 'swr';
 import { useCallback, useRef } from 'react';
+import useSWR from 'swr';
+
 import { createClientSupabase } from '@/lib/supabase';
 import { 
-  RegisterSessionWithClosings, 
-  RegisterClosing, 
-  DatabaseRegisterSession,
-  DateRange
-} from '@/types/register';
-import { transformSession } from '@/types/register';
+  type RegisterSessionWithClosings, 
+  type RegisterClosing, 
+  type DatabaseRegisterSession,
+  type DateRange
+, transformSession } from '@/types/register';
 
 // Constants
 const ITEMS_PER_PAGE = 50;
@@ -42,8 +42,8 @@ const SESSION_QUERY_FIELDS = `
 `;
 
 // Safe processing of code objects to prevent circular references
-const processCodesObject = (codes: any) => {
-  if (!codes) return null;
+const _processCodesObject = (codes: any) => {
+  if (!codes) {return null;}
   
   const codeObject = Array.isArray(codes) && codes.length > 0 ? codes[0] : codes;
   
@@ -71,7 +71,7 @@ const createFallbackSession = (session: any): RegisterSessionWithClosings => ({
 
 // Main data fetcher function
 const fetcher = async (dateRange?: DateRange): Promise<RegisterSessionWithClosings[]> => {
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
   
   try {
     let query = supabase
@@ -123,9 +123,8 @@ const fetcher = async (dateRange?: DateRange): Promise<RegisterSessionWithClosin
     }
     
     // Create lookup table for closings by session ID for O(1) access
-    const closingsBySessionId = (closingsData || []).reduce((acc, closing) => {
-      acc[closing.register_session_id] = acc[closing.register_session_id] || [];
-      acc[closing.register_session_id].push(closing);
+    const closingsBySessionId = (closingsData || []).reduce((acc: Record<string, RegisterClosing[]>, closing: RegisterClosing) => {
+      (acc[closing.register_session_id] = acc[closing.register_session_id] ?? []).push(closing);
       return acc;
     }, {} as Record<string, RegisterClosing[]>);
 
@@ -161,7 +160,7 @@ export function useRegisterSessions(dateRange?: DateRange) {
   
   // Create a stable key for SWR based on the date range
   let swrKey = 'register-sessions';
-  if (dateRange?.startDate && dateRange?.endDate) {
+  if (dateRange?.startDate && dateRange.endDate) {
     swrKey = `register-sessions-${dateRange.startDate}-${dateRange.endDate}`;
   }
   
@@ -182,7 +181,7 @@ export function useRegisterSessions(dateRange?: DateRange) {
     () => {
       // Reset error count on successful fetch
       if (errorCountRef.current > 0) {
-        console.log('Resetting error count after successful fetch');
+        // console.log('Resetting error count after successful fetch');
       }
       
       try {
@@ -219,7 +218,9 @@ export function useRegisterSessions(dateRange?: DateRange) {
         
         // Custom exponential backoff for error retries
         const delay = Math.min(1000 * 2 ** retryCount, 30000);
-        setTimeout(() => revalidate({ retryCount }), delay);
+        setTimeout(() => {
+          void revalidate({ retryCount });
+        }, delay);
       }
     }
   );

@@ -1,24 +1,26 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { toast } from "sonner";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { motion } from "framer-motion";
-import { 
-  MoreHorizontal, 
-  Key, 
-  UserX, 
-  ChevronDown, 
-  Shield, 
-  User, 
+import {
+  MoreHorizontal,
+  Key,
+  UserX,
+  ChevronDown,
+  Shield,
+  User as UserIcon,
   UserCog,
   type LucideIcon,
-  UserCircle 
+  UserCircle
 } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, memo } from "react";
+import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +31,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import ResetPasswordDialog from './ResetPasswordDialog';
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -39,19 +40,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { VirtualizedMobileList } from "@/components/ui/virtualized-mobile-list";
-import { EmptyState } from "@/components/ui/empty-state";
-
-import { Database } from "@/types/supabase";
 import { transitions } from "@/lib/animations";
-import { cn } from "@/lib/utils";
-import { 
+import {
   USER_MESSAGES,
   ALLOWED_USER_ROLES,
   ROLE_TRANSLATIONS,
-  UserRole,
+  type UserRole,
 } from "@/lib/constants";
+import { type Database } from "@/types/supabase";
+
+import ResetPasswordDialog from './ResetPasswordDialog';
 
 type User = {
   id: string;
@@ -67,13 +66,13 @@ interface UsersTableProps {
 
 const roleColors: Record<UserRole, string> = {
   admin: "bg-green-500/10 text-green-700 dark:text-green-400",
-  employee: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  staff: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   secretary: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
 } as const;
 
 const roleIcons: Record<UserRole, LucideIcon> = {
   admin: Shield,
-  employee: User,
+  staff: UserIcon,
   secretary: UserCog,
 } as const;
 
@@ -99,7 +98,7 @@ const DesktopTableRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRol
       <TableCell className="font-medium">{user.username}</TableCell>
       <TableCell>
         <Badge variant="secondary" className={roleColors[user.role]}>
-          {Icon && <Icon className="mr-1 h-4 w-4" />}
+          <Icon className="mr-1 h-4 w-4" />
           {ROLE_TRANSLATIONS[user.role]}
         </Badge>
       </TableCell>
@@ -233,7 +232,7 @@ const MobileRow = memo<UserRowProps>(({ user, onResetPassword, onChangeRole, onD
       </div>
       <div className="pt-1">
         <Badge variant="secondary" className={roleColors[user.role]}>
-          {Icon && <Icon className="mr-1 h-4 w-4" />}
+          <Icon className="mr-1 h-4 w-4" />
           {ROLE_TRANSLATIONS[user.role]}
         </Badge>
       </div>
@@ -248,7 +247,7 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
   const supabase = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) as any;
   
   const [users] = useState(initialUsers);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -273,14 +272,14 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
     // Add throttled resize listener
     let resizeTimeout: NodeJS.Timeout | null = null;
     const handleResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
+      if (resizeTimeout) {clearTimeout(resizeTimeout);}
       resizeTimeout = setTimeout(checkMobile, 250);
     };
     
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) clearTimeout(resizeTimeout);
+      if (resizeTimeout) {clearTimeout(resizeTimeout);}
     };
   }, []);
 
@@ -290,18 +289,17 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
       .update({ role, updated_at: new Date().toISOString() })
       .eq('id', userId);
 
-    if (error) throw error;
+    if (error) {throw error;}
   }
 
   async function handleChangeRole(userId: string, newRole: UserRole) {
-    if (!userId || !newRole) return;
     setLoading(true);
 
     try {
       await updateUserRole(userId, newRole);
       toast.success('Ο ρόλος του χρήστη ενημερώθηκε επιτυχώς');
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error('Σφάλμα κατά την ενημέρωση του ρόλου');
     } finally {
       setLoading(false);
@@ -309,7 +307,7 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
   }
 
   async function handleDeleteUser() {
-    if (!deleteUserId) return;
+    if (!deleteUserId) {return;}
     setLoading(true);
 
     try {
@@ -317,7 +315,7 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
       await supabase.from('users').delete().eq('id', deleteUserId);
       toast.success(USER_MESSAGES.DELETE_SUCCESS);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error(USER_MESSAGES.UNEXPECTED_ERROR);
     } finally {
       setLoading(false);
@@ -339,7 +337,7 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
   });
 
   // For desktop virtualization
-  const rowVirtualizer = useVirtualizer({
+  const _rowVirtualizer = useVirtualizer({
     count: sortedUsers.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 56, // Typical row height

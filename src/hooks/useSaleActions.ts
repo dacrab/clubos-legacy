@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
+
 import { createClientSupabase } from "@/lib/supabase";
-import { Sale } from "@/types/sales";
+import { type Sale } from "@/types/sales";
 
 interface UseSaleActionsProps {
   onSuccess?: () => void;
@@ -12,7 +13,7 @@ interface UseSaleActionsProps {
  */
 export function useSaleActions({ onSuccess }: UseSaleActionsProps = {}) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   /**
    * Delete a sale by marking it as deleted
@@ -25,10 +26,10 @@ export function useSaleActions({ onSuccess }: UseSaleActionsProps = {}) {
         .update({ is_deleted: true })
         .eq('id', saleId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success('Η πώληση αφαιρέθηκε επιτυχώς');
-      if (onSuccess) onSuccess();
+      if (onSuccess) {onSuccess();}
       return true;
     } catch (error) {
       console.error('Error deleting sale:', error);
@@ -58,10 +59,10 @@ export function useSaleActions({ onSuccess }: UseSaleActionsProps = {}) {
         .update(updateData)
         .eq('id', saleId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast.success('Η πώληση ενημερώθηκε επιτυχώς');
-      if (onSuccess) onSuccess();
+      if (onSuccess) {onSuccess();}
       return true;
     } catch (error) {
       console.error('Error updating sale:', error);

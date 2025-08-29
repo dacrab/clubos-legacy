@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { cn } from "@/lib/utils";
-import { DEFAULT_USER_ROLE, UNLIMITED_CATEGORY_ID, LOW_STOCK_THRESHOLD } from "@/lib/constants";
 import { PageWrapper } from "@/components/ui/page-wrapper";
+import { DEFAULT_USER_ROLE, UNLIMITED_CATEGORY_ID, LOW_STOCK_THRESHOLD } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/types/supabase";
 
 type Code = Database['public']['Tables']['codes']['Row'] & {
@@ -30,7 +31,7 @@ export default function OverviewPage() {
   const [codes, setCodes] = useState<Code[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,9 +69,9 @@ export default function OverviewPage() {
           `)
           .order('category(name)', { ascending: true })
           .order('code', { ascending: true })
-          .returns<Code[]>();
+          .returns();
 
-        if (codesError) throw codesError;
+        if (codesError) {throw codesError;}
         setCodes(codesData || []);
       } catch (error) {
         console.error('Error:', error);
@@ -79,7 +80,7 @@ export default function OverviewPage() {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [router, supabase]);
 
   if (isLoading) {
@@ -91,7 +92,7 @@ export default function OverviewPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Διαθέσιμοι Κωδικοί</h1>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {codes?.map((code) => (
+          {codes.map((code) => (
             <div key={code.id} className="p-4 bg-card rounded-lg border">
               <div className="flex justify-between items-start">
                 <div>
@@ -125,7 +126,7 @@ export default function OverviewPage() {
             </div>
           ))}
         </div>
-        {!codes?.length && (
+        {!codes.length && (
           <div className="text-center text-muted-foreground py-8">
             Δεν υπάρχουν διαθέσιμοι κωδικοί
           </div>

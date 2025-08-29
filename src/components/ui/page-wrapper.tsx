@@ -1,12 +1,13 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { motion } from "framer-motion";
-import { transitions } from "@/lib/animations";
-import { cn } from "@/lib/utils";
+
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { transitions } from "@/lib/animations";
 import { DIALOG_MESSAGES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface PageWrapperProps {
   children: React.ReactNode;
@@ -51,10 +52,11 @@ export function PageWrapper({
   isLoading = false,
   loadingText
 }: PageWrapperProps) {
+  const baseVariantClass = "min-h-screen bg-background";
   const variants = {
-    default: "min-h-screen bg-background",
-    dashboard: "min-h-screen bg-background",
-    root: "min-h-screen bg-background"
+    default: baseVariantClass,
+    dashboard: baseVariantClass,
+    root: baseVariantClass
   };
 
   const content = (

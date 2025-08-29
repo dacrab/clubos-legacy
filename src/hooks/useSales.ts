@@ -1,17 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
-import { createClientSupabase } from "@/lib/supabase";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import type { Code, OrderItem, CategoriesMap } from "@/types/sales";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+
 import { 
   API_ERROR_MESSAGES, 
   SALES_MESSAGES, 
   UNLIMITED_STOCK,
   EXTRA_SHOT_PRICE,
   CARD_DISCOUNT,
-  PAYMENT_METHOD_LABELS,
+  type PAYMENT_METHOD_LABELS,
   REGISTER_MESSAGES
 } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
+import type { Code, OrderItem, CategoriesMap } from "@/types/sales";
 
 export function useSales() {
   const [codes, setCodes] = useState<Code[]>([]);
@@ -23,10 +24,9 @@ export function useSales() {
   const [loading, setLoading] = useState(false);
   const [cardDiscountCount, setCardDiscountCount] = useState(0);
   const [categoriesMap, setCategoriesMap] = useState<CategoriesMap>({});
-  const [currentRegisterSession, setCurrentRegisterSession] = useState<string | null>(null);
 
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   const categories = Array.from(new Set(
     codes
@@ -35,15 +35,15 @@ export function useSales() {
   ));
 
   const subtotal = orderItems.reduce((sum, item) => {
-    if (item.isTreat) return sum;
+    if (item.isTreat) {return sum;}
     const dosageExtra = (item.dosageCount || 1) > 1 
       ? (item.dosageCount! - 1) * EXTRA_SHOT_PRICE 
       : 0;
-    return sum + (item.code?.price || 0) + dosageExtra;
+    return sum + (item.code.price || 0) + dosageExtra;
   }, 0);
 
   const cardDiscount = cardDiscountCount * CARD_DISCOUNT;
-  const finalTotal = Math.max(0, subtotal - cardDiscount);
+  Math.max(0, subtotal - cardDiscount);
 
   const fetchCodes = useCallback(async () => {
     try {
@@ -60,14 +60,15 @@ export function useSales() {
             .order('name')
         ]);
 
-      if (codesError || categoriesError) throw new Error(API_ERROR_MESSAGES.SERVER_ERROR);
+      if (codesError || categoriesError) {throw new Error(API_ERROR_MESSAGES.SERVER_ERROR);}
 
-      const categoriesMapTemp = categoriesData?.reduce((acc: CategoriesMap, category) => {
-        if (category.parent_id) {
-          acc[category.parent_id] = [...(acc[category.parent_id] || []), category];
-        }
-        return acc;
-      }, {});
+      const categoriesMapTemp: CategoriesMap = {};
+      for (const category of categoriesData || []) {
+        if (!category.parent_id) {continue;}
+        const parentId: string = category.parent_id;
+        const list = categoriesMapTemp[parentId] ?? (categoriesMapTemp[parentId] = []);
+        list.push(category);
+      }
 
       setCodes(codesData || []);
       setFilteredCodes(codesData || []);
@@ -99,7 +100,7 @@ export function useSales() {
         ? filtered.filter(code => code.category?.name === selectedSubcategory)
         : filtered.filter(code => 
             code.category?.name === selectedCategory || 
-            categoriesMap[categoryId!]?.some(
+            categoriesMap[categoryId!].some(
               subCat => subCat.name === code.category?.name
             )
           );
@@ -139,7 +140,7 @@ export function useSales() {
     setLoading(true);
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error(SALES_MESSAGES.NO_USER_ERROR);
+      if (userError || !user) {throw new Error(SALES_MESSAGES.NO_USER_ERROR);}
 
       // Get or create active register session
       let registerSessionId: string;
@@ -159,7 +160,7 @@ export function useSales() {
           .select('id')
           .single();
 
-        if (sessionError) throw new Error('Failed to create register session');
+        if (sessionError) {throw new Error('Failed to create register session');}
         registerSessionId = newSession.id;
         toast.success(REGISTER_MESSAGES.SESSION_CREATED);
       } else {
@@ -168,7 +169,6 @@ export function useSales() {
 
       // Calculate order totals
       const orderTotal = orderItems.reduce((total, item) => {
-        if (!item.code) return total;
         const basePrice = item.code.price * item.quantity;
         const extraShotCost = ((item.dosageCount || 1) - 1) * EXTRA_SHOT_PRICE;
         return total + basePrice + extraShotCost;
@@ -189,12 +189,10 @@ export function useSales() {
         .select('id')
         .single();
 
-      if (orderError) throw new Error('Failed to create order: ' + orderError.message);
+      if (orderError) {throw new Error('Failed to create order: ' + orderError.message);}
 
       // Process sales
       for (const item of orderItems) {
-        if (!item.code) continue;
-
         const unitPrice = item.code.price;
         const baseTotal = unitPrice * item.quantity;
         const extraShotCost = ((item.dosageCount || 1) - 1) * EXTRA_SHOT_PRICE;
@@ -215,7 +213,7 @@ export function useSales() {
             is_treat: isTreatItem
           });
 
-        if (saleError) throw new Error('Failed to create sale: ' + saleError.message);
+        if (saleError) {throw new Error('Failed to create sale: ' + saleError.message);}
 
         // Update stock if needed
         if (item.code.stock !== UNLIMITED_STOCK) {
@@ -224,12 +222,12 @@ export function useSales() {
             .update({ stock: item.code.stock - item.quantity })
             .eq('id', item.code.id);
 
-          if (stockError) throw new Error(`Failed to update stock for ${item.code.name}: ${stockError.message}`);
+          if (stockError) {throw new Error(`Failed to update stock for ${item.code.name}: ${stockError.message}`);}
         }
       }
 
       toast.success(SALES_MESSAGES.CREATE_SUCCESS);
-      router.refresh();
+      void router.refresh();
       setOrderItems([]);
       setCardDiscountCount(0);
       

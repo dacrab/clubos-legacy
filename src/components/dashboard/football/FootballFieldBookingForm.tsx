@@ -1,16 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
-import { toast } from 'sonner';
+import { createBrowserClient } from "@supabase/ssr";
 import { format } from "date-fns";
 import { el } from 'date-fns/locale';
 import { CalendarIcon } from "lucide-react";
-import { createBrowserClient } from "@supabase/ssr";
+import React, { useState } from 'react';
+import { toast } from 'sonner';
 
 // Types
-import { Database } from '@/types/supabase';
 
 // Constants
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   FOOTBALL_BOOKING_MESSAGES, 
   FORM_LABELS, 
@@ -19,17 +28,8 @@ import {
   DIALOG_MESSAGES,
   DATE_FORMAT
 } from '@/lib/constants';
-
-// UI Components
-import { LoadingButton } from "@/components/ui/loading-button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { type Database } from '@/types/supabase';
 
 // Types
 type FootballFieldBookingFormData = {
@@ -63,7 +63,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
     const supabase = createBrowserClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    ) as any;
 
     const validateForm = () => {
       if (!formData.who_booked || !formData.date || !formData.time || !formData.contact_details || !formData.field_number) {
@@ -100,7 +100,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
+        if (isSubmitting) {return;}
         setIsSubmitting(true);
 
         try {
@@ -111,7 +111,7 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
               .from('football_field_bookings')
               .insert([bookingData]);
 
-            if (error) throw error;
+            if (error) {throw error;}
 
             toast.success(FOOTBALL_BOOKING_MESSAGES.CREATE_SUCCESS);
             setFormData(initialFormData);

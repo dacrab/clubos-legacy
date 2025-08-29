@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
-import type { OrderItem, Code } from '@/types/sales';
 import { v4 as uuidv4 } from 'uuid';
+
 import { EXTRA_SHOT_PRICE, CARD_DISCOUNT } from '@/lib/constants';
+import type { OrderItem, Code } from '@/types/sales';
 
 export function useSalesStore() {
   // States for the sales interface
@@ -17,7 +18,7 @@ export function useSalesStore() {
     setOrderItems(prev => {
       // Check if the item already exists
       const existingItem = prev.find(item => 
-        item.code?.id === code.id && !item.isTreat
+        item.code.id === code.id && !item.isTreat
       );
       
       if (existingItem) {
@@ -91,9 +92,9 @@ export function useSalesStore() {
   // Calculate subtotal and final total
   const cartTotals = useMemo(() => {
     const subtotal = orderItems.reduce((sum, item) => {
-      if (item.isTreat) return sum;
+      if (item.isTreat) {return sum;}
       
-      const basePrice = (item.code?.price || 0) * item.quantity;
+      const basePrice = (item.code.price || 0) * item.quantity;
       const dosageExtra = (item.dosageCount || 1) > 1 
         ? (item.dosageCount! - 1) * EXTRA_SHOT_PRICE * item.quantity
         : 0;

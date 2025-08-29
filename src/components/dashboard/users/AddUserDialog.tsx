@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { 
   Select, 
@@ -16,9 +18,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
-import { Database } from "@/types/supabase";
 import { 
   DEFAULT_USER_ROLE,
   DIALOG_MESSAGES,
@@ -51,10 +50,6 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
   const [showPassword, setShowPassword] = useState(false);
   
   const router = useRouter();
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,7 +68,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
   }, [open, form]);
 
   async function onSubmit(values: FormValues) {
-    if (loading) return;
+    if (loading) {return;}
     setLoading(true);
 
     try {
@@ -115,8 +110,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
     label, 
     type = "text",
     placeholder,
-    disabled = false,
-    autoFocus = false
+    disabled = false
   }: {
     name: keyof FormValues;
     label: string;
@@ -136,7 +130,6 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
           {...form.register(name)}
           placeholder={placeholder}
           disabled={disabled || loading}
-          autoFocus={autoFocus}
           className={form.formState.errors[name] ? "border-destructive" : ""}
         />
         {name === 'password' && (
@@ -158,7 +151,7 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
       </div>
       {form.formState.errors[name] && (
         <p className="text-sm font-medium text-destructive">
-          {form.formState.errors[name]?.message}
+          {form.formState.errors[name].message}
         </p>
       )}
     </div>
@@ -179,7 +172,6 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
             name="username"
             label="Όνομα Χρήστη"
             placeholder="Όνομα χρήστη"
-            autoFocus
           />
 
           <FormField

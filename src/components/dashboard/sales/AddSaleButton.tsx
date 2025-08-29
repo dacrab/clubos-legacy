@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import NewSaleInterface from "./NewSaleInterface";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+import NewSaleInterface from "./NewSaleInterface";
+
 
 interface AddSaleButtonProps {
   className?: string;

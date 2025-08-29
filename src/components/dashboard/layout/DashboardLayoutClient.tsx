@@ -1,20 +1,23 @@
 "use client";
 
-import Sidebar from "@/components/dashboard/Sidebar";
-import Header from "@/components/dashboard/Header";
-import MobileSidebar from "@/components/dashboard/MobileSidebar";
-import { Footer } from "@/components/layout/Footer";
-import { cn, formatPrice } from "@/lib/utils";
 import { usePathname } from "next/navigation";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { Suspense } from "react";
+import { Suspense , useState, useEffect } from "react";
+
 import { ErrorBoundary } from "@/components/error-boundary";
-import { LoadingFallback } from "@/components/loading-fallback";
 import { ErrorFallback } from "@/components/error-fallback";
-import { useState, useEffect } from "react";
+import { Footer } from "@/components/layout/Footer";
+import { LoadingFallback } from "@/components/loading-fallback";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { type UserRole } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+import SecretariatDashboard from "../dashboards/SecretariatDashboard";
+
+import Header from "./Header";
+import MobileSidebar from "./MobileSidebar";
+import Sidebar from "./Sidebar";
+
 import type { User } from '@supabase/supabase-js';
-import SecretariatDashboard from "@/components/dashboard/SecretariatDashboard";
-import { UserRole } from "@/lib/constants";
 
 interface UserProfile {
   id: string;

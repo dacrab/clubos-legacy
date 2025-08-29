@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ButtonProps } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+
+import { Button , type ButtonProps } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { cn } from "@/lib/utils";
 
 interface LoadingButtonProps extends ButtonProps {
   loading?: boolean;

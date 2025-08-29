@@ -1,5 +1,4 @@
-import { Database } from "./supabase";
-import { Json } from "./database";
+import { type Database } from "./supabase";
 
 // Base types from Database
 type Tables = Database['public']['Tables'];

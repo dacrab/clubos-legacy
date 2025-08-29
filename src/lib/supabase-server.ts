@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from "next/headers";
-import { Database } from "@/types/supabase";
+
+import { type Database } from "@/types/supabase";
+
 import { API_ERROR_MESSAGES } from "./constants";
 
 const MAX_RETRIES = 3;
@@ -19,7 +21,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES): Promis
 }
 
 // For server components
-export async function createServerSupabase(requireAuth: boolean = false) {
+export async function createServerSupabase() {
   const cookieStore = await cookies();
 
   const supabase = createServerClient<Database>(
@@ -36,14 +38,14 @@ export async function createServerSupabase(requireAuth: boolean = false) {
               path: '/',
               ...options,
             });
-          } catch (error) {
+          } catch {
             // Cookie cannot be set - this will be handled by Supabase
           }
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string, _options: CookieOptions) {
           try {
             cookieStore.delete(name);
-          } catch (error) {
+          } catch {
             // Cookie cannot be deleted - this will be handled by Supabase
           }
         },
@@ -72,14 +74,14 @@ export async function createAPISupabase() {
               path: '/',
               ...options,
             });
-          } catch (error) {
+          } catch {
             // Cookie cannot be set - this will be handled by Supabase
           }
         },
-        remove(name: string, options: CookieOptions) {
+        remove(name: string, _options: CookieOptions) {
           try {
             cookieStore.delete(name);
-          } catch (error) {
+          } catch {
             // Cookie cannot be deleted - this will be handled by Supabase
           }
         },

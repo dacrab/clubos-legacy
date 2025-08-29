@@ -1,8 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { Database } from '@/types/supabase';
+
 import { AUTH_PAGES } from '@/lib/constants';
+import { type Database } from '@/types/supabase';
+
+import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
   // Skip auth check for public routes

@@ -1,29 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import { motion } from "framer-motion";
+import { Loader2, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { User } from '@supabase/supabase-js';
-import { createBrowserClient } from "@supabase/ssr";
-import { LogOut, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { toast } from "sonner";
+
 import { CloseRegisterButton } from "@/components/dashboard/register/CloseRegisterButton";
-import type { Database } from "@/types/supabase";
-import { UserRole } from "@/lib/constants";
-
-// UI Components
-import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
-
-// Constants
-import { 
-  PUBLIC_ROUTES, 
-  ROLE_TRANSLATIONS, 
-  API_ERROR_MESSAGES 
+import { Button } from "@/components/ui/button";
+import {
+  API_ERROR_MESSAGES,
+  PUBLIC_ROUTES,
+  ROLE_TRANSLATIONS,
+  type UserRole,
 } from "@/lib/constants";
+import type { Database } from "@/types/supabase";
 
-// Types
+import type { User } from "@supabase/supabase-js";
+
 interface HeaderProps {
   user: User;
   profile: {
@@ -43,8 +40,8 @@ export default function Header({ user, profile }: HeaderProps) {
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  const roleLabel = ROLE_TRANSLATIONS[profile?.role] || ROLE_TRANSLATIONS.employee;
-  const displayName = profile?.username || user?.email?.split('@')[0] || 'User';
+  const _roleLabel = ROLE_TRANSLATIONS[profile.role] || ROLE_TRANSLATIONS.staff;
+  const displayName = profile.username || user.email?.split('@')[0] || 'User';
 
   const handleSignOut = async () => {
     try {

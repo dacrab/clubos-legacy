@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { DIALOG_MESSAGES } from "@/lib/constants";
 
 export default function NotFound() {

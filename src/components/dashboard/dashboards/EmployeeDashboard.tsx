@@ -1,21 +1,23 @@
 "use client";
 
 // External Dependencies
-import { ShoppingBag, Calculator, Loader2 } from "lucide-react";
-import type { User } from '@supabase/supabase-js';
 import { createBrowserClient } from "@supabase/ssr";
+import { ShoppingBag, Calculator, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // Internal Components
-import { CloseRegisterButton } from "./register/CloseRegisterButton";
-import AddSaleButton from "./sales/AddSaleButton";
-import RecentSales from "./sales/RecentSales";
 
 // Types and Constants
-import { Database } from "@/types/supabase";
-import { Sale } from "@/types/sales";
-import { UserRole } from "@/lib/constants";
+import { type UserRole } from "@/lib/constants";
 import { REGISTER_DIALOG } from "@/lib/constants";
+import { type Sale } from "@/types/sales";
+import { type Database } from "@/types/supabase";
+
+import { CloseRegisterButton } from "../register/CloseRegisterButton";
+import AddSaleButton from "../sales/AddSaleButton";
+import RecentSales from "../sales/RecentSales";
+
+import type { User } from '@supabase/supabase-js';
 
 interface Profile {
   username: string | null;
@@ -74,7 +76,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
       }
     };
 
-    checkAuth();
+    void checkAuth();
   }, [supabase]);
 
   // Loading State
@@ -90,7 +92,7 @@ export default function EmployeeDashboard({ recentSales = [] }: EmployeeDashboar
   }
 
   // Authorization Check
-  if (!user || !profile || profile.role !== 'employee') {
+  if (!user || !profile || profile.role !== 'staff') {
     return null;
   }
 

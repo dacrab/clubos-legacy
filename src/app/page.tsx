@@ -1,10 +1,11 @@
-import { redirect } from "next/navigation";
-import { createServerSupabase } from "@/lib/supabase-server";
-import Image from "next/image";
 import { LockKeyhole } from "lucide-react";
-import LoginForm from "@/components/auth/LoginForm";
+import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
+
+import LoginForm from "@/components/auth/LoginForm";
 import { DIALOG_MESSAGES } from "@/lib/constants";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 function LoadingFallback() {
   return (
@@ -53,7 +54,7 @@ function Footer() {
 }
 
 export default async function Home() {
-  const supabase = await createServerSupabase(false);
+  const supabase = await createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   
   if (user) {

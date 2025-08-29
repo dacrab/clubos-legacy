@@ -1,10 +1,12 @@
-import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
-import DashboardLayoutClient from "@/components/dashboard/DashboardLayoutClient";
-import { Metadata } from "next";
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import { Database } from "@/types/supabase";
+import { type Metadata } from "next";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import DashboardLayoutClient from "@/components/dashboard/layout/DashboardLayoutClient";
+import { PageWrapper } from "@/components/ui/page-wrapper";
+import { type Database } from "@/types/supabase";
+
 
 export const metadata: Metadata = {
   title: 'Dashboard | clubOS',
@@ -47,14 +49,22 @@ export default async function DashboardLayout({
       .eq('id', user.id)
       .single();
 
-    if (userDataError || !userData) {
+    if (userDataError) {
       console.error('User error:', userDataError);
       return redirect('/');
     }
 
+    const profile: {
+      username: string;
+      role: 'admin' | 'staff';
+      id: string;
+      created_at: string;
+      updated_at: string;
+    } = userData;
+
     return (
       <PageWrapper variant="dashboard">
-        <DashboardLayoutClient user={user} profile={userData}>
+        <DashboardLayoutClient user={user} profile={profile}>
           {children}
         </DashboardLayoutClient>
       </PageWrapper>
@@ -63,41 +73,4 @@ export default async function DashboardLayout({
     console.error('Dashboard layout error:', error);
     return redirect('/');
   }
-}
-
-async function getUserRole() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
-      },
-    }
-  );
-  
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    redirect('/');
-  }
-
-  const { data: userData, error: userDataError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (userDataError) {
-    console.error('User error:', userDataError);
-    throw userDataError;
-  }
-
-  if (!userData) {
-    redirect('/');
-  }
-
-  return userData.role;
 }

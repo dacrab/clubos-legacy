@@ -1,15 +1,16 @@
 "use client";
 
+import { PieChart as PieChartIcon } from "lucide-react";
 import { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import type { Sale } from "@/types/sales";
-import { STATISTICS } from "@/lib/constants";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart as PieChartIcon } from "lucide-react";
+import { STATISTICS } from "@/lib/constants";
 import { aggregateSalesByCode } from "@/lib/utils/chart-utils";
+import type { Sale } from "@/types/sales";
 
 interface TopCodesChartProps {
   sales: Sale[];
@@ -32,7 +33,7 @@ export default function TopCodesChart({ sales }: TopCodesChartProps) {
   }, [sales, topCount, showAll]);
 
   const renderLabel = ({ cx, cy, midAngle, percent, outerRadius }: any) => {
-    if (percent <= 0.05) return null;
+    if (percent <= 0.05) {return null;}
 
     const radius = outerRadius * 0.6;
     const radian = Math.PI / 180;

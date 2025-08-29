@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { transitions } from "@/lib/animations";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { ALLOWED_USER_ROLES, UserRole } from "@/lib/constants";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 import AddUserButton from "@/components/dashboard/users/AddUserButton";
 import UsersTable from "@/components/dashboard/users/UsersTable";
 import { Card } from "@/components/ui/card";
+import { LoadingAnimation } from "@/components/ui/loading-animation";
+import { transitions } from "@/lib/animations";
+import { ALLOWED_USER_ROLES, type UserRole } from "@/lib/constants";
+import { createClientSupabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 type User = {
@@ -25,7 +26,7 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   // Check for mobile view
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function UsersPage() {
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) return router.push('/');
+      if (userError || !user) {return router.push('/');}
 
       const { data: userData, error: userDataError } = await supabase
         .from('users')
@@ -51,15 +52,15 @@ export default function UsersPage() {
         .eq('id', user.id)
         .single();
 
-      if (userDataError || !userData?.role) return router.push('/');
-      if (userData.role !== ALLOWED_USER_ROLES[0]) return router.push('/dashboard');
+      if (userDataError || !userData?.role) {return router.push('/');}
+      if (userData.role !== ALLOWED_USER_ROLES[0]) {return router.push('/dashboard');}
 
       const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('id, username, role, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      if (usersError) throw usersError;
+      if (usersError) {throw usersError;}
 
       setUsers(usersData || []);
     };
@@ -69,7 +70,7 @@ export default function UsersPage() {
       .finally(() => setIsLoading(false));
   }, [router, supabase]);
 
-  if (isLoading) return <LoadingAnimation />;
+  if (isLoading) {return <LoadingAnimation />;}
 
   return (
     <div className="space-y-6">

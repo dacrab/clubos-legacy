@@ -1,15 +1,17 @@
 "use client";
 
+import { ChartPie } from "lucide-react";
 import { useState, useMemo } from 'react';
+
+import { filterSalesByDateRange } from "@/lib/utils/chart-utils";
 import type { Sale } from '@/types/sales';
-import StatsCards from "./StatsCards";
-import SalesChart from "./SalesChart";
-import TopCodesChart from "./TopCodesChart";
+
 import CategorySalesChart from "./CategorySalesChart";
 import RevenueChart from "./RevenueChart";
+import SalesChart from "./SalesChart";
 import StatisticsFilter from "./StatisticsFilter";
-import { ChartPie } from "lucide-react";
-import { filterSalesByDateRange } from "@/lib/utils/chart-utils";
+import StatsCards from "./StatsCards";
+import TopCodesChart from "./TopCodesChart";
 
 interface StatisticsWrapperProps {
   initialSales: Sale[];

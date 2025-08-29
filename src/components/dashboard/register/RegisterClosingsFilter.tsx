@@ -1,22 +1,23 @@
 "use client";
 
+import { format } from "date-fns";
+import { el } from "date-fns/locale";
+import { CalendarIcon, X, Filter } from "lucide-react";
 import { useState, useCallback, useEffect, memo } from "react";
+import { type DateRange as ReactDayPickerDateRange } from "react-day-picker";
+
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, X, Filter } from "lucide-react";
-import { format } from "date-fns";
-import { el } from "date-fns/locale";
-import { DateRange as ReactDayPickerDateRange } from "react-day-picker";
-import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { DateRange } from "@/types/register";
+import { type DateRange } from "@/types/register";
 
 interface RegisterClosingsFilterProps {
   onFilterChange: (dateRange: DateRange) => void;
@@ -107,8 +108,6 @@ function RegisterClosingsFilter({ onFilterChange }: RegisterClosingsFilterProps)
   const applyQuickSelect = useCallback(
     (rangeKey: keyof typeof QUICK_SELECT_RANGES) => {
       const rangeFn = QUICK_SELECT_RANGES[rangeKey];
-      if (!rangeFn) return;
-
       const { start, end } = rangeFn();
       setDate({ from: start, to: end });
       setQuickSelect(rangeKey);
@@ -125,7 +124,7 @@ function RegisterClosingsFilter({ onFilterChange }: RegisterClosingsFilterProps)
   // Memoize the date change handler
   const handleDateChange = useCallback(
     (range: ReactDayPickerDateRange | undefined) => {
-      if (!range?.from) return;
+      if (!range?.from) {return;}
 
       setDate(range);
       setQuickSelect("CUSTOM");

@@ -1,11 +1,11 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
-import type { RegisterSession, RegisterClosing, Order, Sale } from "@/types/register";
-import { CARD_DISCOUNT } from "@/lib/constants";
 import { Pencil, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { CARD_DISCOUNT } from "@/lib/constants";
+import { formatPrice , cn } from "@/lib/utils";
+import type { RegisterSession, RegisterClosing, Order, Sale } from "@/types/register";
 
 // Types
 interface ClosingDetailsProps {
@@ -45,9 +45,9 @@ interface ExtendedSale extends Sale {
 
 // Utility functions
 const calculateProductSummary = (orders?: Order[]): Record<string, ProductSummary> => {
-  if (!orders?.length) return {};
+  if (!orders?.length) {return {};}
 
-  const summary = {} as Record<string, ProductSummary>;
+  const summary = {} as Partial<Record<string, ProductSummary>>;
   const deletedItems = {} as Record<string, ProductSummary>;
 
   orders.forEach(({ sales = [] }) => {
@@ -78,12 +78,12 @@ const calculateProductSummary = (orders?: Order[]): Record<string, ProductSummar
       
       // Process active sales as before
       if (!summary[id]) {
-        summary[id] = { 
-          id, 
-          name, 
+        summary[id] = {
+          id,
+          name,
           originalId: id,
-          quantity: 0, 
-          totalAmount: 0, 
+          quantity: 0,
+          totalAmount: 0,
           treatCount: 0,
           isEdited: false,
           isDeleted: false,
@@ -91,22 +91,17 @@ const calculateProductSummary = (orders?: Order[]): Record<string, ProductSummar
           originalQuantity: undefined
         };
       }
-      
       summary[id].quantity += quantity;
       summary[id].totalAmount += total_price;
-      if (is_treat) summary[id].treatCount += quantity;
-      
-      // Handle edited sales
-      if (extendedSale.is_edited) {
-        summary[id].isEdited = true;
-        summary[id].originalCode = extendedSale.original_code;
-        summary[id].originalQuantity = extendedSale.original_quantity;
-      }
+      summary[id].treatCount += is_treat ? quantity : 0;
+      summary[id].isEdited = extendedSale.is_edited || summary[id].isEdited;
+      summary[id].originalCode = extendedSale.original_code || summary[id].originalCode;
+      summary[id].originalQuantity = extendedSale.original_quantity || summary[id].originalQuantity;
     });
   });
   
   // Combine active and deleted items, deleted items will appear after active ones
-  return { ...summary, ...deletedItems };
+  return { ...(summary as Record<string, ProductSummary>), ...deletedItems };
 };
 
 export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals => {
@@ -118,11 +113,11 @@ export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals 
     treatsAmount: 0
   };
 
-  if (!orders?.length) return defaultTotals;
+  if (!orders?.length) {return defaultTotals;}
 
   return orders.reduce((acc, { sales = [], card_discount_count = 0 }) => {
     sales.forEach(sale => {
-      if ((sale as ExtendedSale)?.is_deleted) return;
+      if ((sale as ExtendedSale).is_deleted) {return;}
       
       if (!sale.is_treat) {
         acc.totalBeforeDiscounts += sale.total_price;
@@ -140,7 +135,7 @@ export const calculateTransactionTotals = (orders?: Order[]): TransactionTotals 
 };
 
 // Component parts
-const TransactionSummaryCard = ({ totals, closing }: { totals: TransactionTotals, closing: RegisterClosing | null }) => {
+const TransactionSummaryCard = ({ totals }: { totals: TransactionTotals, closing: RegisterClosing | null }) => {
   const cardDiscountAmount = +(totals.cardDiscounts * CARD_DISCOUNT).toFixed(2);
   const finalAmount = Math.max(0, +(totals.totalBeforeDiscounts - cardDiscountAmount).toFixed(2));
 
@@ -182,7 +177,7 @@ const TransactionSummaryCard = ({ totals, closing }: { totals: TransactionTotals
 
 const ProductDetailsCard = ({ productSummary }: { productSummary: Record<string, ProductSummary> }) => {
   const products = Object.values(productSummary);
-  if (!products.length) return null;
+  if (!products.length) {return null;}
 
   // Sort products - active items first, then deleted items
   const sortedProducts = products.sort((a, b) => 
@@ -273,7 +268,7 @@ const ProductDetailsCard = ({ productSummary }: { productSummary: Record<string,
 
 const NotesCard = ({ session, closing }: { session: RegisterSession, closing: RegisterClosing | null }) => {
   const notes = (closing?.notes as any)?.text || (session.notes as any)?.text;
-  if (!notes) return null;
+  if (!notes) {return null;}
 
   return (
     <Card>

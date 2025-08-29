@@ -1,22 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClientSupabase } from "@/lib/supabase";
+import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import AddCodeButton from "@/components/dashboard/codes/AddCodeButton";
+import CodesTable from "@/components/dashboard/codes/CodesTable";
+import ManageCategoriesButton from "@/components/dashboard/codes/ManageCategoriesButton";
+import { Input } from "@/components/ui/input";
 import { LoadingAnimation } from "@/components/ui/loading-animation";
 import { ALLOWED_USER_ROLES } from "@/lib/constants";
-import AddCodeButton from "@/components/dashboard/codes/AddCodeButton";
-import ManageCategoriesButton from "@/components/dashboard/codes/ManageCategoriesButton";
-import CodesTable from "@/components/dashboard/codes/CodesTable";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import type { Database } from "@/types/supabase";
-
-type Code = Database['public']['Tables']['codes']['Row'] & {
-  category?: Database['public']['Tables']['categories']['Row'] & {
-    parent?: Database['public']['Tables']['categories']['Row'] | null;
-  } | null;
-};
+import { createClientSupabase } from "@/lib/supabase";
+import type { Code } from "@/types/sales";
 
 export default function CodesPage() {
   const [codes, setCodes] = useState<Code[]>([]);
@@ -25,7 +20,7 @@ export default function CodesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
-  const supabase = createClientSupabase();
+  const supabase = createClientSupabase() as any;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,9 +62,9 @@ export default function CodesPage() {
             )
           `)
           .order('name')
-          .returns<Code[]>();
+          .returns();
 
-        if (codesError) throw codesError;
+        if (codesError) {throw codesError;}
         setCodes(codesData || []);
         setFilteredCodes(codesData || []);
       } catch (error) {
@@ -79,7 +74,7 @@ export default function CodesPage() {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [router, supabase]);
 
   // Filter codes based on search query
