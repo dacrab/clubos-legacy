@@ -7,6 +7,7 @@ import { CalendarIcon } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { env } from '@/lib/env';
 
 // Types
 type FootballBookingInsert = Database['public']['Tables']['football_bookings']['Insert'];
@@ -65,8 +66,8 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Missing Supabase URL or anonymous key');
   }

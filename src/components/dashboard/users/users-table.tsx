@@ -47,6 +47,7 @@ import {
   USER_MESSAGES,
   type UserRole,
 } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 import ResetPasswordDialog from './reset-password-dialog';
@@ -292,15 +293,15 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
     };
   }, []);
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!env.NEXT_PUBLIC_SUPABASE_URL) {
     return <div className="text-destructive">Missing Supabase URL</div>;
   }
-  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return <div className="text-destructive">Missing Supabase Anon Key</div>;
   }
   const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
   async function updateUserRole(userId: string, role: UserRole) {
@@ -335,8 +336,8 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
     setLoading(true);
 
     try {
-      await supabase.auth.admin.deleteUser(deleteUserId);
-      await supabase.from('users').delete().eq('id', deleteUserId);
+      const res = await fetch(`/api/users/${deleteUserId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed');
       toast.success(USER_MESSAGES.DELETE_SUCCESS);
       router.refresh();
     } catch {

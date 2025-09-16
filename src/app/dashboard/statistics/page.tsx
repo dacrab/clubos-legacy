@@ -1,10 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
 import StatisticsWrapper from '@/components/dashboard/statistics/statistics-wrapper';
 import { PageWrapper } from '@/components/ui/page-wrapper';
 import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { SaleLike } from '@/lib/utils/chart-utils';
 import type { OrderItemWithProduct, OrderWithItems } from '@/types/database';
 import type { Database, UserRole } from '@/types/supabase';
@@ -16,8 +16,8 @@ export const dynamic = 'force-dynamic';
 export default async function StatisticsPage() {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     return redirect('/error');

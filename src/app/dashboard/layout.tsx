@@ -2,10 +2,10 @@ import { createServerClient } from '@supabase/ssr';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
 import DashboardLayoutClient from '@/components/dashboard/layout/dashboard-layout-client';
 import { PageWrapper } from '@/components/ui/page-wrapper';
 import type { UserRole } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 export const metadata: Metadata = {
@@ -18,8 +18,8 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     // Handle missing environment variables, maybe redirect to an error page

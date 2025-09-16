@@ -1,11 +1,11 @@
 import {
   checkAdminAccess,
-  createAdminClient,
   createApiClient,
   errorResponse,
   handleApiError,
   successResponse,
 } from '@/lib/api-utils';
+// no service role usage
 import {
   ALLOWED_USER_ROLES,
   API_ERROR_MESSAGES,
@@ -35,22 +35,15 @@ export async function POST(request: Request) {
       return errorResponse(API_ERROR_MESSAGES.INVALID_ROLE, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Use admin client for user creation
-    const adminClient = createAdminClient();
-
-    // Create user with admin client
-    const { data, error: createUserError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { username, role },
+    // Delegate to Supabase Edge Function which holds service role securely
+    const supabase = createApiClient();
+    const { error: fnError } = await supabase.functions.invoke('admin-create-user', {
+      body: { email, password, username, role },
     });
 
-    if (createUserError || !data.user) {
-      return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, HTTP_STATUS_BAD_REQUEST);
+    if (fnError) {
+      return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, HTTP_STATUS_BAD_REQUEST, fnError);
     }
-
-    // Profile row is created by DB trigger; no further action required here
 
     return successResponse(null, USER_MESSAGES.CREATE_SUCCESS);
   } catch (error) {

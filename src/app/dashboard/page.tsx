@@ -1,9 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
 import AdminDashboard from '@/components/dashboard/dashboards/admin-dashboard';
 import EmployeeDashboard from '@/components/dashboard/dashboards/employee-dashboard';
+import { env } from '@/lib/env';
 import { getProductsQuery } from '@/lib/utils/products';
 import type { Database, UserRole } from '@/types/supabase';
 
@@ -42,8 +42,8 @@ type UserData = { role: UserRole };
 export default async function DashboardPage() {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     // Handle missing environment variables, maybe redirect to an error page

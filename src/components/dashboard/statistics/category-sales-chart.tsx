@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { API_ERROR_MESSAGES, CATEGORY_SALES_CHART } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { SaleLike } from '@/lib/utils/chart-utils';
 import { aggregateSalesByCategory, MEDAL_COLORS } from '@/lib/utils/chart-utils';
 import { cn } from '@/lib/utils/format';
@@ -45,15 +46,9 @@ export default function CategorySalesChart({ sales }: CategorySalesChartProps) {
   const [subCategories, setSubCategories] = useState<Partial<Record<string, Category[]>>>({});
 
   const supabase = useMemo(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
-    }
-    if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    }
     return createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
   }, []);
 

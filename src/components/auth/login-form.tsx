@@ -5,7 +5,6 @@ import { Eye, EyeOff, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +19,7 @@ import {
   PASSWORD_MIN_LENGTH,
   VALIDATION,
 } from '@/lib/constants';
+import { env } from '@/lib/env';
 import { cn } from '@/lib/utils/format';
 import type { Database } from '@/types/supabase';
 
@@ -66,8 +66,8 @@ export default function LoginForm() {
   const [isInitializing, setIsInitializing] = useState(true);
 
   const router = useRouter();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Supabase URL or anonymous key is not defined');

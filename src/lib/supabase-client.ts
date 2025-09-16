@@ -1,12 +1,12 @@
 import type { CookieOptions } from '@supabase/ssr';
 import { createBrowserClient, createServerClient } from '@supabase/ssr';
+import { env } from '@/lib/env';
 
 import type { Database } from '@/types/supabase';
 
 // Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Validation
 if (!(supabaseUrl && supabaseAnonKey)) {
@@ -138,21 +138,7 @@ export async function createAPISupabase() {
 /**
  * Creates a Supabase admin client with service role key
  */
-export function createAdminClient() {
-  if (!(serviceRoleKey && supabaseUrl)) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  return createBrowserClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    db: {
-      schema: 'public',
-    },
-  });
-}
+// Removed admin client; use Edge Functions for privileged operations
 
 /**
  * Supabase Image Loader for Next.js

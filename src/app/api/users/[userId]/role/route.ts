@@ -1,6 +1,6 @@
 import {
   checkAdminAccess,
-  createAdminClient,
+  createApiClient,
   errorResponse,
   handleApiError,
   successResponse,
@@ -36,9 +36,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
       });
     }
 
-    // Update role using admin client (bypasses RLS safely)
-    const admin = createAdminClient();
-    const { error: updateError } = await admin.from('users').update({ role }).eq('id', userId);
+    // Update role using authenticated anon client; RLS ensures only admins can change roles
+    const supabase = createApiClient();
+    const { error: updateError } = await supabase.from('users').update({ role }).eq('id', userId);
 
     if (updateError) {
       return errorResponse('Failed to update role', HTTP_STATUS_INTERNAL_SERVER_ERROR, {
@@ -48,7 +48,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
     }
 
     // Verify update
-    const { data: updatedProfile, error: verifyError } = await admin
+    const { data: updatedProfile, error: verifyError } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)

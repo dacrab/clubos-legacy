@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Calculator, Loader2, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { env } from '@/lib/env';
 
 // Internal Components
 
@@ -36,8 +37,8 @@ export default function EmployeeDashboard(_props: EmployeeDashboardProps) {
   const router = useRouter();
 
   // Supabase Client
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Missing Supabase URL or anonymous key');
   }

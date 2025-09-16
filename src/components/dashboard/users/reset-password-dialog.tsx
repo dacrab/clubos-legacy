@@ -1,6 +1,5 @@
 'use client';
 
-import { createBrowserClient } from '@supabase/ssr';
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -33,18 +32,7 @@ export default function ResetPasswordDialog({
 }: ResetPasswordDialogProps) {
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const supabase = useMemo(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
-    }
-    if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    }
-    return createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
-  }, []);
+  const supabase = null as unknown as Database; // removed direct admin SDK usage
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,12 +43,13 @@ export default function ResetPasswordDialog({
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword,
+      const res = await fetch(`/api/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
       });
-
-      if (error) {
-        throw error;
+      if (!res.ok) {
+        throw new Error('Failed to reset password');
       }
 
       toast.success(USER_MESSAGES.PASSWORD_RESET_SUCCESS);

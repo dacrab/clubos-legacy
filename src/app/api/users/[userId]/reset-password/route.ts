@@ -1,6 +1,6 @@
 // Route handler uses web Request and untyped context to satisfy Next's checks
 
-import { createAdminClient, errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
+import { createApiClient, errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
 import { API_ERROR_MESSAGES, PASSWORD_MIN_LENGTH, USER_MESSAGES } from '@/lib/constants';
 
 const HTTP_STATUS_BAD_REQUEST = 400;
@@ -18,10 +18,10 @@ export async function POST(request: Request, context: { params: Promise<{ userId
       return errorResponse(API_ERROR_MESSAGES.INVALID_REQUEST, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Update password using admin client
-    const adminClient = createAdminClient();
-    const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
-      password,
+    // Delegate to Edge Function with service role to update password
+    const supabase = createApiClient();
+    const { error: updateError } = await supabase.functions.invoke('admin-reset-password', {
+      body: { userId, password },
     });
 
     if (updateError) {

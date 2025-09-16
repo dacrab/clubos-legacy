@@ -2,6 +2,7 @@ import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { AUTH_PAGES } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 export async function middleware(req: NextRequest) {
@@ -12,8 +13,8 @@ export async function middleware(req: NextRequest) {
 
   const res = NextResponse.next();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     // In middleware, you might want to log this error and redirect

@@ -8,11 +8,11 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-
 import { CloseRegisterButton } from '@/components/dashboard/register/close-register-button';
 import { ModeToggle } from '@/components/providers/mode-toggle';
 import { Button } from '@/components/ui/button';
 import { API_ERROR_MESSAGES, PUBLIC_ROUTES, type UserRole } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 type HeaderProps = {
@@ -28,8 +28,8 @@ type HeaderProps = {
 
 export default function Header({ user, profile }: HeaderProps) {
   const router = useRouter();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Missing Supabase URL or anonymous key');
   }

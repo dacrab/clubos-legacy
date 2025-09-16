@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { API_ERROR_MESSAGES } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 const HTTP_STATUS = {
@@ -16,34 +16,14 @@ const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
 };
 
-/**
- * Creates a Supabase admin client with service role key
- */
-export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!(supabaseUrl && serviceRoleKey)) {
-    throw new Error('Missing Supabase URL or service role key');
-  }
-
-  return createClient<Database>(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    db: {
-      schema: 'public',
-    },
-  });
-}
+// Removed admin client: use Supabase Edge Functions for privileged actions
 
 /**
  * Creates a Supabase client for API routes with cookies
  */
 export function createApiClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Missing Supabase URL or anonymous key');

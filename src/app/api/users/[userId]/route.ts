@@ -1,6 +1,6 @@
 import {
   checkAdminAccess,
-  createAdminClient,
+  createApiClient,
   errorResponse,
   handleApiError,
   successResponse,
@@ -22,10 +22,11 @@ export async function DELETE(_request: Request, context: { params: Promise<{ use
       return errorResponse('Unauthorized', HTTP_STATUS_FORBIDDEN);
     }
 
-    const admin = createAdminClient();
-
-    // Delete the user from auth.users (this will cascade to public.users due to our trigger)
-    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+    const supabase = createApiClient();
+    // Invoke Edge Function to delete the user in auth; ON DELETE CASCADE cleans up public.users
+    const { error: deleteError } = await supabase.functions.invoke('admin-delete-user', {
+      body: { userId },
+    });
 
     if (deleteError) {
       return errorResponse('Error deleting user', HTTP_STATUS_INTERNAL_SERVER_ERROR, deleteError);

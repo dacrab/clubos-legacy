@@ -4,7 +4,6 @@
 export type { Category } from '@/types/database';
 export type { Database } from '@/types/supabase';
 export {
-  createAdminClient,
   createAPISupabase,
   createClientSupabase,
   createServerSupabase,

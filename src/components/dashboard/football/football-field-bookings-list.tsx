@@ -7,7 +7,6 @@ import { Check, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import useSWR, { useSWRConfig } from 'swr';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -31,6 +30,7 @@ import {
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
+import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
 
 const THREE_DAYS = 3;
@@ -69,8 +69,8 @@ export default function FootballFieldBookingsList({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!(supabaseUrl && supabaseAnonKey)) {
     throw new Error('Missing Supabase URL or anonymous key');
   }
