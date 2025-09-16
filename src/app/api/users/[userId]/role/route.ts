@@ -1,70 +1,61 @@
-import { type NextRequest } from 'next/server';
-
 import {
   checkAdminAccess,
-  createApiClient,
+  createAdminClient,
   errorResponse,
+  handleApiError,
   successResponse,
-  handleApiError
 } from '@/lib/api-utils';
 import { ALLOWED_USER_ROLES } from '@/lib/constants';
-import { type RouteHandler } from '@/types/route';
+import type { UserRole } from '@/types/supabase';
 
-type Params = {
-  userId: string;
-};
+const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_FORBIDDEN = 403;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
-export const PATCH: RouteHandler<Params> = async (
-  request: NextRequest,
-  { params }
-) => {
+// Params type removed to satisfy Next.js build checks
+
+export async function PATCH(request: Request, context: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = await params;
+    const { userId } = await context.params;
 
     // Check admin access
     const adminAccess = await checkAdminAccess();
     if (!adminAccess) {
-      return errorResponse('Unauthorized', 403);
+      return errorResponse('Unauthorized', HTTP_STATUS_FORBIDDEN);
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: { role: UserRole } = await request.json();
 
     // Validate role
     const { role } = body;
-    if (!role || !ALLOWED_USER_ROLES.includes(role)) {
-      console.error('Invalid role provided:', role);
-      return errorResponse('Invalid role', 400, {
+    if (!(role && ALLOWED_USER_ROLES.includes(role))) {
+      return errorResponse('Invalid role', HTTP_STATUS_BAD_REQUEST, {
         allowedRoles: ALLOWED_USER_ROLES,
         providedRole: role,
       });
     }
 
-    // Update the user's role
-    const supabase = await createApiClient() as any;
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ role })
-      .eq('id', userId);
+    // Update role using admin client (bypasses RLS safely)
+    const admin = createAdminClient();
+    const { error: updateError } = await admin.from('users').update({ role }).eq('id', userId);
 
     if (updateError) {
-      console.error('Role update failed:', updateError);
-      return errorResponse('Failed to update role', 500, {
+      return errorResponse('Failed to update role', HTTP_STATUS_INTERNAL_SERVER_ERROR, {
         details: updateError.message,
         code: updateError.code,
       });
     }
 
     // Verify update
-    const { data: updatedProfile, error: verifyError } = await supabase
+    const { data: updatedProfile, error: verifyError } = await admin
       .from('users')
       .select('*')
       .eq('id', userId)
       .single();
 
     if (verifyError || !updatedProfile) {
-      console.error('Failed to verify update:', { verifyError, updatedProfile });
-      return errorResponse('Failed to verify role update', 500, {
+      return errorResponse('Failed to verify role update', HTTP_STATUS_INTERNAL_SERVER_ERROR, {
         details: verifyError?.message,
       });
     }
@@ -73,4 +64,4 @@ export const PATCH: RouteHandler<Params> = async (
   } catch (error) {
     return handleApiError(error);
   }
-}; 
+}

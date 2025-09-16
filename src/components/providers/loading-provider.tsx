@@ -1,28 +1,31 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 import { LoadingAnimation } from '@/components/ui/loading-animation';
 
-interface LoadingContextType {
+const LOADING_TIMEOUT = 5000;
+
+type LoadingContextType = {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-}
+};
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Add timeout to prevent infinite loading
   useEffect(() => {
     if (isLoading) {
       const timeout = setTimeout(() => {
         setIsLoading(false);
-      }, 5000); // 5 second timeout
-      
+      }, LOADING_TIMEOUT); // 5 second timeout
+
       return () => clearTimeout(timeout);
     }
+    return;
   }, [isLoading]);
 
   return (

@@ -2,31 +2,43 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import StatisticsWrapper from "@/components/dashboard/statistics/StatisticsWrapper";
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import { ALLOWED_USER_ROLES } from "@/lib/constants";
-import type { Sale } from '@/types/sales';
-import type { Database } from '@/types/supabase';
+import StatisticsWrapper from '@/components/dashboard/statistics/statistics-wrapper';
+import { PageWrapper } from '@/components/ui/page-wrapper';
+import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import type { SaleLike } from '@/lib/utils/chart-utils';
+import type { OrderItemWithProduct, OrderWithItems } from '@/types/database';
+import type { Database, UserRole } from '@/types/supabase';
 
-export const dynamic = 'force-dynamic'
+type UserData = { role: UserRole };
+
+export const dynamic = 'force-dynamic';
 
 export default async function StatisticsPage() {
   const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    return redirect('/error');
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value ?? '';
       },
-    }
-  ) as any;
+    },
+  });
 
   // Authentication check
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {redirect('/');}
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    redirect('/');
+  }
 
   // Get user role
   const { data: userData, error: userDataError } = await supabase
@@ -35,39 +47,26 @@ export default async function StatisticsPage() {
     .eq('id', user.id)
     .single();
 
-  if (userDataError || !userData || userData.role !== ALLOWED_USER_ROLES[0]) {
+  if (userDataError || !userData || (userData as UserData).role !== ALLOWED_USER_ROLES[0]) {
     redirect('/dashboard');
   }
 
   // Fetch sales data with full code details
-  const { data: salesData, error: salesError } = await supabase
-    .from('sales')
+  const { data: ordersData, error: salesError } = await supabase
+    .from('orders')
     .select(`
-      *,
-      code:codes (
-        name,
-        price,
-        image_url,
-        category:categories (
-          id,
-          name
-        )
-      ),
-      order:orders (
-        id,
-        total_amount,
-        final_amount,
-        card_discount_count,
-        created_at,
-        created_by
+      id, created_at, created_by, payment_method, card_discounts_applied,
+      order_items:order_items(
+        id, order_id, quantity, unit_price, line_total, is_treat, is_deleted,
+        product:products(id, name, image_url, category:categories(id, name))
       )
     `)
     .order('created_at', { ascending: false });
 
-  if (salesError || !salesData) {
+  if (salesError || !ordersData) {
     return (
       <PageWrapper>
-        <div className="flex items-center justify-center h-[50vh]">
+        <div className="flex h-[50vh] items-center justify-center">
           <div className="text-center text-destructive">
             Σφάλμα κατά την ανάκτηση των στατιστικών
           </div>
@@ -78,7 +77,38 @@ export default async function StatisticsPage() {
 
   return (
     <PageWrapper>
-      <StatisticsWrapper initialSales={salesData as Sale[]} />
+      <StatisticsWrapper
+        initialSales={
+          ((ordersData || []) as unknown as OrderWithItems[]).flatMap((order) =>
+            (order.order_items || []).map((item: OrderItemWithProduct) => ({
+              id: item.id,
+              order_id: order.id,
+              code_id: item.product.id,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.line_total,
+              is_treat: item.is_treat,
+              payment_method: order.payment_method,
+              sold_by: order.created_by,
+              created_at: order.created_at,
+              is_deleted: item.is_deleted,
+              code: {
+                name: item.product.name,
+                category: (item.product as unknown as { category?: { name: string } }).category
+                  ? {
+                      name: (item.product as unknown as { category: { name: string } }).category
+                        .name,
+                    }
+                  : null,
+              },
+              order: {
+                id: order.id,
+                card_discounts_applied: order.card_discounts_applied,
+              },
+            }))
+          ) as unknown as SaleLike[]
+        }
+      />
     </PageWrapper>
   );
 }

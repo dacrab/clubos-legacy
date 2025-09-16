@@ -1,10 +1,19 @@
-import { 
-  createApiClient, 
-  errorResponse, 
-  successResponse, 
-  handleApiError 
-} from '@/lib/api-utils';
+import { createApiClient, errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
 import { API_ERROR_MESSAGES } from '@/lib/constants';
+
+const BYTES_IN_A_KILOBYTE = 1024;
+const KILOBYTES_IN_A_MEGABYTE = 1024;
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * KILOBYTES_IN_A_MEGABYTE * BYTES_IN_A_KILOBYTE; // 5MB
+
+const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
 
 export const runtime = 'edge';
 
@@ -12,22 +21,19 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file');
-    
-    if (!file || !(file instanceof Blob)) {
-      console.error('Invalid file received');
-      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, 400);
+
+    if (!(file && file instanceof Blob)) {
+      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, HTTP_STATUS_BAD_REQUEST);
     }
 
     // Validate file type
     if (!(file as File).type.startsWith('image/')) {
-      console.error('Invalid file type:', (file as File).type);
-      return errorResponse(API_ERROR_MESSAGES.INVALID_IMAGE_TYPE, 400);
+      return errorResponse(API_ERROR_MESSAGES.INVALID_IMAGE_TYPE, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('File too large:', file.size);
-      return errorResponse(API_ERROR_MESSAGES.IMAGE_TOO_LARGE, 400);
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return errorResponse(API_ERROR_MESSAGES.IMAGE_TOO_LARGE, HTTP_STATUS_BAD_REQUEST);
     }
 
     // Convert File to ArrayBuffer
@@ -35,32 +41,38 @@ export async function POST(request: Request) {
     const fileBuffer = new Uint8Array(arrayBuffer);
 
     // Generate unique filename
-    const fileExt = (file as File).name.split('.').pop();
-    const uniqueId = Math.random().toString(36).substring(2);
-    const fileName = `product-images/new-${uniqueId}.${fileExt}`;
+    const explicitExt = (file as File).name.includes('.')
+      ? (file as File).name.split('.').pop() || ''
+      : '';
+    const mimeExt = MIME_TO_EXT[(file as File).type] || explicitExt || 'bin';
+    const RANDOM_STRING_LENGTH = 2;
+    const BASE_36_RADIX = 36;
+    const uniqueId = (globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(BASE_36_RADIX).slice(RANDOM_STRING_LENGTH)}`) as string;
+    const fileName = `new-${uniqueId}.${mimeExt}`;
 
     // Upload to Supabase
     const supabase = await createApiClient();
     const { error: uploadError } = await supabase.storage
-      .from('products')
+      .from('product-images')
       .upload(fileName, fileBuffer, {
         contentType: (file as File).type,
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
 
     if (uploadError) {
-      console.error('Upload error:', {
-        message: uploadError.message,
-        name: uploadError.name
-      });
-      return errorResponse(API_ERROR_MESSAGES.UPLOAD_ERROR, 500, uploadError);
+      return errorResponse(
+        API_ERROR_MESSAGES.UPLOAD_ERROR,
+        HTTP_STATUS_INTERNAL_SERVER_ERROR,
+        uploadError
+      );
     }
 
     // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('products')
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('product-images').getPublicUrl(fileName);
 
     return successResponse({ url: publicUrl });
   } catch (error) {

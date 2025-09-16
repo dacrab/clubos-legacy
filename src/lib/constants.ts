@@ -1,5 +1,5 @@
 // Authentication & Authorization
-export const DEFAULT_USER_ROLE = 'admin' as const;
+export const DEFAULT_USER_ROLE = 'staff' as const;
 export const ALLOWED_USER_ROLES = ['admin', 'staff', 'secretary'] as const;
 export type UserRole = (typeof ALLOWED_USER_ROLES)[number];
 
@@ -8,42 +8,61 @@ export const PUBLIC_ROUTES = ['/'] as const;
 
 export const ROLE_TRANSLATIONS: Record<UserRole, string> = {
   admin: 'Διαχειριστής',
-  staff: 'Υπάλληλος', 
-  secretary: 'Γραμματεία'
+  staff: 'Υπάλληλος',
+  secretary: 'Γραμματεία',
 } as const;
 
 // UI Components & Icons
-import { Search, Euro } from "lucide-react";
+import { Euro, Search } from 'lucide-react';
 
 // Sales Interface Icons
 export const SALES_ICONS = {
   SEARCH: Search,
-  EURO: Euro
+  EURO: Euro,
 } as const;
 
-export const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512] as const;
+export const ICON_SIZE_72 = 72;
+export const ICON_SIZE_96 = 96;
+export const ICON_SIZE_128 = 128;
+export const ICON_SIZE_144 = 144;
+export const ICON_SIZE_152 = 152;
+export const ICON_SIZE_192 = 192;
+export const ICON_SIZE_384 = 384;
+export const ICON_SIZE_512 = 512;
+
+export const ICON_SIZES = [
+  ICON_SIZE_72,
+  ICON_SIZE_96,
+  ICON_SIZE_128,
+  ICON_SIZE_144,
+  ICON_SIZE_152,
+  ICON_SIZE_192,
+  ICON_SIZE_384,
+  ICON_SIZE_512,
+] as const;
 
 export const VALIDATION = {
   USERNAME_MIN_LENGTH: 3,
   USERNAME_MAX_LENGTH: 20,
 } as const;
 
-export const PASSWORD_MIN_LENGTH = 1;
+export const PASSWORD_MIN_LENGTH = 8;
 export const DEFAULT_ITEMS_PER_PAGE = 10;
 
 // Business Logic - Inventory
 export const UNLIMITED_STOCK = -1;
 export const UNLIMITED_CATEGORY_ID = '250f2320-b578-4344-80f8-1addf0bf8b3f';
 export const LOW_STOCK_THRESHOLD = 10;
+export const EDIT_WINDOW_MINUTES = 5;
 
 // Business Logic - Payments & Pricing
-export const EXTRA_SHOT_PRICE = 0.50;
-export const CARD_DISCOUNT = 2.00; // Fixed 2€ discount per coupon applied to the total bill
+export const EXTRA_SHOT_PRICE = 0.5;
+export const CARD_DISCOUNT = 2.0; // Fixed 2€ discount per coupon applied to the total bill
 
 export const PAYMENT_METHOD_LABELS = {
   cash: 'Μετρητά',
   card: 'Κουπόνια',
-  treat: 'Κέρασμα'
+  treat: 'Κέρασμα',
 } as const;
 
 // Business Logic - Statistics
@@ -58,47 +77,47 @@ export const STATISTICS = {
 
 // Date Formatting
 export const DATE_FORMAT = {
-  DISPLAY: "dd/MM/yyyy",
-  API: "yyyy-MM-dd",
-  FULL_WITH_TIME: "d MMMM yyyy, HH:mm"
+  DISPLAY: 'dd/MM/yyyy',
+  API: 'yyyy-MM-dd',
+  FULL_WITH_TIME: 'd MMMM yyyy, HH:mm',
 } as const;
 
 export const QUICK_SELECT_OPTIONS = {
-  CUSTOM: "Προσαρμοσμένη",
-  TODAY: "Σήμερα",
-  YESTERDAY: "Χθες",
-  THIS_WEEK: "Αυτή την εβδομάδα",
-  LAST_WEEK: "Προηγούμενη εβδομάδα",
-  THIS_MONTH: "Τρέχων μήνας",
-  LAST_MONTH: "Πρηγούμενος μήνας",
-  THIS_YEAR: "Τρέχον έτος",
-  LAST_YEAR: "Προηγούμενο έτος"
+  CUSTOM: 'Προσαρμοσμένη',
+  TODAY: 'Σήμερα',
+  YESTERDAY: 'Χθες',
+  THIS_WEEK: 'Αυτή την εβδομάδα',
+  LAST_WEEK: 'Προηγούμενη εβδομάδα',
+  THIS_MONTH: 'Τρέχων μήνας',
+  LAST_MONTH: 'Πρηγούμενος μήνας',
+  THIS_YEAR: 'Τρέχον έτος',
+  LAST_YEAR: 'Προηγούμενο έτος',
 } as const;
 
-export const REQUIRED_FIELDS_MESSAGE = "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
+export const REQUIRED_FIELDS_MESSAGE = 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία';
 
 // UI Messages - API Errors
 export const API_ERROR_MESSAGES = {
-  UNAUTHORIZED: "Μη εξουσιοδοτημένη πρόσβαση",
-  INVALID_CREDENTIALS: "Λανθασμένα στοιχεία σύνδεσης",
-  USER_NOT_FOUND: "Ο χρήστης δεν βρέθηκε",
-  INVALID_ROLE: "Μη έγκυρος ρόλος",
-  INVALID_TOKEN: "Μη έγκυρο token",
-  EXPIRED_TOKEN: "Το token έχει λήξει",
-  INVALID_REQUEST: "Μη έγκυρο αίτημα",
-  SERVER_ERROR: "Σφάλμα διακομιστή",
-  TOO_MANY_ATTEMPTS: "Πάρα πολλές προσπάθειες σύνδεσης. Παρακαλώ δοκιμάστε ξανά αργότερα",
-  FETCH_CATEGORIES_ERROR: "Σφάλμα κατά την ανάκτηση των κατηγοριών",
-  CHECK_CODE_ERROR: "Σφάλμα κατά τον έλεγχο του κωδικού",
-  CODE_EXISTS: "Ο κωδικός υπάρχει ήδη",
-  AUTH_ERROR: "Σφάλμα ταυτοποίησης χρήστη",
-  UPLOAD_ERROR: "Σφάλμα κατά το ανέβασμα της εικόνας",
-  CREATE_CODE_ERROR: "Σφάλμα κατά την δημιουργία του κωδικού",
-  CODE_CREATED: "Ο κωδικός δημιουργήθηκε επιτυχώς",
-  GENERIC_ERROR: "Κάτι πήγε στραβά",
-  INVALID_IMAGE_TYPE: "Παρακαλώ επιλέξτε μια εικόνα",
-  IMAGE_TOO_LARGE: "Η εικόνα δεν πρέπει να ξεπερνά τα 5MB",
-  MISSING_REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE
+  UNAUTHORIZED: 'Μη εξουσιοδοτημένη πρόσβαση',
+  INVALID_CREDENTIALS: 'Λανθασμένα στοιχεία σύνδεσης',
+  USER_NOT_FOUND: 'Ο χρήστης δεν βρέθηκε',
+  INVALID_ROLE: 'Μη έγκυρος ρόλος',
+  INVALID_TOKEN: 'Μη έγκυρο token',
+  EXPIRED_TOKEN: 'Το token έχει λήξει',
+  INVALID_REQUEST: 'Μη έγκυρο αίτημα',
+  SERVER_ERROR: 'Σφάλμα διακομιστή',
+  TOO_MANY_ATTEMPTS: 'Πάρα πολλές προσπάθειες σύνδεσης. Παρακαλώ δοκιμάστε ξανά αργότερα',
+  FETCH_CATEGORIES_ERROR: 'Σφάλμα κατά την ανάκτηση των κατηγοριών',
+  CHECK_CODE_ERROR: 'Σφάλμα κατά τον έλεγχο του κωδικού',
+  CODE_EXISTS: 'Ο κωδικός υπάρχει ήδη',
+  AUTH_ERROR: 'Σφάλμα ταυτοποίησης χρήστη',
+  UPLOAD_ERROR: 'Σφάλμα κατά το ανέβασμα της εικόνας',
+  CREATE_CODE_ERROR: 'Σφάλμα κατά την δημιουργία του κωδικού',
+  CODE_CREATED: 'Ο κωδικός δημιουργήθηκε επιτυχώς',
+  GENERIC_ERROR: 'Κάτι πήγε στραβά',
+  INVALID_IMAGE_TYPE: 'Παρακαλώ επιλέξτε μια εικόνα',
+  IMAGE_TOO_LARGE: 'Η εικόνα δεν πρέπει να ξεπερνά τα 5MB',
+  MISSING_REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
 } as const;
 
 // UI Messages - Dialogs
@@ -115,7 +134,8 @@ export const DIALOG_MESSAGES = {
   OFFLINE_BUTTON: 'Επαναλήψη',
   NOT_FOUND_BUTTON: 'Επιστροφή στην αρχική',
   DELETE_BOOKING_TITLE: 'Διαγραφή Κράτησης',
-  DELETE_BOOKING_DESCRIPTION: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.'
+  DELETE_BOOKING_DESCRIPTION:
+    'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση; Η ενέργεια αυτή δεν μπορεί να αναιρεθεί.',
 } as const;
 
 // UI Messages - User Management
@@ -123,7 +143,7 @@ export const USER_MESSAGES = {
   CREATE_SUCCESS: 'Ο χρήστης δημιουργήθηκε επιτυχώς',
   DELETE_SUCCESS: 'Ο χρήστης διαγράφηκε επιτυχώς',
   PASSWORD_RESET_SUCCESS: 'Ο κωδικός άλλαξε επιτυχώς',
-  UNEXPECTED_ERROR: 'Απρόσμενο σφάλμα'
+  UNEXPECTED_ERROR: 'Απρόσμενο σφάλμα',
 } as const;
 
 // UI Messages - Code Management
@@ -132,7 +152,7 @@ export const CODE_MESSAGES = {
   UPDATE_SUCCESS: 'Ο κωδικός ενημερώθηκε επιτυχώς',
   DELETE_SUCCESS: 'Ο κωδικός διαγράφηκε επιτυχώς',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον κωδικό;',
-  GENERIC_ERROR: 'Κάτι πήγε στραβά'
+  GENERIC_ERROR: 'Κάτι πήγε στραβά',
 } as const;
 
 // UI Messages - Stock Management
@@ -140,7 +160,7 @@ export const STOCK_MESSAGES = {
   UPDATE_SUCCESS: 'Το απόθεμα ενημερώθηκε επιτυχώς',
   UNLIMITED_STOCK_NOTE: 'Το προϊόν αυτό έχει απεριόριστο απόθεμα και δεν μπορεί να τροποποιηθεί.',
   NEW_STOCK_LABEL: 'Νέο Απόθεμα',
-  UNLIMITED_STOCK_LABEL: 'Απεριόριστο απόθεμα'
+  UNLIMITED_STOCK_LABEL: 'Απεριόριστο απόθεμα',
 } as const;
 
 // UI Messages - Sales Management
@@ -153,19 +173,22 @@ export const SALES_MESSAGES = {
   NO_USER_ERROR: 'Δεν βρέθηκε χρήστης',
   NO_ITEMS: 'Δεν έχουν προστεθεί προϊόντα',
   EDIT_WINDOW_EXPIRED: 'Το χρονικό διάστημα επεξεργασίας έχει λήξει',
-  PRODUCT_NOT_FOUND: 'Το προϊόν δεν βρέθηκε'
+  PRODUCT_NOT_FOUND: 'Το προϊόν δεν βρέθηκε',
+  INSUFFICIENT_STOCK: 'Ανεπαρκές απόθεμα',
+  CODE_NOT_FOUND: 'Ο κωδικός δεν βρέθηκε',
 } as const;
 
 // UI Messages - Register Management
 export const REGISTER_MESSAGES = {
-  NOT_LOGGED_IN: "Πρέπει να συνδεθείτε για να δείτε το ταμείο",
-  FETCH_ERROR: "Σφάλμα κατά τη φόρτωση των ταμειακών περιόδων",
-  NO_ACTIVE_SESSION: "Δεν υπάρχει ενεργή ταμειακή περίοδος",
-  SESSION_CREATED: "Δημιουργήθηκε νέα ταμειακή περίοδος",
-  CLOSE_SUCCESS: "Η ταμειακή περίοδος έκλεισε επιτυχώς",
-  CLOSE_ERROR: "Σφάλμα κατά το κλείσιμο της ταμειακής περιόδου",
-  ALREADY_CLOSED: "Η ταμειακή περίοδος έχει ήδη κλείσει",
-  NAME_REQUIRED: "Παρακαλώ εισάγετε το όνομά σας για να κλείσετε το ταμείο"
+  NOT_LOGGED_IN: 'Πρέπει να συνδεθείτε για να δείτε το ταμείο',
+  FETCH_ERROR: 'Σφάλμα κατά τη φόρτωση των ταμειακών περιόδων',
+  NO_PERMISSION: 'Δεν έχετε δικαιώματα για πρόσβαση στο ταμείο',
+  NO_ACTIVE_SESSION: 'Δεν υπάρχει ενεργή ταμειακή περίοδος',
+  SESSION_CREATED: 'Δημιουργήθηκε νέα ταμειακή περίοδος',
+  CLOSE_SUCCESS: 'Η ταμειακή περίοδος έκλεισε επιτυχώς',
+  CLOSE_ERROR: 'Σφάλμα κατά το κλείσιμο της ταμειακής περιόδου',
+  ALREADY_CLOSED: 'Η ταμειακή περίοδος έχει ήδη κλείσει',
+  NAME_REQUIRED: 'Παρακαλώ εισάγετε το όνομά σας για να κλείσετε το ταμείο',
 } as const;
 
 export const REGISTER_DIALOG = {
@@ -190,7 +213,7 @@ export const APPOINTMENT_MESSAGES = {
   GENERIC_ERROR: 'Σφάλμα κατά την καταχώρηση του παιδικού πάρτυ',
   FETCH_ERROR: 'Σφάλμα κατά την ανάκτηση των παιδικών πάρτυ',
   NO_UPCOMING: 'Δεν υπάρχουν προσεχή παιδικά πάρτυ για τις επόμενες 3 ημέρες',
-  NO_APPOINTMENTS: 'Δεν υπάρχουν παιδικά πάρτυ'
+  NO_APPOINTMENTS: 'Δεν υπάρχουν παιδικά πάρτυ',
 } as const;
 
 // UI Messages - Football Bookings
@@ -209,7 +232,7 @@ export const FOOTBALL_BOOKING_MESSAGES = {
   UPDATE_ERROR: 'Σφάλμα κατά την ενημέρωση της κράτησης',
   DELETE_ERROR: 'Σφάλμα κατά τη διαγραφή της κράτησης',
   NO_UPCOMING: 'Δεν υπάρχουν προσεχείς κρατήσεις για τις επόμενες 3 ημέρες',
-  NO_BOOKINGS: 'Δεν υπάρχουν κρατήσεις'
+  NO_BOOKINGS: 'Δεν υπάρχουν κρατήσεις',
 } as const;
 
 // UI - Form Labels & Placeholders
@@ -225,7 +248,7 @@ export const FORM_LABELS = {
   REQUIRED: '*',
   CREATED_AT: 'Καταχωρήθηκε',
   FIELD: 'Γήπεδο',
-  PLAYERS: 'παίκτες'
+  PLAYERS: 'παίκτες',
 } as const;
 
 export const PLACEHOLDERS = {
@@ -234,7 +257,7 @@ export const PLACEHOLDERS = {
   NUM_CHILDREN: 'π.χ. 10',
   NUM_ADULTS: 'π.χ. 5',
   NUM_PLAYERS: 'π.χ. 5',
-  NOTES: 'π.χ. Αλλεργίες, ειδικές απαιτήσεις, ή άλλες σημαντικές πληροφορίες'
+  NOTES: 'π.χ. Αλλεργίες, ειδικές απαιτήσεις, ή άλλες σημαντικές πληροφορίες',
 } as const;
 
 // UI - Button Labels
@@ -245,23 +268,23 @@ export const BUTTON_LABELS = {
   EDIT: 'Επεξεργασία',
   DELETE: 'Διαγραφή',
   CANCEL: 'Ακύρωση',
-  SAVE: 'Αποθήκευση'
+  SAVE: 'Αποθήκευση',
 } as const;
 
 // UI - Charts & Visualizations
 export const CATEGORY_SALES_CHART = {
   MEDAL_COLORS: {
-    GOLD: "text-yellow-400",
-    SILVER: "text-gray-400",
-    BRONZE: "text-amber-600",
-    DEFAULT: "text-transparent"
+    GOLD: 'text-yellow-400',
+    SILVER: 'text-gray-400',
+    BRONZE: 'text-amber-600',
+    DEFAULT: 'text-transparent',
   },
   EMPTY_STATES: {
-    NO_CATEGORY: "Επιλέξτε μια κατηγορία για να δείτε τις πωλήσεις",
-    NO_SALES: "Δεν βρέθηκαν πωλήσεις για αυτή την κατηγορία"
+    NO_CATEGORY: 'Επιλέξτε μια κατηγορία για να δείτε τις πωλήσεις',
+    NO_SALES: 'Δεν βρέθηκαν πωλήσεις για αυτή την κατηγορία',
   },
   UI: {
-    CATEGORY_SELECT_PLACEHOLDER: "Επιλέξτε κατηγορία",
-    SELECT_WIDTH: "w-[180px]"
-  }
+    CATEGORY_SELECT_PLACEHOLDER: 'Επιλέξτε κατηγορία',
+    SELECT_WIDTH: 'w-[180px]',
+  },
 } as const;

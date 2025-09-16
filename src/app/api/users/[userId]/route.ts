@@ -1,43 +1,38 @@
-import { type NextRequest } from 'next/server';
-
-import { 
+import {
   checkAdminAccess,
-  createApiClient,
+  createAdminClient,
   errorResponse,
+  handleApiError,
   successResponse,
-  handleApiError
 } from '@/lib/api-utils';
-import { type RouteHandler } from '@/types/route';
 
-type Params = {
-  userId: string;
-};
+// Use Next.js route handler signature directly
 
-export const DELETE: RouteHandler<Params> = async (
-  request: NextRequest,
-  { params }
-) => {
+const HTTP_STATUS_FORBIDDEN = 403;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+
+// Params type removed to satisfy Next.js build checks
+
+export async function DELETE(_request: Request, context: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = await params;
-    
+    const { userId } = await context.params;
+
     const adminAccess = await checkAdminAccess();
     if (!adminAccess) {
-      return errorResponse('Unauthorized', 403);
+      return errorResponse('Unauthorized', HTTP_STATUS_FORBIDDEN);
     }
-    
-    const supabase = await createApiClient();
+
+    const admin = createAdminClient();
 
     // Delete the user from auth.users (this will cascade to public.users due to our trigger)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(
-      userId
-    );
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      return errorResponse('Error deleting user', 500, deleteError);
+      return errorResponse('Error deleting user', HTTP_STATUS_INTERNAL_SERVER_ERROR, deleteError);
     }
 
     return successResponse(null, 'User deleted successfully');
   } catch (error) {
     return handleApiError(error);
   }
-};
+}

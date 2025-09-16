@@ -1,46 +1,42 @@
-"use client";
+'use client';
 
-import Image from "next/image";
+import Image from 'next/image';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils/format';
 
-interface ProductImageProps {
+type ProductImageProps = {
   src: string;
   alt: string;
-  size?: "sm" | "md" | "lg";
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
-}
+};
 
 const sizes = {
-  sm: "h-8 w-8",
-  md: "h-16 w-16",
-  lg: "h-40 w-full"
+  sm: 'h-8 w-8',
+  md: 'h-16 w-16',
+  lg: 'h-40 w-full',
 };
 
 const imageSizes = {
-  sm: "32px",
-  md: "64px",
-  lg: "400px"
+  sm: '32px',
+  md: '64px',
+  lg: '400px',
 };
 
-export function ProductImage({ src, alt, size = "md", className }: ProductImageProps) {
-  const containerClasses = cn(
-    "relative",
-    sizes[size],
-    className
-  );
+export function ProductImage({ src, alt, size = 'md', className }: ProductImageProps) {
+  const containerClasses = cn('relative', sizes[size], className);
 
   return (
     <div className={containerClasses}>
       <Image
-        src={src}
         alt={alt}
+        className="rounded-md object-contain"
         fill
-        className="object-contain rounded-md"
-        sizes={imageSizes[size]}
+        priority={size === 'lg'}
         quality={90}
-        priority={size === "lg"}
+        sizes={imageSizes[size]}
+        src={src}
       />
     </div>
   );
-} 
+}

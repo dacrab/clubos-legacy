@@ -7,23 +7,19 @@ import { createServerSupabase } from './supabase-server';
 /**
  * Type for server action responses
  */
-export type ActionResponse<T = any> = {
+export type ActionResponse<T = unknown> = {
   success: boolean;
   message: string;
-  data?: T;
+  data?: T | undefined;
 };
 
 /**
  * Generic error handler for server actions
  */
-export async function handleActionError(
-  error: unknown,
-  defaultMessage: string
-): Promise<ActionResponse> {
-  console.error('Action error:', error);
+export function handleActionError(error: unknown, defaultMessage: string): ActionResponse<never> {
   return {
     success: false,
-    message: error instanceof Error ? error.message : defaultMessage
+    message: error instanceof Error ? error.message : defaultMessage,
   };
 }
 
@@ -37,10 +33,10 @@ export async function getActionSupabase() {
 /**
  * Creates a successful action response
  */
-export function actionSuccess<T = any>(message: string, data?: T): ActionResponse<T> {
+export function actionSuccess<T = unknown>(message: string, data?: T): ActionResponse<T> {
   return {
     success: true,
     message,
-    data
+    data: data as T | undefined,
   };
-} 
+}

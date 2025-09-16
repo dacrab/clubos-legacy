@@ -1,108 +1,114 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 
-import AddUserButton from "@/components/dashboard/users/AddUserButton";
-import UsersTable from "@/components/dashboard/users/UsersTable";
-import { Card } from "@/components/ui/card";
-import { LoadingAnimation } from "@/components/ui/loading-animation";
-import { transitions } from "@/lib/animations";
-import { ALLOWED_USER_ROLES, type UserRole } from "@/lib/constants";
-import { createClientSupabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
+import AddUserButton from '@/components/dashboard/users/add-user-button';
+import UsersTable from '@/components/dashboard/users/users-table';
+import { Input } from '@/components/ui/input';
+import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { ALLOWED_USER_ROLES } from '@/lib/constants';
+import { createClientSupabase } from '@/lib/supabase';
+import type { User, UserRole } from '@/types/supabase';
 
-type User = {
-  id: string;
-  username: string;
-  role: UserRole;
-  created_at: string;
-  updated_at: string;
-};
+type UserData = { role: UserRole };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
-  const supabase = createClientSupabase() as any;
+  const supabase = createClientSupabase();
 
-  // Check for mobile view
+  const checkUserRole = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return false;
+    }
+
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userDataError || !userData) {
+      router.push('/');
+      return false;
+    }
+
+    if ((userData as UserData).role !== ALLOWED_USER_ROLES[0]) {
+      router.push('/dashboard');
+      return false;
+    }
+
+    return true;
+  }, [supabase, router]);
+
+  const fetchUsersData = useCallback(async () => {
+    const { data: usersData, error } = await supabase.from('users').select('*').order('username');
+
+    if (error) {
+      // console.error('Error fetching users:', error);
+    } else {
+      setUsers(usersData as User[]);
+      setFilteredUsers(usersData as User[]);
+    }
+  }, [supabase]);
+
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    
-    const handleResize = () => {
-      checkMobile();
+    const fetchUsers = async () => {
+      setLoading(true);
+
+      const hasPermission = await checkUserRole();
+      if (hasPermission) {
+        await fetchUsersData();
+      }
+
+      setLoading(false);
     };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
+    fetchUsers();
+  }, [checkUserRole, fetchUsersData]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {return router.push('/');}
+    const lowercasedQuery = searchQuery.toLowerCase();
+    const filtered = users.filter((user) => user.username.toLowerCase().includes(lowercasedQuery));
+    setFilteredUsers(filtered);
+  }, [searchQuery, users]);
 
-      const { data: userData, error: userDataError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (userDataError || !userData?.role) {return router.push('/');}
-      if (userData.role !== ALLOWED_USER_ROLES[0]) {return router.push('/dashboard');}
-
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, username, role, created_at, updated_at')
-        .order('created_at', { ascending: false });
-
-      if (usersError) {throw usersError;}
-
-      setUsers(usersData || []);
-    };
-
-    fetchData()
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [router, supabase]);
-
-  if (isLoading) {return <LoadingAnimation />;}
+  if (loading) {
+    return <LoadingAnimation />;
+  }
 
   return (
-    <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={transitions.smooth}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Χρήστες</h1>
-            <p className="text-muted-foreground">
-              Διαχείριση χρηστών και δικαιωμάτων πρόσβασης
-            </p>
+    <div className="flex h-full flex-col">
+      <div className="mb-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h1 className="font-semibold text-2xl">Χρήστες</h1>
+          <span className="text-base text-muted-foreground">{filteredUsers.length} συνολικά</span>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-muted-foreground" />
+            <Input
+              className="w-full pl-9"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Αναζήτηση χρηστών..."
+              value={searchQuery}
+            />
           </div>
           <AddUserButton />
         </div>
-      </motion.div>
-
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, ...transitions.smooth }}
-        className="w-full"
-      >
-        <Card className={cn(
-          isMobile ? "border-0 p-0 shadow-none bg-transparent" : "p-0"
-        )}>
-          <UsersTable users={users} />
-        </Card>
-      </motion.div>
+      </div>
+      <div className="flex-1">
+        <UsersTable users={filteredUsers} />
+      </div>
     </div>
   );
 }

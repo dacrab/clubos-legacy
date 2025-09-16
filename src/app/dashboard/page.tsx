@@ -2,111 +2,66 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import AdminDashboard from '@/components/dashboard/dashboards/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/dashboards/EmployeeDashboard';
-import type { Sale, Code as SaleCode } from '@/types/sales';
-import { type Database , type PaymentMethodType } from '@/types/supabase';
+import AdminDashboard from '@/components/dashboard/dashboards/admin-dashboard';
+import EmployeeDashboard from '@/components/dashboard/dashboards/employee-dashboard';
+import { getProductsQuery } from '@/lib/utils/products';
+import type { Database, UserRole } from '@/types/supabase';
 
-interface OrderSale {
-  id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  is_treat: boolean;
-  coffee_options: any;
-  code?: {
-    id: string;
-    name: string;
-    price: number;
-    image_url: string | null;
-    category?: {
-      id: string;
-      name: string;
-      description: string | null;
-    } | null;
-  };
-}
+// type OrderSale = {
+//   id: string;
+//   quantity: number;
+//   unit_price: number;
+//   total_price: number;
+//   is_treat: boolean;
+//   coffee_options: Json;
+//   products: SaleCode | null;
+// };
 
-interface OrderData {
-  id: string;
-  created_at: string;
-  total_amount: number;
-  discount_amount: number;
-  final_amount: number;
-  card_discount_count: number;
-  payment_method: PaymentMethodType;
-  created_by: string;
-  sales?: OrderSale[];
-}
+type ProductRow = Database['public']['Tables']['products']['Row'] & {
+  category?: Database['public']['Tables']['categories']['Row'];
+};
 
-// Helper function to transform order data to Sale type
-function transformOrderToSales(order: OrderData): Sale[] {
-  return (order.sales || []).map((sale: OrderSale) => {
-    if (!sale.code) {
-      throw new Error('Sale must have a code');
-    }
+// type OrderData = {
+//   id: string;
+//   created_at: string;
+//   subtotal: number;
+//   discount_amount: number;
+//   total_amount: number; // replaces legacy final_amount
+//   card_discounts_applied: number; // replaces legacy card_discount_count
+//   payment_method: PaymentMethodType;
+//   created_by: string;
+//   order_items?: OrderSale[];
+// };
 
-    const saleCode: SaleCode = {
-      id: sale.code.id,
-      name: sale.code.name,
-      price: sale.code.price,
-      stock: 0, // Default value since it's not in the query
-      image_url: sale.code.image_url,
-      created_at: order.created_at,
-      created_by: order.created_by,
-      updated_at: null,
-      category_id: sale.code.category?.id || '', // Required by type
-      category: sale.code.category ? {
-        id: sale.code.category.id,
-        name: sale.code.category.name,
-        description: sale.code.category.description,
-        parent_id: null, // These fields aren't in the query but required by type
-        created_at: order.created_at,
-        created_by: order.created_by
-      } : undefined
-    };
+type UserData = { role: UserRole };
 
-    return {
-      id: sale.id,
-      order_id: order.id,
-      code_id: sale.code.id,
-      quantity: sale.quantity,
-      unit_price: sale.unit_price,
-      total_price: sale.total_price,
-      is_treat: sale.is_treat,
-      coffee_options: sale.coffee_options,
-      created_at: order.created_at,
-      code: saleCode,
-      order: {
-        id: order.id,
-        register_session_id: '', // Not needed for display
-        total_amount: order.total_amount,
-        discount_amount: order.discount_amount,
-        final_amount: order.final_amount,
-        card_discount_count: order.card_discount_count,
-        payment_method: order.payment_method,
-        created_by: order.created_by,
-        created_at: order.created_at
-      }
-    };
-  });
-}
+// Helper function existed to transform order data to sales after schema changes.
+// It's currently unused; keep as reference but disable to satisfy type checks.
+// function transformOrderToSales(order: OrderData) { /* ... */ }
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
-      },
-    }
-  ) as any;
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    // Handle missing environment variables, maybe redirect to an error page
+    return redirect('/error');
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value ?? '';
+      },
+    },
+  });
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
   if (userError || !user) {
     redirect('/');
   }
@@ -118,7 +73,6 @@ export default async function DashboardPage() {
     .single();
 
   if (userDataError) {
-    console.error('User error:', userDataError);
     throw userDataError;
   }
 
@@ -126,71 +80,32 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  // Fetch recent orders with full details
-  const { data: recentOrders = [] } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      created_at,
-      total_amount,
-      discount_amount,
-      final_amount,
-      card_discount_count,
-      payment_method,
-      created_by,
-      sales (
-        id,
-        quantity,
-        unit_price,
-        total_price,
-        is_treat,
-        coffee_options,
-        code:codes (
-          id,
-          name,
-          price,
-          image_url,
-          category:categories (
-            id,
-            name,
-            description
-          )
-        )
-      )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(10);
+  // No server-side recent orders needed; recent sales load client-side
 
   // If admin, also fetch low stock items with category details
-  if (userData.role === 'admin') {
-    const { data: lowStock = [] } = await supabase
-      .from('codes')
-      .select(`
-        *,
-        category:categories (
-          id,
-          name,
-          description,
-          created_at,
-          parent_id
-        )
-      `)
-      .lt('stock', 10)
-      .neq('stock', -1)
-      .order('stock', { ascending: true })
+  if ((userData as UserData).role === 'admin') {
+    const { data: lowStock = [] } = await getProductsQuery(
+      supabase as unknown as Parameters<typeof getProductsQuery>[0],
+      {
+        onlyAvailableForNonAdmin: false,
+      }
+    )
+      .lt('stock_quantity', 10)
+      .neq('stock_quantity', -1)
+      .order('stock_quantity', { ascending: true })
       .limit(10);
 
-    const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
-    
-    return <AdminDashboard 
-      recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
-      lowStock={lowStock as unknown as SaleCode[]}
-    />;
+    return (
+      <AdminDashboard
+        lowStock={
+          (lowStock as unknown as ProductRow[]).map((p) => ({
+            ...p,
+          })) as ProductRow[]
+        }
+        recentSales={[]}
+      />
+    );
   }
 
-  const typedRecentOrders = (recentOrders || []) as unknown as OrderData[];
-
-  return <EmployeeDashboard 
-    recentSales={typedRecentOrders.flatMap(order => transformOrderToSales(order))}
-  />;
+  return <EmployeeDashboard />;
 }

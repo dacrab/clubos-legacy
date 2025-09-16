@@ -1,38 +1,43 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, useEffect } from "react";
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useEffect, useRef } from 'react';
 
-interface VirtualizedMobileListProps<T> {
+type VirtualizedMobileListProps<T> = {
   items: T[];
   renderItem: (item: T) => React.ReactNode;
   className?: string;
   estimateSize?: (item: T) => number;
-}
+};
 
-export function VirtualizedMobileList<T>({ 
-  items, 
+const DEFAULT_ESTIMATED_SIZE = 110;
+
+export function VirtualizedMobileList<T extends { id: string }>({
+  items,
   renderItem,
   className,
-  estimateSize = () => 110
+  estimateSize = () => DEFAULT_ESTIMATED_SIZE,
 }: VirtualizedMobileListProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) => estimateSize(items[index]),
+    estimateSize: (index) => {
+      const item = items[index];
+      return item ? estimateSize(item) : 0;
+    },
     overscan: 5,
-    measureElement: (element) => element.getBoundingClientRect().height
+    measureElement: (element) => element.getBoundingClientRect().height,
   });
 
   // Recalculate sizes when items change
   useEffect(() => {
     virtualizer.measure();
-  }, [items, virtualizer]);
+  }, [virtualizer]);
 
   return (
     <div
-      ref={parentRef}
       className={className}
+      ref={parentRef}
       style={{
         height: '600px',
         overflow: 'auto',
@@ -47,8 +52,8 @@ export function VirtualizedMobileList<T>({
       >
         {virtualizer.getVirtualItems().map((virtualItem) => (
           <div
-            key={virtualItem.key}
             data-index={virtualItem.index}
+            key={virtualItem.key}
             ref={virtualizer.measureElement}
             style={{
               position: 'absolute',
@@ -58,10 +63,13 @@ export function VirtualizedMobileList<T>({
               transform: `translateY(${virtualItem.start}px)`,
             }}
           >
-            {renderItem(items[virtualItem.index])}
+            {(() => {
+              const item = items[virtualItem.index];
+              return item ? renderItem(item) : null;
+            })()}
           </div>
         ))}
       </div>
     </div>
   );
-} 
+}

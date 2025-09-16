@@ -1,3 +1,4 @@
+// Date formatting constants
 const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'numeric',
@@ -5,8 +6,14 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: 'numeric',
   minute: 'numeric',
   hour12: false,
-  hourCycle: 'h23'
+  hourCycle: 'h23',
 };
+
+const GREEK_LOCALE = 'el' as const;
+const GREEK_AM_PM = {
+  AM: 'π.μ.',
+  PM: 'μ.μ.',
+} as const;
 
 /**
  * Formats a date with Greek AM/PM indicators
@@ -15,9 +22,9 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
  */
 export function formatDateWithGreekAmPm(date: Date): string {
   return date
-    .toLocaleString('el', DATE_FORMAT_OPTIONS)
-    .replace('AM', 'π.μ.')
-    .replace('PM', 'μ.μ.');
+    .toLocaleString(GREEK_LOCALE, DATE_FORMAT_OPTIONS)
+    .replace('AM', GREEK_AM_PM.AM)
+    .replace('PM', GREEK_AM_PM.PM);
 }
 
 /**
@@ -35,7 +42,7 @@ export function formatDateStringWithGreekAmPm(dateString: string): string {
  * @returns Formatted date string
  */
 export function formatDateToYYYYMMDD(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return date.toISOString().slice(0, 10);
 }
 
 /**
@@ -44,9 +51,25 @@ export function formatDateToYYYYMMDD(date: Date): string {
  * @returns Formatted time string
  */
 export function formatTimeToHHMM(date: Date): string {
-  return date.toLocaleTimeString('el', {
+  return date.toLocaleTimeString(GREEK_LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: false,
   });
-} 
+}
+
+/**
+ * Formats a date for display in Greek locale
+ * @param dateString Date string to format
+ * @returns Formatted date string
+ */
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('el-GR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

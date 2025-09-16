@@ -1,0 +1,19 @@
+// ======= User & Role Types =======
+export type UserRole = 'admin' | 'staff' | 'secretary';
+
+export type User = {
+  id: string;
+  username: string | null;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserDisplay = User & {
+  display_name: string; // Can be username or full name depending on context
+};
+
+export type UserProfile = User & {
+  isAdmin: boolean;
+  fullName: string | null;
+};

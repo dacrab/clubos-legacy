@@ -2,42 +2,63 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { API_ERROR_MESSAGES } from '@/lib/constants';
+import type { Database } from '@/types/supabase';
 
-import { type Database } from '@/types/supabase';
-
-import { API_ERROR_MESSAGES } from './constants';
+const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+};
 
 /**
  * Creates a Supabase admin client with service role key
  */
 export function createAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!(supabaseUrl && serviceRoleKey)) {
+    throw new Error('Missing Supabase URL or service role key');
+  }
+
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    db: {
+      schema: 'public',
+    },
+  });
 }
 
 /**
  * Creates a Supabase client for API routes with cookies
  */
-export async function createApiClient() {
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        async get(name: string) {
-          return (await cookies()).get(name)?.value ?? '';
-        },
+export function createApiClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    throw new Error('Missing Supabase URL or anonymous key');
+  }
+
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      async get(name: string) {
+        return (await cookies()).get(name)?.value ?? '';
       },
-    }
-  );
+    },
+    db: {
+      schema: 'public',
+    },
+  });
 }
 
 /**
@@ -45,10 +66,13 @@ export async function createApiClient() {
  * @returns Object containing currentUser and user if admin, or null if not
  */
 export async function checkAdminAccess() {
-  const supabase = await createApiClient();
-  
+  const supabase = createApiClient();
+
   // Check if user is authenticated
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
   if (userError || !user) {
     return null;
   }
@@ -70,22 +94,22 @@ export async function checkAdminAccess() {
 /**
  * Standard API error response helper
  */
-export function errorResponse(message: string, status: number = 500, details?: any) {
-  console.error(`API Error: ${message}`, details || '');
-  return NextResponse.json(
-    { error: message, ...(details ? { details } : {}) },
-    { status }
-  );
+export function errorResponse(
+  message: string,
+  status = HTTP_STATUS.INTERNAL_SERVER_ERROR,
+  details?: unknown
+) {
+  return NextResponse.json({ error: message, ...(details ? { details } : {}) }, { status });
 }
 
 /**
  * Standard API success response helper
  */
-export function successResponse(data: any, message?: string) {
+export function successResponse(data: unknown, message?: string) {
   return NextResponse.json({
     success: true,
     ...(message ? { message } : {}),
-    ...(data ? { data } : {})
+    ...(data ? { data } : {}),
   });
 }
 
@@ -93,10 +117,9 @@ export function successResponse(data: any, message?: string) {
  * Catch-all error handler for API routes
  */
 export function handleApiError(error: unknown) {
-  console.error('Critical API error:', error);
   return errorResponse(
     API_ERROR_MESSAGES.SERVER_ERROR,
-    500,
+    HTTP_STATUS.INTERNAL_SERVER_ERROR,
     error instanceof Error ? { message: error.message } : undefined
   );
-} 
+}

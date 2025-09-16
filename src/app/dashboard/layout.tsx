@@ -1,62 +1,64 @@
-import { createServerClient } from "@supabase/ssr";
-import { type Metadata } from "next";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { createServerClient } from '@supabase/ssr';
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-import DashboardLayoutClient from "@/components/dashboard/layout/DashboardLayoutClient";
-import { PageWrapper } from "@/components/ui/page-wrapper";
-import { type Database } from "@/types/supabase";
-
+import DashboardLayoutClient from '@/components/dashboard/layout/dashboard-layout-client';
+import { PageWrapper } from '@/components/ui/page-wrapper';
+import type { UserRole } from '@/lib/constants';
+import type { Database } from '@/types/supabase';
 
 export const metadata: Metadata = {
   title: 'Dashboard | clubOS',
   description: 'clubOS Dashboard',
 };
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic';
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value ?? '';
-        },
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    // Handle missing environment variables, maybe redirect to an error page
+    return redirect('/error');
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value ?? '';
       },
-    }
-  );
-  
+    },
+  });
+
   try {
     // Authentication check
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
-      console.error('Authentication error:', userError);
       return redirect('/');
     }
 
     // Get user data
     const { data: userData, error: userDataError } = await supabase
       .from('users')
-      .select('username, role, id, created_at, updated_at')    
+      .select('username, role, id, created_at, updated_at')
       .eq('id', user.id)
       .single();
 
     if (userDataError) {
-      console.error('User error:', userDataError);
       return redirect('/');
     }
 
     const profile: {
       username: string;
-      role: 'admin' | 'staff';
+      role: UserRole;
       id: string;
       created_at: string;
       updated_at: string;
@@ -64,13 +66,12 @@ export default async function DashboardLayout({
 
     return (
       <PageWrapper variant="dashboard">
-        <DashboardLayoutClient user={user} profile={profile}>
+        <DashboardLayoutClient profile={profile} user={user}>
           {children}
         </DashboardLayoutClient>
       </PageWrapper>
     );
-  } catch (error) {
-    console.error('Dashboard layout error:', error);
+  } catch (_error) {
     return redirect('/');
   }
 }
