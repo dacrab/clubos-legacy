@@ -1,10 +1,9 @@
 'use client';
 
-import type { User } from '@supabase/supabase-js';
 import { Calendar } from 'lucide-react';
 import type React from 'react';
-import AppointmentForm from '@/components/dashboard/appointments/appointment-form';
-import AppointmentsList from '@/components/dashboard/appointments/appointments-list';
+import { AppointmentForm } from '@/components/dashboard/appointments/appointment-form';
+import { AppointmentsList } from '@/components/dashboard/appointments/appointments-list';
 import FootballFieldBookingForm from '@/components/dashboard/football/football-field-booking-form';
 import FootballFieldBookingsList from '@/components/dashboard/football/football-field-bookings-list';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -54,7 +53,7 @@ const TabButton = ({ value, label }: { value: string; label: string }) => (
   </TabsTrigger>
 );
 
-export default function SecretariatDashboard({ user: _user }: { user: User }) {
+export default function SecretariatDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-7xl px-3 xs:px-4 py-4 sm:px-6 sm:py-8 lg:px-8">

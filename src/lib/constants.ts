@@ -21,25 +21,7 @@ export const SALES_ICONS = {
   EURO: Euro,
 } as const;
 
-export const ICON_SIZE_72 = 72;
-export const ICON_SIZE_96 = 96;
-export const ICON_SIZE_128 = 128;
-export const ICON_SIZE_144 = 144;
-export const ICON_SIZE_152 = 152;
-export const ICON_SIZE_192 = 192;
-export const ICON_SIZE_384 = 384;
-export const ICON_SIZE_512 = 512;
-
-export const ICON_SIZES = [
-  ICON_SIZE_72,
-  ICON_SIZE_96,
-  ICON_SIZE_128,
-  ICON_SIZE_144,
-  ICON_SIZE_152,
-  ICON_SIZE_192,
-  ICON_SIZE_384,
-  ICON_SIZE_512,
-] as const;
+// Icon sizes removed - unused
 
 export const VALIDATION = {
   USERNAME_MIN_LENGTH: 3,
@@ -47,11 +29,11 @@ export const VALIDATION = {
 } as const;
 
 export const PASSWORD_MIN_LENGTH = 8;
-export const DEFAULT_ITEMS_PER_PAGE = 10;
+// DEFAULT_ITEMS_PER_PAGE removed - unused
 
 // Business Logic - Inventory
 export const UNLIMITED_STOCK = -1;
-export const UNLIMITED_CATEGORY_ID = '250f2320-b578-4344-80f8-1addf0bf8b3f';
+// UNLIMITED_CATEGORY_ID removed - unused
 export const LOW_STOCK_THRESHOLD = 10;
 export const EDIT_WINDOW_MINUTES = 5;
 
@@ -108,12 +90,12 @@ export const API_ERROR_MESSAGES = {
   SERVER_ERROR: 'Σφάλμα διακομιστή',
   TOO_MANY_ATTEMPTS: 'Πάρα πολλές προσπάθειες σύνδεσης. Παρακαλώ δοκιμάστε ξανά αργότερα',
   FETCH_CATEGORIES_ERROR: 'Σφάλμα κατά την ανάκτηση των κατηγοριών',
-  CHECK_CODE_ERROR: 'Σφάλμα κατά τον έλεγχο του κωδικού',
-  CODE_EXISTS: 'Ο κωδικός υπάρχει ήδη',
+  CHECK_CODE_ERROR: 'Σφάλμα κατά τον έλεγχο του προϊόντος',
+  CODE_EXISTS: 'Το προϊόν υπάρχει ήδη',
   AUTH_ERROR: 'Σφάλμα ταυτοποίησης χρήστη',
   UPLOAD_ERROR: 'Σφάλμα κατά το ανέβασμα της εικόνας',
-  CREATE_CODE_ERROR: 'Σφάλμα κατά την δημιουργία του κωδικού',
-  CODE_CREATED: 'Ο κωδικός δημιουργήθηκε επιτυχώς',
+  CREATE_CODE_ERROR: 'Σφάλμα κατά την δημιουργία του προϊόντος',
+  CODE_CREATED: 'Το προϊόν δημιουργήθηκε επιτυχώς',
   GENERIC_ERROR: 'Κάτι πήγε στραβά',
   INVALID_IMAGE_TYPE: 'Παρακαλώ επιλέξτε μια εικόνα',
   IMAGE_TOO_LARGE: 'Η εικόνα δεν πρέπει να ξεπερνά τα 5MB',
@@ -147,11 +129,11 @@ export const USER_MESSAGES = {
 } as const;
 
 // UI Messages - Code Management
-export const CODE_MESSAGES = {
-  CREATE_SUCCESS: 'Ο κωδικός προστέθηκε επιτυχώς',
-  UPDATE_SUCCESS: 'Ο κωδικός ενημερώθηκε επιτυχώς',
-  DELETE_SUCCESS: 'Ο κωδικός διαγράφηκε επιτυχώς',
-  DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον κωδικό;',
+export const PRODUCT_MESSAGES = {
+  CREATE_SUCCESS: 'Το προϊόν προστέθηκε επιτυχώς',
+  UPDATE_SUCCESS: 'Το προϊόν ενημερώθηκε επιτυχώς',
+  DELETE_SUCCESS: 'Το προϊόν διαγράφηκε επιτυχώς',
+  DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν;',
   GENERIC_ERROR: 'Κάτι πήγε στραβά',
 } as const;
 
@@ -175,7 +157,7 @@ export const SALES_MESSAGES = {
   EDIT_WINDOW_EXPIRED: 'Το χρονικό διάστημα επεξεργασίας έχει λήξει',
   PRODUCT_NOT_FOUND: 'Το προϊόν δεν βρέθηκε',
   INSUFFICIENT_STOCK: 'Ανεπαρκές απόθεμα',
-  CODE_NOT_FOUND: 'Ο κωδικός δεν βρέθηκε',
+  CODE_NOT_FOUND: 'Το προϊόν δεν βρέθηκε',
 } as const;
 
 // UI Messages - Register Management

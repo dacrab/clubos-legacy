@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 
 const LOADING_TIMEOUT = 5000;
 
@@ -30,7 +30,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LoadingContext.Provider value={{ isLoading, setIsLoading }}>
-      {isLoading && <LoadingAnimation />}
+      {isLoading && <LoadingSkeleton className="h-10 w-full" count={3} />}
       {children}
     </LoadingContext.Provider>
   );

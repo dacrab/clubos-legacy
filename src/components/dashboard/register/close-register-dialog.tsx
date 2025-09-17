@@ -1,14 +1,13 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Textarea } from '@/components/ui/textarea';
 import { API_ERROR_MESSAGES, REGISTER_MESSAGES } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
+import { toast } from '@/lib/utils/toast';
 
 type CloseRegisterDialogProps = {
   open: boolean;

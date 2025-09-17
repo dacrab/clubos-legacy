@@ -4,7 +4,6 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Eye, EyeOff, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import {
 } from '@/lib/constants';
 import { env } from '@/lib/env';
 import { cn } from '@/lib/utils/format';
+import { toast } from '@/lib/utils/toast';
 import type { Database } from '@/types/supabase';
 
 const VERIFICATION_FAILED_MSG = 'Profile verification failed';

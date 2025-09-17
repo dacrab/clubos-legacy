@@ -7,10 +7,10 @@ import { useCallback, useEffect, useState } from 'react';
 import AddUserButton from '@/components/dashboard/users/add-user-button';
 import UsersTable from '@/components/dashboard/users/users-table';
 import { Input } from '@/components/ui/input';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { ALLOWED_USER_ROLES } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
-import type { User, UserRole } from '@/types/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
+import type { User, UserRole } from '@/types/user';
 
 type UserData = { role: UserRole };
 
@@ -78,12 +78,14 @@ export default function UsersPage() {
 
   useEffect(() => {
     const lowercasedQuery = searchQuery.toLowerCase();
-    const filtered = users.filter((user) => user.username.toLowerCase().includes(lowercasedQuery));
+    const filtered = users.filter((user) =>
+      (user.username ?? '').toLowerCase().includes(lowercasedQuery)
+    );
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
 
   if (loading) {
-    return <LoadingAnimation />;
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
   return (

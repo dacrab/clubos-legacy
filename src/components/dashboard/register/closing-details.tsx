@@ -12,8 +12,8 @@ import {
 import type { OrderItemWithProduct } from '@/hooks/use-register-sessions';
 import { CARD_DISCOUNT } from '@/lib/constants';
 import { formatPrice } from '@/lib/utils/format';
-import type { OrderWithItems } from '@/types/database';
-import type { OrderWithSales, RegisterClosing, RegisterSession, Sale } from '@/types/register';
+import type { OrderWithItems, RegisterClosing, RegisterSession } from '@/types/database';
+import type { OrderWithSales } from '@/types/register';
 
 type ClosingDetailsProps = {
   session: RegisterSession;
@@ -43,7 +43,28 @@ type TransactionTotals = {
   treatsAmount: number;
 };
 
-type ExtendedSale = Sale & { is_deleted?: boolean };
+type Sale = {
+  id: string;
+  order_id: string;
+  code_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  is_treat: boolean;
+  payment_method: string;
+  sold_by: string;
+  created_at: string;
+  is_deleted: boolean;
+  is_edited: boolean;
+  original_code: string | null;
+  original_quantity: number | null;
+  code?: {
+    name: string;
+    id?: string;
+    category?: { name: string } | null;
+  } | null;
+};
+type ExtendedSale = Sale;
 type ExtendedOrderItem = OrderItemWithProduct;
 
 const createSummaryItem = (id: string, name: string): ProductSummary => ({

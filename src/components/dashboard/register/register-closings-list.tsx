@@ -4,13 +4,14 @@ import { AlertCircle, ClipboardList } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { VirtualizedMobileList } from '@/components/ui/virtualized-mobile-list';
 import { useRegisterSessions } from '@/hooks/use-register-sessions';
 import { REGISTER_MESSAGES } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
-import { calculateStats, type ListItem, type RegisterSessionWithDetails } from '@/types/register';
+import { calculateStats } from '@/lib/utils/sales-totals';
+import type { ListItem, RegisterSessionWithDetails } from '@/types/register';
 
 import { RegisterItemCard } from './register-item-card';
 
@@ -221,7 +222,7 @@ export function RegisterClosingsList() {
 
   // Handle loading states
   if (isAuthorized === null || isSessionsLoading) {
-    return <LoadingAnimation />;
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
   // Handle error states

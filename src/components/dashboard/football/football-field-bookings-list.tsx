@@ -5,7 +5,6 @@ import { addDays, format, formatDistanceToNow, isWithinInterval, parseISO } from
 import { el } from 'date-fns/locale';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { toast } from 'sonner';
 import useSWR, { useSWRConfig } from 'swr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +30,7 @@ import {
   PLACEHOLDERS,
 } from '@/lib/constants';
 import { env } from '@/lib/env';
+import { toast } from '@/lib/utils/toast';
 import type { Database } from '@/types/supabase';
 
 const THREE_DAYS = 3;

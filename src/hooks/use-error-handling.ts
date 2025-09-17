@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/utils/toast';
 
 type UseErrorHandlingProps = {
   showToasts?: boolean;
@@ -38,10 +38,6 @@ export function useErrorHandling({
     [showToasts, defaultErrorMessage]
   );
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
   const reset = useCallback(() => {
     setError(null);
   }, []);
@@ -51,7 +47,7 @@ export function useErrorHandling({
     isError: error !== null,
     setError,
     handleError,
-    clearError,
+    clearError: () => setError(null),
     reset,
   };
 }

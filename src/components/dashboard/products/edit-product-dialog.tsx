@@ -4,8 +4,6 @@ import { ImagePlus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -27,16 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { API_ERROR_MESSAGES, BUTTON_LABELS, UNLIMITED_STOCK } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
-import type { Database } from '@/types/supabase';
+import { toast } from '@/lib/utils/toast';
+import type { Category as CategoryRow, ProductWithCategory } from '@/types/database';
 
 // Types
-type CategoryRow = Database['public']['Tables']['categories']['Row'];
-type ProductRow = Database['public']['Tables']['products']['Row'];
-type Code = Pick<ProductRow, 'id' | 'name' | 'price' | 'image_url' | 'category_id'> & {
-  stock: number;
-};
 
 type Category = CategoryRow & {
   parent: CategoryRow | null;
@@ -47,8 +41,8 @@ type GroupedCategory = {
   subcategories: Category[];
 };
 
-type EditCodeDialogProps = {
-  code: Code;
+type EditProductDialogProps = {
+  product: ProductWithCategory;
   onClose: () => void;
 };
 
@@ -92,18 +86,18 @@ const STYLES = {
   },
 } as const;
 
-export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
+export default function EditProductDialog({ product, onClose }: EditProductDialogProps) {
   const router = useRouter();
   const supabase = createClientSupabase();
 
   // Form state
   const [formData, setFormData] = useState({
-    name: code.name,
-    price: code.price.toString(),
-    stock: code.stock === UNLIMITED_STOCK ? '' : code.stock.toString(),
-    categoryId: code.category_id,
-    isUnlimited: code.stock === UNLIMITED_STOCK,
-    imageUrl: code.image_url,
+    name: product.name,
+    price: product.price.toString(),
+    stock: product.stock_quantity === UNLIMITED_STOCK ? '' : product.stock_quantity.toString(),
+    categoryId: product.category_id,
+    isUnlimited: product.stock_quantity === UNLIMITED_STOCK,
+    imageUrl: product.image_url,
     uploadedImage: null as File | null,
   });
 
@@ -163,9 +157,8 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
 
         setCategories(categories);
         setGroupedCategories(grouped);
-      } catch (_error) {
-        toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
-        onClose();
+      } catch (fetchError) {
+        toast.error(API_ERROR_MESSAGES.FETCH_CATEGORIES_ERROR);
       } finally {
         setIsLoadingCategories(false);
       }
@@ -257,7 +250,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
     return uploadedImage ? handleImageUpload(uploadedImage) : currentImageUrl;
   };
 
-  type UpdateCodeOptions = {
+  type UpdateProductOptions = {
     name: string;
     price: number;
     stock_quantity: number;
@@ -265,7 +258,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
     image_url: string | null;
   };
 
-  const updateCode = async (id: string, options: UpdateCodeOptions) => {
+  const updateProduct = async (id: string, options: UpdateProductOptions) => {
     const { error: updateError } = await supabase
       .from('products')
       .update({
@@ -291,7 +284,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
 
       const imageUrl = await uploadImage(uploadedImage, formData.imageUrl);
 
-      await updateCode(code.id, {
+      await updateProduct(product.id, {
         name: name.trim(),
         price: priceValue,
         stock_quantity: stockValue,
@@ -299,7 +292,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
         image_url: imageUrl,
       });
 
-      toast.success('Code updated successfully');
+      toast.success('Product updated successfully');
       router.refresh();
       onClose();
     } catch (error) {
@@ -313,8 +306,8 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
     <Dialog onOpenChange={onClose} open={true}>
       <DialogContent className={STYLES.dialog.content}>
         <DialogHeader className={STYLES.dialog.header}>
-          <DialogTitle>Edit Code</DialogTitle>
-          <DialogDescription>Update the code details below.</DialogDescription>
+          <DialogTitle>Edit Product</DialogTitle>
+          <DialogDescription>Update the product details below.</DialogDescription>
         </DialogHeader>
 
         <form className={STYLES.form.container} onSubmit={handleSubmit}>
@@ -324,7 +317,7 @@ export default function EditCodeDialog({ code, onClose }: EditCodeDialogProps) {
               className={STYLES.form.field.input.base}
               id="name"
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter code name"
+              placeholder="Enter product name"
               value={formData.name}
             />
           </div>

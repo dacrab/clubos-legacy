@@ -5,9 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 import { z } from 'zod';
-
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -28,6 +26,7 @@ import {
   type UserRole,
   VALIDATION,
 } from '@/lib/constants';
+import { toast } from '@/lib/utils/toast';
 
 type AddUserDialogProps = {
   open: boolean;

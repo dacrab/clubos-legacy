@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { AddCodeDialog } from './add-code-dialog';
+import { AddProductDialog } from './add-product-dialog';
 
-export default function AddCodeButton() {
+export default function AddProductButton() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -22,14 +22,14 @@ export default function AddCodeButton() {
             variant="default"
           >
             <Plus className="mr-2 h-4 w-4" />
-            <span className="font-medium text-sm">Νέος Κωδικός</span>
+            <span className="font-medium text-sm">Νέο Προϊόν</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Προσθήκη νέου κωδικού</p>
+          <p>Προσθήκη νέου προϊόντος</p>
         </TooltipContent>
       </Tooltip>
-      <AddCodeDialog isOpen={open} onClose={() => setOpen(false)} />
+      <AddProductDialog isOpen={open} onClose={() => setOpen(false)} />
     </TooltipProvider>
   );
 }

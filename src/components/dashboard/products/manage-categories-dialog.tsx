@@ -2,8 +2,6 @@
 
 import { Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,18 +22,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { API_ERROR_MESSAGES, BUTTON_LABELS, DIALOG_MESSAGES } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
-import type { Database } from '@/types/supabase';
+import { toast } from '@/lib/utils/toast';
+import type { Category } from '@/types/database';
+
+// import type { Database } from '@/types/supabase';
 
 // Types
-type CategoryRow = Database['public']['Tables']['categories']['Row'];
-
-type Category = CategoryRow & {
-  subcategories?: Category[];
+type CategoryNode = Category & {
+  subcategories?: CategoryNode[];
 };
 
-type ManageCategoriesDialogProps = {
+type ManageProductCategoriesDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -71,9 +70,9 @@ function CategoryItem({
   isSubCategory = false,
   onDelete,
 }: {
-  category: Category;
+  category: CategoryNode;
   isSubCategory?: boolean;
-  onDelete: (category: Category) => void;
+  onDelete: (category: CategoryNode) => void;
 }) {
   return (
     <div
@@ -97,17 +96,17 @@ function CategoryItem({
   );
 }
 
-export default function ManageCategoriesDialog({
+export default function ManageProductCategoriesDialog({
   open,
   onOpenChange,
-}: ManageCategoriesDialogProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Partial<Record<string, Category[]>>>({});
+}: ManageProductCategoriesDialogProps) {
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [subCategories, setSubCategories] = useState<Partial<Record<string, CategoryNode[]>>>({});
   const [newCategoryName, setNewCategoryName] = useState('');
   const [parentCategoryId, setParentCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryNode | null>(null);
 
   const supabase = createClientSupabase();
 
@@ -122,15 +121,15 @@ export default function ManageCategoriesDialog({
         return;
       }
 
-      const mainCategories = data.filter((cat: Category) => !cat.parent_id);
+      const mainCategories = data.filter((cat: CategoryNode) => !cat.parent_id);
       const subCategoriesMap = data.reduce(
-        (acc: Partial<Record<string, Category[]>>, cat: Category) => {
+        (acc: Partial<Record<string, CategoryNode[]>>, cat: CategoryNode) => {
           if (cat.parent_id) {
             acc[cat.parent_id] = [...(acc[cat.parent_id] ?? []), cat];
           }
           return acc;
         },
-        {} as Partial<Record<string, Category[]>>
+        {} as Partial<Record<string, CategoryNode[]>>
       );
 
       setCategories(mainCategories);

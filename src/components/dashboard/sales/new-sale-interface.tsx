@@ -9,13 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { useSales } from '@/hooks/use-sales';
+import { useSales } from '@/hooks/sales/use-sales';
+import { useMediaQuery } from '@/hooks/utils/use-media-query';
 import { SALES_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils/format';
 
 import { OrderItem } from './components/order-item';
 import { ProductCard } from './components/product-card';
+
+// Removed unused imports
 
 // Types
 type SalesCode = ReturnType<typeof useSales>['codes'][number];

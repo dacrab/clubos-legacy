@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { transitions } from '@/lib/animations';
 import { DIALOG_MESSAGES } from '@/lib/constants';
+import { transitions } from '@/lib/utils/animations';
 import { cn } from '@/lib/utils/format';
 
 type PageWrapperProps = {

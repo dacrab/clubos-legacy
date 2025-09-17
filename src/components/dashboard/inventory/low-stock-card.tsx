@@ -1,11 +1,13 @@
 import { Package } from 'lucide-react';
 import Image from 'next/image';
+import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { LOW_STOCK_THRESHOLD } from '@/lib/constants';
 import { cn } from '@/lib/utils/format';
-import type { Database } from '@/types/supabase';
+import type { ProductWithCategory } from '@/types/database';
+import StockManagementDialog from './stock-management-dialog';
 
 const STOCK_PERCENTAGE = {
   CRITICAL: 30,
@@ -14,15 +16,7 @@ const STOCK_PERCENTAGE = {
 };
 
 type LowStockCardProps = {
-  code: Database['public']['Tables']['products']['Row'] & {
-    category?: {
-      id: string;
-      name: string;
-      description: string | null;
-      created_at?: string;
-      parent_id?: string | null;
-    };
-  };
+  code: ProductWithCategory;
 };
 
 export default function LowStockCard({ code }: LowStockCardProps) {
@@ -38,6 +32,8 @@ export default function LowStockCard({ code }: LowStockCardProps) {
     }
     return 'text-primary bg-primary/10 hover:bg-primary/20';
   };
+
+  const [open, setOpen] = React.useState(false);
 
   return (
     <Card className="transition-all duration-200 hover:shadow-md">
@@ -74,9 +70,17 @@ export default function LowStockCard({ code }: LowStockCardProps) {
               {stockValue} τεμ.
             </Badge>
             <p className="text-muted-foreground text-sm">{priceValue.toFixed(2)}€</p>
+            <button
+              className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+              onClick={() => setOpen(true)}
+              type="button"
+            >
+              Διαχείριση Αποθέματος
+            </button>
           </div>
         </div>
       </CardContent>
+      <StockManagementDialog code={code} onOpenChange={setOpen} open={open} />
     </Card>
   );
 }

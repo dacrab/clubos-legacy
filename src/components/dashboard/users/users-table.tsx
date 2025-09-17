@@ -3,7 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { motion } from 'framer-motion';
 import {
-  ChevronDown,
   Key,
   type LucideIcon,
   MoreHorizontal,
@@ -15,8 +14,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { memo, useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
@@ -31,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SortButton } from '@/components/ui/sort-button';
 import {
   Table,
   TableBody,
@@ -40,7 +38,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { VirtualizedMobileList } from '@/components/ui/virtualized-mobile-list';
-import { transitions } from '@/lib/animations';
 import {
   ALLOWED_USER_ROLES,
   ROLE_TRANSLATIONS,
@@ -48,13 +45,15 @@ import {
   type UserRole,
 } from '@/lib/constants';
 import { env } from '@/lib/env';
+import { transitions } from '@/lib/utils/animations';
+import { toast } from '@/lib/utils/toast';
 import type { Database } from '@/types/supabase';
 
 import ResetPasswordDialog from './reset-password-dialog';
 
 type User = {
   id: string;
-  username: string;
+  username: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
@@ -96,7 +95,7 @@ const DesktopTableRow = memo<UserRowProps>(
         initial={{ opacity: 0, y: 20 }}
         transition={{ ...transitions.smooth }}
       >
-        <TableCell className="font-medium">{user.username}</TableCell>
+        <TableCell className="font-medium">{user.username ?? '—'}</TableCell>
         <TableCell>
           <Badge className={roleColors[user.role]} variant="secondary">
             <Icon className="mr-1 h-4 w-4" />
@@ -178,7 +177,7 @@ const MobileRow = memo<UserRowProps>(
               <UserCircle className="h-6 w-6 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="font-medium text-base">{user.username}</h3>
+              <h3 className="font-medium text-base">{user.username ?? '—'}</h3>
               <p className="text-muted-foreground text-sm">
                 {new Date(user.created_at).toLocaleDateString('el-GR')}
               </p>
@@ -337,7 +336,9 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
 
     try {
       const res = await fetch(`/api/users/${deleteUserId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) {
+        throw new Error('Failed');
+      }
       toast.success(USER_MESSAGES.DELETE_SUCCESS);
       router.refresh();
     } catch {
@@ -355,9 +356,17 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
     }));
   }
 
+  const getComparableValue = (u: User, key: keyof User): string => {
+    const value = u[key];
+    if (key === 'role') {
+      return ROLE_TRANSLATIONS[u.role];
+    }
+    return (value ?? '').toString();
+  };
+
   const sortedUsers = [...users].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
+    const aValue = getComparableValue(a, sortConfig.key);
+    const bValue = getComparableValue(b, sortConfig.key);
 
     if (aValue < bValue) {
       return sortConfig.direction === 'asc' ? -1 : 1;
@@ -372,14 +381,12 @@ export default function UsersTable({ users: initialUsers }: UsersTableProps) {
 
   function renderSortButton(label: string, key: keyof User) {
     return (
-      <Button className="-ml-3 h-8" onClick={() => handleSort(key)} size="sm" variant="ghost">
-        {label}
-        <ChevronDown
-          className={`ml-1 h-4 w-4 transition-transform ${
-            sortConfig.key === key && sortConfig.direction === 'desc' ? 'rotate-180' : ''
-          }`}
-        />
-      </Button>
+      <SortButton
+        active={sortConfig.key === key}
+        className="-ml-3 h-8"
+        label={label}
+        onClick={() => handleSort(key)}
+      />
     );
   }
 

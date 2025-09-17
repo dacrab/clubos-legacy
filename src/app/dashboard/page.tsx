@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import AdminDashboard from '@/components/dashboard/dashboards/admin-dashboard';
 import EmployeeDashboard from '@/components/dashboard/dashboards/employee-dashboard';
+import type { UserRole } from '@/lib/constants';
 import { env } from '@/lib/env';
 import { getProductsQuery } from '@/lib/utils/products';
-import type { Database, UserRole } from '@/types/supabase';
+import type { Database } from '@/types/supabase';
 
 // type OrderSale = {
 //   id: string;

@@ -4,7 +4,7 @@ import {
   errorResponse,
   handleApiError,
   successResponse,
-} from '@/lib/api-utils';
+} from '@/lib/utils/api-utils';
 
 // Use Next.js route handler signature directly
 

@@ -4,25 +4,20 @@ import { AlertTriangle, Calendar, History, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
+import { AppointmentForm } from '@/components/dashboard/appointments/appointment-form';
+import { AppointmentsList } from '@/components/dashboard/appointments/appointments-list';
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LOW_STOCK_THRESHOLD } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
-import type { Database } from '@/types/supabase';
-
-type Code = Database['public']['Tables']['products']['Row'];
-type Order = Database['public']['Tables']['orders']['Row'];
-type Sale = Database['public']['Tables']['sales']['Row'] & {
-  code: Code;
-  order: Order;
-};
-
-import { APPOINTMENT_MESSAGES, FOOTBALL_BOOKING_MESSAGES } from '@/lib/constants';
-// Dashboard Components
-import AppointmentForm from '../appointments/appointment-form';
-import AppointmentsList from '../appointments/appointments-list';
+import {
+  APPOINTMENT_MESSAGES,
+  FOOTBALL_BOOKING_MESSAGES,
+  LOW_STOCK_THRESHOLD,
+} from '@/lib/constants';
+import { createClientSupabase } from '@/lib/supabase/client';
+import type { SaleLike } from '@/lib/utils/chart-utils';
+import type { Product as Code } from '@/types/database';
 import FootballFieldBookingForm from '../football/football-field-booking-form';
 import FootballFieldBookingsList from '../football/football-field-bookings-list';
 import LowStockCard from '../inventory/low-stock-card';
@@ -30,7 +25,7 @@ import AddSaleButton from '../sales/add-sale-button';
 import RecentSales from '../sales/recent-sales';
 
 type AdminDashboardProps = {
-  recentSales: Sale[];
+  recentSales: SaleLike[];
   lowStock: Code[];
 };
 
@@ -45,7 +40,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
   const [_isDeleting, _setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [formDialogOpen, setFormDialogOpen] = useState(false);
-  const [_localRecentSales, setLocalRecentSales] = useState<Sale[]>(recentSales);
+  const [_localRecentSales, setLocalRecentSales] = useState<SaleLike[]>(recentSales);
   const [localLowStock, setLocalLowStock] = useState<Code[]>(
     Array.isArray(lowStock) ? lowStock : []
   );
@@ -178,7 +173,7 @@ export default function AdminDashboard({ recentSales = [], lowStock = [] }: Admi
                       {(localLowStock?.length ?? 0) > 0 && (
                         <Link
                           className="text-primary text-sm transition-colors hover:text-primary/80"
-                          href="/dashboard/codes"
+                          href="/dashboard/products"
                         >
                           Διαχείριση →
                         </Link>

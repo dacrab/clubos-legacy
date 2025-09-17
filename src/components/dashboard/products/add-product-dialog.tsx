@@ -4,8 +4,6 @@ import { ImagePlus, Loader2, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -27,18 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { API_ERROR_MESSAGES, UNLIMITED_STOCK } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
+import { toast } from '@/lib/utils/toast';
+import type { Category } from '@/types/database';
 
 // Types
-type Category = {
-  id: string;
-  name: string;
-  description: string | null;
-  parent_id: string | null;
-  created_at: string;
-};
-
 type GroupedCategory = {
   main: Category;
   subcategories: Category[];
@@ -55,7 +47,7 @@ type FormData = {
   categories: string[]; // Added for multiple category selection
 };
 
-type AddCodeDialogProps = {
+type AddProductDialogProps = {
   isOpen: boolean;
   onClose: () => void;
 };
@@ -100,7 +92,7 @@ const STYLES = {
   },
 } as const;
 
-export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
+export function AddProductDialog({ isOpen, onClose }: AddProductDialogProps) {
   const getInitialFormState = useCallback(
     (): FormData => ({
       name: '',
@@ -272,7 +264,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
     return handleImageUpload(image);
   };
 
-  type InsertCodeOptions = {
+  type InsertProductOptions = {
     name: string;
     price: number;
     stock_quantity: number;
@@ -282,7 +274,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
     categories: string[];
   };
 
-  const insertCode = async (options: InsertCodeOptions) => {
+  const insertProduct = async (options: InsertProductOptions) => {
     const { error: insertError } = await supabase.from('products').insert([options]);
     if (insertError) {
       throw insertError;
@@ -303,7 +295,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
 
       const primaryCategoryId: string | null = formCategories[0] ?? null;
 
-      await insertCode({
+      await insertProduct({
         name: name.trim(),
         price: priceValue,
         stock_quantity: stockValue,
@@ -313,7 +305,7 @@ export function AddCodeDialog({ isOpen, onClose }: AddCodeDialogProps) {
         categories: formCategories,
       });
 
-      toast.success('Code added successfully');
+      toast.success('Product added successfully');
       router.refresh();
       onClose();
     } catch (error) {

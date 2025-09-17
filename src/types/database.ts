@@ -125,6 +125,3 @@ export type FootballBooking = {
   created_at: string;
   updated_at: string | null;
 };
-
-// Re-export Database type from supabase
-export type { Database } from './supabase';

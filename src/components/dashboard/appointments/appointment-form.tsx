@@ -2,7 +2,6 @@ import { format } from 'date-fns';
 import { el } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -18,8 +17,9 @@ import {
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
+import { toast } from '@/lib/utils/toast';
 // Use direct Insert type to help Supabase inference
 import type { Database } from '@/types/supabase';
 
@@ -37,7 +37,7 @@ const initialFormData = {
   notes: '',
 };
 
-const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
+export const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -279,5 +279,3 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) => {
     </div>
   );
 };
-
-export default AppointmentForm;

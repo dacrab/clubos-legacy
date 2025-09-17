@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
-import { createClientSupabase } from '@/lib/supabase';
-import type { Sale } from '@/types/register';
+import { LOW_STOCK_THRESHOLD, UNLIMITED_STOCK } from '@/lib/constants';
+import { createClientSupabase } from '@/lib/supabase/client';
+import type { SaleLike } from '@/lib/utils/chart-utils';
+import type { ProductWithCategory } from '@/types/database';
 import type { Database } from '@/types/supabase';
 
 // Types for filter parameters
@@ -51,8 +53,25 @@ const generateSalesKey = (filters?: SalesFilters) => {
   return key;
 };
 
+// Fetch function for low stock products
+const fetchLowStockData = async (): Promise<ProductWithCategory[]> => {
+  const supabase = createClientSupabase();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, category:categories(*)')
+    .lt('stock_quantity', LOW_STOCK_THRESHOLD)
+    .neq('stock_quantity', UNLIMITED_STOCK)
+    .order('stock_quantity', { ascending: true });
+
+  if (error) {
+    throw new Error((error as Error).message);
+  }
+
+  return (data as ProductWithCategory[]) || [];
+};
+
 // Fetch function that applies all the filters
-const fetchSalesData = async (filters?: SalesFilters): Promise<Sale[]> => {
+const fetchSalesData = async (filters?: SalesFilters): Promise<SaleLike[]> => {
   const supabase = createClientSupabase();
 
   // Build date range
@@ -102,7 +121,7 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<Sale[]> => {
     >;
   };
 
-  const sales: Sale[] = (data as unknown as OrderRow[]).flatMap((order) => {
+  const sales: SaleLike[] = (data as unknown as OrderRow[]).flatMap((order) => {
     return (order.order_items || []).map((item) => ({
       id: item.id,
       order_id: order.id,
@@ -120,20 +139,17 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<Sale[]> => {
       original_code: null,
       original_quantity: null,
       code: {
-        id: item.product.id,
         name: item.product.name,
-        price: item.unit_price,
-        stock: item.product.stock_quantity,
-        image_url: item.product.image_url ?? null,
-        created_at: item.product.created_at,
-        updated_at: item.product.updated_at,
-        created_by: item.product.created_by,
-        category_id: item.product.category_id ?? null,
+        category: (item.product as unknown as { category?: { name: string } }).category
+          ? {
+              name: (item.product as unknown as { category: { name: string } }).category.name,
+            }
+          : null,
       },
       order: {
         id: order.id,
         card_discounts_applied: order.card_discounts_applied,
-      } as { id: string; card_discounts_applied: number },
+      },
     }));
   });
 
@@ -147,8 +163,8 @@ export function useSalesData(filters?: SalesFilters) {
   // Use SWR for data fetching with caching and revalidation
   const {
     data: sales,
-    error,
-    isLoading,
+    error: salesError,
+    isLoading: isLoadingSales,
     isValidating,
     mutate,
   } = useSWR(key, () => fetchSalesData(filters), {
@@ -157,6 +173,15 @@ export function useSalesData(filters?: SalesFilters) {
     revalidateOnReconnect: true,
     refreshInterval: 30_000, // Refresh every 30 seconds
     dedupingInterval: 5000, // Prevent duplicate requests in quick succession
+  });
+
+  const {
+    data: lowStock,
+    error: lowStockError,
+    isLoading: isLoadingLowStock,
+  } = useSWR('low-stock', fetchLowStockData, {
+    revalidateOnFocus: false,
+    refreshInterval: 60_000,
   });
 
   // Method to force refresh the data
@@ -175,10 +200,11 @@ export function useSalesData(filters?: SalesFilters) {
   }, [sales, filters?.searchQuery]);
 
   return {
-    sales: filters?.searchQuery ? filteredSales() : sales || [],
-    isLoading,
+    sales: (filters?.searchQuery ? filteredSales() : sales) || [],
+    lowStock: lowStock || [],
+    isLoading: isLoadingSales || isLoadingLowStock,
     isValidating,
-    error,
+    error: salesError || lowStockError,
     refreshData,
   };
 }

@@ -3,8 +3,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { BarChart3, Medal } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -19,13 +17,9 @@ import { env } from '@/lib/env';
 import type { SaleLike } from '@/lib/utils/chart-utils';
 import { aggregateSalesByCategory, MEDAL_COLORS } from '@/lib/utils/chart-utils';
 import { cn } from '@/lib/utils/format';
+import { toast } from '@/lib/utils/toast';
+import type { Category } from '@/types/database';
 import type { Database } from '@/types/supabase';
-
-type Category = {
-  id: string;
-  name: string;
-  parent_id: string | null;
-};
 
 type CategorySalesChartProps = {
   sales: SaleLike[];

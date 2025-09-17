@@ -2,15 +2,17 @@ import { Package } from 'lucide-react';
 
 import { ProductImage } from './product-image';
 
-type CodeImageProps = {
+type ProductAvatarProps = {
   imageUrl: string | null;
-  code: string;
+  productName: string;
   size?: 'sm' | 'md' | 'lg';
 };
 
-export function CodeImage({ imageUrl, code, size = 'sm' }: CodeImageProps) {
+export function ProductAvatar({ imageUrl, productName, size = 'sm' }: ProductAvatarProps) {
   if (imageUrl) {
-    return <ProductImage alt={code} className="md:h-12 md:w-12" size={size} src={imageUrl} />;
+    return (
+      <ProductImage alt={productName} className="md:h-12 md:w-12" size={size} src={imageUrl} />
+    );
   }
 
   return (

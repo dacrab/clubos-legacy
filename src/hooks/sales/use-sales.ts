@@ -1,8 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import {
   API_ERROR_MESSAGES,
   CARD_DISCOUNT,
@@ -11,7 +9,8 @@ import {
   REGISTER_MESSAGES,
   SALES_MESSAGES,
 } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
+import { toast } from '@/lib/utils/toast';
 
 type Code = Database['public']['Tables']['products']['Row'] & {
   category?: Database['public']['Tables']['categories']['Row'] | null;

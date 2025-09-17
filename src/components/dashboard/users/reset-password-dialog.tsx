@@ -1,9 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
-
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,9 +13,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { transitions } from '@/lib/animations';
 import { USER_MESSAGES } from '@/lib/constants';
-import type { Database } from '@/types/supabase';
+import { transitions } from '@/lib/utils/animations';
+import { toast } from '@/lib/utils/toast';
 
 type ResetPasswordDialogProps = {
   open: boolean;
@@ -32,7 +30,6 @@ export default function ResetPasswordDialog({
 }: ResetPasswordDialogProps) {
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const supabase = null as unknown as Database; // removed direct admin SDK usage
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

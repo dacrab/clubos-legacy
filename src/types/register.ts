@@ -1,20 +1,3 @@
-// Re-export from focused type files
-
-export type { DateRange, Json, TimeRange } from './common';
-// Import and re-export Order type directly to avoid circular imports
-export type {
-  Order,
-  OrderItem,
-  Product,
-  ProductSummary,
-  RegisterClosing,
-  RegisterSession,
-  RegisterSessionWithClosings,
-} from './database';
-export type { Sale, SalesStats } from './sales';
-export type { User, UserDisplay, UserRole } from './user';
-
-// Local type definitions
 export type PaymentMethodType = 'cash' | 'card' | 'treat';
 
 // Additional register-specific types
@@ -165,45 +148,3 @@ export type ListItem = {
     treat_total: number;
   };
 };
-
-// Implement calculateStats function
-export function calculateStats(items: ListItem[]): {
-  totalSessions: number;
-  activeSessions: number;
-  closedSessions: number;
-  totalRevenue: number;
-  totalCashSales: number;
-  totalCardSales: number;
-  totalTreats: number;
-  totalDiscounts: number;
-} {
-  const stats = {
-    totalSessions: items.length,
-    activeSessions: 0,
-    closedSessions: 0,
-    totalRevenue: 0,
-    totalCashSales: 0,
-    totalCardSales: 0,
-    totalTreats: 0,
-    totalDiscounts: 0,
-  };
-
-  for (const item of items) {
-    if (item.type === 'active') {
-      stats.activeSessions++;
-    } else if (item.type === 'closed' || item.type === 'closing') {
-      stats.closedSessions++;
-
-      if (item.closing) {
-        stats.totalCashSales += item.closing.cash_sales_total;
-        stats.totalCardSales += item.closing.card_sales_total;
-        stats.totalTreats += item.closing.treat_count;
-        stats.totalDiscounts += item.closing.total_discounts;
-      }
-    }
-  }
-
-  stats.totalRevenue = stats.totalCashSales + stats.totalCardSales;
-
-  return stats;
-}

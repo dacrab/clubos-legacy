@@ -24,7 +24,7 @@ export const navigation: NavigationItem[] = [
   },
   {
     name: 'Κωδικοί',
-    href: '/dashboard/codes',
+    href: '/dashboard/products',
     icon: Boxes,
     show: (role: string | undefined) => role === ALLOWED_USER_ROLES[0],
   },
@@ -48,7 +48,7 @@ export const navigation: NavigationItem[] = [
   },
   {
     name: 'Κλεισίματα Ταμείου',
-    href: '/dashboard/register-closings',
+    href: '/dashboard/register-sessions',
     icon: Receipt,
     show: (role: string | undefined) => role === ALLOWED_USER_ROLES[0],
   },

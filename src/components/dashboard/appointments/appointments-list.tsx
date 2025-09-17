@@ -4,7 +4,6 @@ import { addDays, format, formatDistanceToNow, isWithinInterval, parseISO } from
 import { el } from 'date-fns/locale';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { toast } from 'sonner';
 import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,8 +21,12 @@ import {
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
-import type { Appointment, AppointmentUpdate } from '@/types/appointments';
+import { createClientSupabase } from '@/lib/supabase/client';
+import { toast } from '@/lib/utils/toast';
+import type { Appointment } from '@/types/appointment';
+import type { Database } from '@/types/supabase';
+
+type AppointmentUpdate = Database['public']['Tables']['appointments']['Update'];
 
 const UPCOMING_DAYS = 3;
 
@@ -47,13 +50,13 @@ const formatDateWithGreekAmPm = (dateString: string): string => {
   }
 };
 
-export default function AppointmentsList({
+export const AppointmentsList = ({
   showUpcomingOnly = false,
   emptyState,
   appointmentsData,
   appointmentsError,
   isLoadingOverride,
-}: AppointmentsListProps) {
+}: AppointmentsListProps) => {
   // State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<AppointmentUpdate>({});
@@ -442,4 +445,4 @@ export default function AppointmentsList({
       />
     </>
   );
-}
+};

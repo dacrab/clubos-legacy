@@ -1,5 +1,10 @@
-import { createApiClient, errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
 import { API_ERROR_MESSAGES } from '@/lib/constants';
+import {
+  createApiClient,
+  errorResponse,
+  handleApiError,
+  successResponse,
+} from '@/lib/utils/api-utils';
 
 const BYTES_IN_A_KILOBYTE = 1024;
 const KILOBYTES_IN_A_MEGABYTE = 1024;

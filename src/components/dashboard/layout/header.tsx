@@ -7,12 +7,12 @@ import { Loader2, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { CloseRegisterButton } from '@/components/dashboard/register/close-register-button';
 import { ModeToggle } from '@/components/providers/mode-toggle';
 import { Button } from '@/components/ui/button';
 import { API_ERROR_MESSAGES, PUBLIC_ROUTES, type UserRole } from '@/lib/constants';
 import { env } from '@/lib/env';
+import { toast } from '@/lib/utils/toast';
 import type { Database } from '@/types/supabase';
 
 type HeaderProps = {

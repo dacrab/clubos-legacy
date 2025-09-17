@@ -5,7 +5,11 @@ import { Suspense } from 'react';
 
 import LoginForm from '@/components/auth/login-form';
 import { DIALOG_MESSAGES } from '@/lib/constants';
-import { createServerSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase/server';
+
+// import { cookies } from 'next/headers';
+
+// import { env } from '@/lib/env';
 
 function LoadingFallback() {
   return (
@@ -49,8 +53,8 @@ function Footer() {
   );
 }
 
-export default async function Home() {
-  const supabase = await createServerSupabase();
+export default async function LoginPage() {
+  const supabase = createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

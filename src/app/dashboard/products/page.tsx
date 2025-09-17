@@ -3,30 +3,16 @@
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import AddCodeButton from '@/components/dashboard/codes/add-code-button';
-import CodesTable from '@/components/dashboard/codes/codes-table';
-import ManageCategoriesButton from '@/components/dashboard/codes/manage-categories-button';
+import AddProductButton from '@/components/dashboard/products/add-product-button';
+import ManageProductCategoriesButton from '@/components/dashboard/products/manage-categories-button';
+import ProductsTable from '@/components/dashboard/products/products-table';
 import { Input } from '@/components/ui/input';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { useProductManagement } from '@/hooks/use-product-management';
 import { useUserManagement } from '@/hooks/use-user-management';
-import type { Category } from '@/types/database';
-import type { Database } from '@/types/supabase';
+import type { Category, ProductWithCategory } from '@/types/database';
 
-type Code = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  image_url: string | null;
-  category?:
-    | (Database['public']['Tables']['categories']['Row'] & {
-        parent?: Database['public']['Tables']['categories']['Row'] | null;
-      })
-    | null;
-};
-
-export default function CodesPage() {
+export default function ProductsPage() {
   const {
     profile,
     isAdmin,
@@ -41,14 +27,12 @@ export default function CodesPage() {
     enableErrorToasts: false,
   });
 
-  const [filteredProducts, setFilteredProducts] = useState<Code[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<ProductWithCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Transform products to match the expected format
-  const transformedProducts: Code[] = products.map((p) => ({
-    id: p.id,
-    name: p.name,
-    price: p.price,
+  const transformedProducts: ProductWithCategory[] = products.map((p) => ({
+    ...p,
     stock: p.stock_quantity,
     image_url: p.image_url ?? null,
     category: p.category
@@ -100,14 +84,14 @@ export default function CodesPage() {
   }, [searchQuery, transformedProducts]);
 
   if (isLoading) {
-    return <LoadingAnimation />;
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="font-semibold text-2xl">Κωδικοί</h1>
+          <h1 className="font-semibold text-2xl">Προϊόντα</h1>
           <span className="text-base text-muted-foreground">
             {filteredProducts.length} συνολικά
           </span>
@@ -118,20 +102,20 @@ export default function CodesPage() {
             <Input
               className="w-full pl-9"
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Αναζήτηση κωδικών..."
+              placeholder="Αναζήτηση προϊόντων..."
               value={searchQuery}
             />
           </div>
           {isAdmin && (
             <div className="flex flex-row gap-2">
-              <AddCodeButton />
-              <ManageCategoriesButton />
+              <AddProductButton />
+              <ManageProductCategoriesButton />
             </div>
           )}
         </div>
       </div>
       <div className="flex-1">
-        <CodesTable codes={filteredProducts} isAdmin={isAdmin} />
+        <ProductsTable isAdmin={isAdmin} products={filteredProducts} />
       </div>
     </div>
   );

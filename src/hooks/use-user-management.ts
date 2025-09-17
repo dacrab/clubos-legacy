@@ -2,8 +2,10 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ALLOWED_USER_ROLES, DEFAULT_USER_ROLE } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
+
+import { useErrorHandling } from './use-error-handling';
 
 type User = Database['public']['Tables']['users']['Row'];
 type UserRole = (typeof ALLOWED_USER_ROLES)[number];
@@ -31,7 +33,7 @@ type UserManagementState = {
 
 type UserManagementActions = {
   refetch: () => Promise<void>;
-  clearError: () => void;
+  reset: () => void;
 };
 
 export function useUserManagement({
@@ -41,13 +43,15 @@ export function useUserManagement({
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { error, handleError, reset } = useErrorHandling({
+    defaultErrorMessage: 'Σφάλμα φόρτωσης χρήστη',
+  });
   const router = useRouter();
   const supabase = createClientSupabase();
 
   const fetchUserData = useCallback(async (): Promise<void> => {
     setLoading(true);
-    setError(null);
+    reset();
 
     try {
       const {
@@ -90,20 +94,15 @@ export function useUserManagement({
         updated_at: userProfile.updated_at,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Σφάλμα φόρτωσης χρήστη';
-      setError(errorMessage);
+      handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [supabase, router, redirectOnUnauthorized, redirectPath]);
+  }, [supabase, router, redirectOnUnauthorized, redirectPath, handleError, reset]);
 
   const refetch = useCallback(() => {
     return fetchUserData();
   }, [fetchUserData]);
-
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
 
   useEffect(() => {
     fetchUserData();
@@ -118,6 +117,6 @@ export function useUserManagement({
     loading,
     error,
     refetch,
-    clearError,
+    reset,
   };
 }

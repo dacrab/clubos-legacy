@@ -1,7 +1,7 @@
 import type { SWRConfiguration } from 'swr';
 import useSWR from 'swr';
 
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import type { Order, OrderItem, Product, RegisterClosing, RegisterSession } from '@/types/database';
 
 // Constants for SWR configuration

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 
-import { pageVariants, transitions } from '@/lib/animations';
+import { pageVariants, transitions } from '@/lib/utils/animations';
 
 export default function AnimatedContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

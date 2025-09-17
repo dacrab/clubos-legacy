@@ -7,10 +7,6 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CARD_DISCOUNT } from '@/lib/constants';
 import { aggregateSalesByDate, CHART_STYLES, type SaleLike } from '@/lib/utils/chart-utils';
-import type { Database } from '@/types/supabase';
-
-type Order = Database['public']['Tables']['orders']['Row'];
-type Sale = Database['public']['Tables']['sales']['Row'] & { order?: Order };
 
 const BAR_RADIUS = 4;
 const SALE_RATIO_PRECISION = 6;
@@ -27,15 +23,15 @@ export default function RevenueChart({ sales: initialSales }: { sales: SaleLike[
   // Calculate net revenue after applying coupon discounts
   const netSales = useMemo(() => {
     // Group sales by order to properly apply discounts
-    const salesByOrder = (initialSales as Sale[]).reduce(
+    const salesByOrder = (initialSales as SaleLike[]).reduce(
       (acc, sale) => {
-        if (sale.is_treat || sale.is_deleted) {
+        if (sale.is_treat || (sale as { is_deleted?: boolean }).is_deleted) {
           return acc;
         } // Skip treats and deleted items
 
         const orderId = sale.order?.id || 'unknown';
         const orderData = acc[orderId] ?? {
-          sales: [],
+          sales: [] as SaleLike[],
           order: sale.order,
           totalPrice: 0,
         };
@@ -45,7 +41,7 @@ export default function RevenueChart({ sales: initialSales }: { sales: SaleLike[
         acc[orderId] = orderData;
         return acc;
       },
-      {} as Record<string, { sales: Sale[]; order: Sale['order']; totalPrice: number }>
+      {} as Record<string, { sales: SaleLike[]; order: SaleLike['order']; totalPrice: number }>
     );
 
     // Apply discounts per order and distribute proportionally with exact precision
@@ -72,7 +68,7 @@ export default function RevenueChart({ sales: initialSales }: { sales: SaleLike[
           original_total_price: sale.total_price,
           // Adjust the total_price to reflect the discount with exact precision
           total_price: Math.max(0, +(sale.total_price - saleDiscount).toFixed(2)),
-        };
+        } as SaleLike;
       });
     });
   }, [initialSales]);

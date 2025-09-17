@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
-
 import { API_ERROR_MESSAGES } from '@/lib/constants';
+import { toast } from '@/lib/utils/toast';
 
 type PollingConfig<T = void> = {
   enabled?: boolean;

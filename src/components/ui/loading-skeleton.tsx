@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { memo } from 'react';
 
-import { transitions } from '@/lib/animations';
+import { transitions } from '@/lib/utils/animations';
 
 type LoadingSkeletonProps = {
   className?: string;

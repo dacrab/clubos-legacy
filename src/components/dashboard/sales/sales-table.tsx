@@ -3,16 +3,16 @@
 import { ChevronDown, CreditCard, Gift, History } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SearchInput } from '@/components/ui/search-input';
 import { type SalesFilters, useSalesData } from '@/hooks/use-sales-data';
-import { useSearch } from '@/hooks/use-search';
+import { useSearch } from '@/hooks/utils/use-search';
 import type { GroupedSale, SaleLike } from '@/lib/utils/chart-utils';
 import { formatDateWithGreekAmPm } from '@/lib/utils/date';
 import { cn, formatPrice } from '@/lib/utils/format';
 import { computeGroupedSaleTotals } from '@/lib/utils/sales-totals';
-import type { Sale } from '@/types/register';
+import type { SaleLike as Sale } from '@/types/sales';
 
 // Constants
 const DEBOUNCE_TIMEOUT = 300;
@@ -20,7 +20,7 @@ const SCROLL_HEIGHT = 'calc(100vh-16rem)';
 
 // Types
 type SalesTableProps = {
-  initialSales?: Sale[];
+  initialSales?: (Sale | SaleLike)[];
   dateRange?: { startDate: string; endDate: string };
   timeRange?: { startTime: string; endTime: string };
 };
@@ -74,13 +74,13 @@ const useGroupedSales = (sales: (Sale | SaleLike)[] | undefined) => {
       group.items.push(sale as SaleLike);
 
       // Only add non-treats and non-deleted items to total
-      if (!(sale.is_treat || (sale as { is_deleted?: boolean }).is_deleted)) {
+      if (!((sale as SaleLike).is_treat || (sale as { is_deleted?: boolean }).is_deleted)) {
         group.total += sale.total_price;
       }
 
       // Count the number of non-deleted treat items
-      if (sale.is_treat && !(sale as { is_deleted?: boolean }).is_deleted) {
-        group.treats_count += sale.quantity;
+      if ((sale as SaleLike).is_treat && !(sale as { is_deleted?: boolean }).is_deleted) {
+        group.treats_count += (sale as SaleLike).quantity;
       }
 
       map.set(sale.order_id, group);
@@ -249,15 +249,15 @@ const SalesListContent = memo(
     toggleGroup,
   }: {
     isLoading: boolean;
-    initialSales: Sale[];
+    initialSales: (Sale | SaleLike)[];
     groupedSales: GroupedSale[];
     expandedGroups: Set<string>;
     toggleGroup: (id: string) => void;
   }) => {
     if (isLoading && !initialSales.length) {
       return (
-        <div className="flex justify-center p-4">
-          <LoadingAnimation />
+        <div className="p-4">
+          <LoadingSkeleton className="h-10 w-full rounded-md" count={3} />
         </div>
       );
     }

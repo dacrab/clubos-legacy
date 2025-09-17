@@ -5,7 +5,7 @@ import { ChevronDown, History } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import {
   type OrderItemWithProduct,
   type OrderWithItems,
@@ -203,7 +203,7 @@ export default function RecentSales() {
       <CardContent>
         {isLoading ? (
           <div className="flex items-center justify-center p-8">
-            <LoadingAnimation className="h-8 w-8" />
+            <LoadingSkeleton className="h-8 w-full rounded-md" count={1} />
           </div>
         ) : (
           <RecentSalesContent

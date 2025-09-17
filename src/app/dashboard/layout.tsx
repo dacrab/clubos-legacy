@@ -53,6 +53,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .single();
 
     if (userDataError) {
+      // Throw an error or redirect to an error page
+      // For now, we'll redirect to the home page
       return redirect('/');
     }
 
@@ -62,13 +64,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       id: string;
       created_at: string;
       updated_at: string;
-    } = userData;
+    } = {
+      username: userData.username,
+      role: userData.role,
+      id: userData.id,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+    };
 
     return (
       <PageWrapper variant="dashboard">
-        <DashboardLayoutClient profile={profile} user={user}>
-          {children}
-        </DashboardLayoutClient>
+        <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>
       </PageWrapper>
     );
   } catch (_error) {

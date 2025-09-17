@@ -6,8 +6,8 @@ import { el } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { env } from '@/lib/env';
+import { toast } from '@/lib/utils/toast';
 
 // Types
 type FootballBookingInsert = Database['public']['Tables']['football_bookings']['Insert'];

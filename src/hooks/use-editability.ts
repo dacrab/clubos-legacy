@@ -36,6 +36,5 @@ export function useEditability({
 
   return {
     canEdit,
-    checkEditability,
   };
 }

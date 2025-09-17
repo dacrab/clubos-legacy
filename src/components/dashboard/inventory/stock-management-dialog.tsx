@@ -2,15 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { CODE_MESSAGES, DIALOG_MESSAGES, STOCK_MESSAGES, UNLIMITED_STOCK } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import {
+  DIALOG_MESSAGES,
+  PRODUCT_MESSAGES,
+  STOCK_MESSAGES,
+  UNLIMITED_STOCK,
+} from '@/lib/constants';
+import { createClientSupabase } from '@/lib/supabase/client';
+import { toast } from '@/lib/utils/toast';
 
 type StockManagementDialogProps = {
   code: {
@@ -60,11 +65,11 @@ export default function StockManagementDialog({
         throw error;
       }
 
-      toast.success(STOCK_MESSAGES.UPDATE_SUCCESS);
+      toast.success(PRODUCT_MESSAGES.UPDATE_SUCCESS);
       onOpenChange(false);
       router.refresh();
     } catch (_error) {
-      toast.error(CODE_MESSAGES.GENERIC_ERROR);
+      toast.error(PRODUCT_MESSAGES.GENERIC_ERROR);
     } finally {
       setLoading(false);
     }

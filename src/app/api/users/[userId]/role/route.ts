@@ -1,12 +1,12 @@
+import { ALLOWED_USER_ROLES } from '@/lib/constants';
 import {
   checkAdminAccess,
   createApiClient,
   errorResponse,
   handleApiError,
   successResponse,
-} from '@/lib/api-utils';
-import { ALLOWED_USER_ROLES } from '@/lib/constants';
-import type { UserRole } from '@/types/supabase';
+} from '@/lib/utils/api-utils';
+import type { UserRole } from '@/types/user';
 
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_FORBIDDEN = 403;

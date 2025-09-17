@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { mobileNavVariants } from '@/lib/animations';
+import { mobileNavVariants } from '@/lib/utils/animations';
 import { cn } from '@/lib/utils/format';
 
 import { getVisibleNavItems } from './navigation';

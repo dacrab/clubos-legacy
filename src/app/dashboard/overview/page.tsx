@@ -1,6 +1,6 @@
 'use client';
 
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { PageWrapper } from '@/components/ui/page-wrapper';
 import { useProductManagement } from '@/hooks/use-product-management';
 import { useUserManagement } from '@/hooks/use-user-management';
@@ -34,7 +34,7 @@ export default function OverviewPage() {
   const isLoading = userLoading || productsLoading;
 
   if (isLoading) {
-    return <LoadingAnimation />;
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
   return (

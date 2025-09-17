@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils/format';
 
-import ManageCategoriesDialog from './manage-categories-dialog';
+import ManageProductCategoriesDialog from './manage-categories-dialog';
 
 // Constants
 const STYLES = {
@@ -18,7 +18,7 @@ const STYLES = {
   },
 } as const;
 
-export default function ManageCategoriesButton() {
+export default function ManageProductCategoriesButton() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -35,7 +35,7 @@ export default function ManageCategoriesButton() {
         </TooltipContent>
       </Tooltip>
 
-      <ManageCategoriesDialog onOpenChange={setOpen} open={open} />
+      <ManageProductCategoriesDialog onOpenChange={setOpen} open={open} />
     </TooltipProvider>
   );
 }

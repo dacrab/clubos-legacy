@@ -1,10 +1,3 @@
-import {
-  checkAdminAccess,
-  createApiClient,
-  errorResponse,
-  handleApiError,
-  successResponse,
-} from '@/lib/api-utils';
 // no service role usage
 import {
   ALLOWED_USER_ROLES,
@@ -12,6 +5,13 @@ import {
   DEFAULT_USER_ROLE,
   USER_MESSAGES,
 } from '@/lib/constants';
+import {
+  checkAdminAccess,
+  createApiClient,
+  errorResponse,
+  handleApiError,
+  successResponse,
+} from '@/lib/utils/api-utils';
 
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_FORBIDDEN = 403;

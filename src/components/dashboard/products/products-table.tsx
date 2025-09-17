@@ -4,10 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Edit2, PackageX, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Button } from '@/components/ui/button';
-import { CodeImage } from '@/components/ui/code-image';
 import {
   Dialog,
   DialogContent,
@@ -18,59 +15,35 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingButton } from '@/components/ui/loading-button';
+import { ProductAvatar } from '@/components/ui/product-avatar';
 import { StockStatusBadge } from '@/components/ui/stock-status-badge';
 import { VirtualizedMobileList } from '@/components/ui/virtualized-mobile-list';
-import { usePolling } from '@/hooks/use-polling';
+import { usePolling } from '@/hooks/utils/use-polling';
 // Database and types
 import {
   API_ERROR_MESSAGES,
   BUTTON_LABELS,
-  CODE_MESSAGES,
   LOW_STOCK_THRESHOLD,
+  PRODUCT_MESSAGES,
   STOCK_MESSAGES,
   UNLIMITED_STOCK,
 } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/format';
 import { fetchProductsForUI } from '@/lib/utils/products';
-import type { ProductWithCategory } from '@/types/database';
+import { toast } from '@/lib/utils/toast';
+import type { Category, ProductWithCategory } from '@/types/database';
 
 // UI Components
 
 // Local components
-import EditCodeDialog from './edit-code-dialog';
+import EditProductDialog from './edit-product-dialog';
 
 // Utils and constants
 
 // Types
-type Code = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  image_url: string | null;
-  category?: {
-    id: string;
-    name: string;
-    description: string | null;
-    parent_id: string | null;
-    is_active: boolean;
-    created_at: string;
-    created_by: string;
-    parent?: {
-      id: string;
-      name: string;
-      description: string | null;
-      parent_id: string | null;
-      is_active: boolean;
-      created_at: string;
-      created_by: string;
-    } | null;
-  } | null;
-};
-
-type CodesTableProps = {
-  codes: Code[];
+type ProductsTableProps = {
+  products: ProductWithCategory[];
   isAdmin: boolean;
 };
 
@@ -78,10 +51,10 @@ type SortField = 'name' | 'category' | 'price' | 'stock';
 type SortOrder = 'asc' | 'desc';
 
 type TableRowProps = {
-  code: Code;
+  product: ProductWithCategory;
   isAdmin: boolean;
-  onEdit: (code: Code) => void;
-  onDelete: (code: Code) => void;
+  onEdit: (product: ProductWithCategory) => void;
+  onDelete: (product: ProductWithCategory) => void;
 };
 
 // Constants
@@ -90,15 +63,15 @@ const DESKTOP_ROW_ESTIMATE = 72;
 const MOBILE_ROW_ESTIMATE = 110;
 
 // Helper Functions
-const hasUnlimitedStock = (code: Code) => code.stock === UNLIMITED_STOCK;
+const hasUnlimitedStock = (product: ProductWithCategory) =>
+  product.stock_quantity === UNLIMITED_STOCK;
 
-const formatCategoryPath = (code: Code) => {
-  if (!code.category) {
+const formatCategoryPath = (product: ProductWithCategory) => {
+  if (!product.category) {
     return '';
   }
-  return code.category.parent?.name
-    ? `${code.category.parent.name}/${code.category.name}`
-    : code.category.name;
+  const category = product.category as Category & { parent?: Category };
+  return category.parent?.name ? `${category.parent.name}/${category.name}` : category.name;
 };
 
 const getStockStatusStyle = (stock: number) => {
@@ -161,39 +134,41 @@ const TableHeader = memo(
 
 TableHeader.displayName = 'TableHeader';
 
-const TableRow = memo<TableRowProps>(({ code, isAdmin, onEdit, onDelete }) => (
+const TableRow = memo<TableRowProps>(({ product, isAdmin, onEdit, onDelete }) => (
   <div className="flex h-full items-center px-8 py-4">
     <div className="flex w-[40%] items-center gap-4">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center">
-        <CodeImage code={code.name} imageUrl={code.image_url} />
+        <ProductAvatar imageUrl={product.image_url} productName={product.name} />
       </div>
-      <span className="truncate font-medium text-base">{code.name}</span>
+      <span className="truncate font-medium text-base">{product.name}</span>
     </div>
     <div className="w-[25%]">
-      <span className="truncate text-base text-muted-foreground">{formatCategoryPath(code)}</span>
+      <span className="truncate text-base text-muted-foreground">
+        {formatCategoryPath(product)}
+      </span>
     </div>
     <div className="w-[15%]">
-      <span className="text-base tabular-nums">{code.price.toFixed(2)}€</span>
+      <span className="text-base tabular-nums">{product.price.toFixed(2)}€</span>
     </div>
     <div className="w-[12%]">
       <StockStatusBadge
         status={{
-          text: hasUnlimitedStock(code)
+          text: hasUnlimitedStock(product)
             ? STOCK_MESSAGES.UNLIMITED_STOCK_LABEL
-            : `${code.stock} τεμ.`,
-          className: getStockStatusStyle(code.stock),
+            : `${product.stock_quantity} τεμ.`,
+          className: getStockStatusStyle(product.stock_quantity),
         }}
       />
     </div>
     {isAdmin && (
       <div className="flex w-[8%] min-w-[100px] items-center justify-center gap-2">
-        <Button className="h-8 w-8" onClick={() => onEdit(code)} size="icon" variant="ghost">
+        <Button className="h-8 w-8" onClick={() => onEdit(product)} size="icon" variant="ghost">
           <Edit2 className="h-4 w-4" />
           <span className="sr-only">Edit</span>
         </Button>
         <Button
           className="h-8 w-8 hover:text-destructive"
-          onClick={() => onDelete(code)}
+          onClick={() => onDelete(product)}
           size="icon"
           variant="ghost"
         >
@@ -207,26 +182,26 @@ const TableRow = memo<TableRowProps>(({ code, isAdmin, onEdit, onDelete }) => (
 
 TableRow.displayName = 'TableRow';
 
-const MobileRow = memo<TableRowProps>(({ code, isAdmin, onEdit, onDelete }) => (
+const MobileRow = memo<TableRowProps>(({ product, isAdmin, onEdit, onDelete }) => (
   <div className="space-y-2 border-b bg-card p-3">
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-center gap-3">
-        <CodeImage code={code.name} imageUrl={code.image_url} />
+        <ProductAvatar imageUrl={product.image_url} productName={product.name} />
         <div>
-          <h3 className="font-medium text-base">{code.name}</h3>
+          <h3 className="font-medium text-base">{product.name}</h3>
           <p className="max-w-[200px] truncate text-muted-foreground text-sm">
-            {formatCategoryPath(code)}
+            {formatCategoryPath(product)}
           </p>
         </div>
       </div>
       {isAdmin && (
         <div className="flex gap-1">
-          <Button className="h-8 w-8" onClick={() => onEdit(code)} size="icon" variant="ghost">
+          <Button className="h-8 w-8" onClick={() => onEdit(product)} size="icon" variant="ghost">
             <Edit2 className="h-4 w-4" />
           </Button>
           <Button
             className="h-8 w-8 hover:text-destructive"
-            onClick={() => onDelete(code)}
+            onClick={() => onDelete(product)}
             size="icon"
             variant="ghost"
           >
@@ -236,14 +211,14 @@ const MobileRow = memo<TableRowProps>(({ code, isAdmin, onEdit, onDelete }) => (
       )}
     </div>
     <div className="flex items-center justify-between gap-4">
-      <div className="font-medium text-base">{code.price.toFixed(2)}€</div>
+      <div className="font-medium text-base">{product.price.toFixed(2)}€</div>
       <StockStatusBadge
         size="sm"
         status={{
-          text: hasUnlimitedStock(code)
+          text: hasUnlimitedStock(product)
             ? STOCK_MESSAGES.UNLIMITED_STOCK_LABEL
-            : `${code.stock} τεμ.`,
-          className: getStockStatusStyle(code.stock),
+            : `${product.stock_quantity} τεμ.`,
+          className: getStockStatusStyle(product.stock_quantity),
         }}
       />
     </div>
@@ -253,17 +228,17 @@ const MobileRow = memo<TableRowProps>(({ code, isAdmin, onEdit, onDelete }) => (
 MobileRow.displayName = 'MobileRow';
 
 // Main Component
-export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableProps) {
+export default function ProductsTable({ products: initialProducts, isAdmin }: ProductsTableProps) {
   // State
-  const [codes, setCodes] = useState<Code[]>(initialCodes);
-  type EditingCode = Code & { category_id: string | null };
-  const [editingCode, setEditingCode] = useState<EditingCode | null>(null);
-  const [_managingStock, _setManagingStock] = useState<Code | null>(null);
+  const [products, setProducts] = useState<ProductWithCategory[]>(initialProducts);
+  type EditingProduct = ProductWithCategory & { category_id: string | null };
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
+  const [_managingStock, _setManagingStock] = useState<ProductWithCategory | null>(null);
   const [loading, setLoading] = useState(false);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [codeToDelete, setCodeToDelete] = useState<Code | null>(null);
+  const [productToDelete, setProductToDelete] = useState<ProductWithCategory | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
   const [_height, setHeight] = useState(0);
@@ -285,29 +260,25 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   }, []);
 
   // Replace useRealtimeSubscription with usePolling
-  const fetchCodes = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const data = await fetchProductsForUI(
         supabase as unknown as Parameters<typeof fetchProductsForUI>[0],
         { isAdmin }
       );
-      const mapped: Code[] = (data || []).map((p: ProductWithCategory) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
+      const mapped: ProductWithCategory[] = (data || []).map((p: ProductWithCategory) => ({
+        ...p,
         stock: p.stock_quantity,
-        image_url: p.image_url ?? null,
-        category: p.category ?? null,
       }));
-      setCodes(mapped);
+      setProducts(mapped);
     } catch (_error) {
       // Handle error silently
     }
   }, [supabase, isAdmin]);
 
-  // Use polling hook to fetch codes every 5 seconds
+  // Use polling hook to fetch products every 5 seconds
   usePolling({
-    onPoll: fetchCodes,
+    onPoll: fetchProducts,
     interval: 5000, // 5 seconds
     enabled: true,
   });
@@ -324,28 +295,28 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   );
 
   const handleDelete = useCallback(async () => {
-    if (!codeToDelete) {
+    if (!productToDelete) {
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('products').delete().eq('id', codeToDelete.id);
+      const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
 
       if (error) {
         throw error;
       }
 
-      toast.success(CODE_MESSAGES.DELETE_SUCCESS);
+      toast.success(PRODUCT_MESSAGES.DELETE_SUCCESS);
       router.refresh();
     } catch (_error) {
       toast.error(API_ERROR_MESSAGES.SERVER_ERROR);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
-      setCodeToDelete(null);
+      setProductToDelete(null);
     }
-  }, [codeToDelete, router, supabase]);
+  }, [productToDelete, router, supabase]);
 
   // Sorting
   const compareValues = useCallback((a: string | number, b: string | number) => {
@@ -358,34 +329,34 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
     return 0;
   }, []);
 
-  const sortedCodes = useMemo(() => {
-    const getValue = (code: Code, field: SortField) => {
+  const sortedProducts = useMemo(() => {
+    const getValue = (product: ProductWithCategory, field: SortField) => {
       if (field === 'name') {
-        return code.name.toLowerCase();
+        return product.name.toLowerCase();
       }
       if (field === 'category') {
-        return formatCategoryPath(code).toLowerCase();
+        return formatCategoryPath(product).toLowerCase();
       }
       if (field === 'price') {
-        return code.price;
+        return product.price;
       }
       if (field === 'stock') {
-        return code.stock;
+        return product.stock_quantity;
       }
       return '';
     };
 
-    return [...codes].sort((a, b) => {
+    return [...products].sort((a, b) => {
       const aValue = getValue(a, sortField);
       const bValue = getValue(b, sortField);
 
       return sortOrder === 'asc' ? compareValues(aValue, bValue) : compareValues(bValue, aValue);
     });
-  }, [codes, sortField, sortOrder, compareValues]);
+  }, [products, sortField, sortOrder, compareValues]);
 
   // Virtualization
   const rowVirtualizer = useVirtualizer({
-    count: sortedCodes.length,
+    count: sortedProducts.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => DESKTOP_ROW_ESTIMATE,
     overscan: 10,
@@ -393,12 +364,12 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   });
 
   // Empty state
-  if (codes.length === 0) {
+  if (products.length === 0) {
     return (
       <EmptyState
-        description="Δεν υπάρχουν καταχωρημένοι κωδικοί στο σύστημα."
+        description="Δεν υπάρχουν καταχωρημένα προϊόντα στο σύστημα."
         icon={PackageX}
-        title="Δεν υπάρχουν κωδικοί"
+        title="Δεν υπάρχουν προϊόντα"
       />
     );
   }
@@ -407,35 +378,37 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
   if (isMobile) {
     return (
       <>
-        <VirtualizedMobileList<Code>
+        <VirtualizedMobileList<ProductWithCategory>
           className="h-[calc(100vh-180px)] bg-background"
           estimateSize={() => MOBILE_ROW_ESTIMATE}
-          items={sortedCodes}
+          items={sortedProducts}
           renderItem={(item) => (
             <MobileRow
-              code={item}
               isAdmin={isAdmin}
               key={item.id}
-              onDelete={(deletedCode) => {
-                setCodeToDelete(deletedCode);
+              onDelete={(deletedProduct) => {
+                setProductToDelete(deletedProduct);
                 setDeleteDialogOpen(true);
               }}
-              onEdit={(code) =>
-                setEditingCode({
-                  ...code,
-                  category_id: code.category?.id ?? null,
+              onEdit={(product) =>
+                setEditingProduct({
+                  ...product,
+                  category_id: product.category?.id ?? null,
                 })
               }
+              product={item}
             />
           )}
         />
-        {editingCode && <EditCodeDialog code={editingCode} onClose={() => setEditingCode(null)} />}
-        {deleteDialogOpen && codeToDelete && (
+        {editingProduct && (
+          <EditProductDialog onClose={() => setEditingProduct(null)} product={editingProduct} />
+        )}
+        {deleteDialogOpen && productToDelete && (
           <Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Διαγραφή Κωδικού</DialogTitle>
-                <DialogDescription>{CODE_MESSAGES.DELETE_CONFIRM}</DialogDescription>
+                <DialogTitle>Διαγραφή Προϊόντος</DialogTitle>
+                <DialogDescription>{PRODUCT_MESSAGES.DELETE_CONFIRM}</DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button onClick={() => setDeleteDialogOpen(false)} variant="outline">
@@ -460,7 +433,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
           <div className="w-[40%]">
             <TableHeader
               currentSortField={sortField}
-              label="Κωδικός"
+              label="Προϊόν"
               onSort={handleSort}
               sortField="name"
               sortOrder={sortOrder}
@@ -508,7 +481,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const item = sortedCodes[virtualRow.index];
+              const item = sortedProducts[virtualRow.index];
               if (!item) {
                 return null;
               }
@@ -516,7 +489,7 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
                 <div
                   className={cn(
                     'absolute top-0 left-0 w-full border-b',
-                    virtualRow.index === sortedCodes.length - 1 && 'border-b-0'
+                    virtualRow.index === sortedProducts.length - 1 && 'border-b-0'
                   )}
                   data-index={virtualRow.index}
                   key={virtualRow.key}
@@ -526,18 +499,18 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
                   }}
                 >
                   <TableRow
-                    code={item}
                     isAdmin={isAdmin}
-                    onDelete={(deletedCode) => {
-                      setCodeToDelete(deletedCode);
+                    onDelete={(deletedProduct) => {
+                      setProductToDelete(deletedProduct);
                       setDeleteDialogOpen(true);
                     }}
-                    onEdit={(code) =>
-                      setEditingCode({
-                        ...code,
-                        category_id: code.category?.id ?? null,
+                    onEdit={(product) =>
+                      setEditingProduct({
+                        ...product,
+                        category_id: product.category?.id ?? null,
                       })
                     }
+                    product={item}
                   />
                 </div>
               );
@@ -546,14 +519,16 @@ export default function CodesTable({ codes: initialCodes, isAdmin }: CodesTableP
         </div>
       </div>
 
-      {editingCode && <EditCodeDialog code={editingCode} onClose={() => setEditingCode(null)} />}
+      {editingProduct && (
+        <EditProductDialog onClose={() => setEditingProduct(null)} product={editingProduct} />
+      )}
 
-      {deleteDialogOpen && codeToDelete && (
+      {deleteDialogOpen && productToDelete && (
         <Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Διαγραφή Κωδικού</DialogTitle>
-              <DialogDescription>{CODE_MESSAGES.DELETE_CONFIRM}</DialogDescription>
+              <DialogTitle>Διαγραφή Προϊόντος</DialogTitle>
+              <DialogDescription>{PRODUCT_MESSAGES.DELETE_CONFIRM}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button onClick={() => setDeleteDialogOpen(false)} variant="outline">

@@ -3,8 +3,6 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 import { Badge } from '@/components/ui/badge';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import {
@@ -21,12 +19,13 @@ import { ProductImage } from '@/components/ui/product-image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEditability } from '@/hooks/use-editability';
 import { useErrorHandling } from '@/hooks/use-error-handling';
-import { useLoadingState } from '@/hooks/use-loading-state';
 import { useProductManagement } from '@/hooks/use-product-management';
+import { useLoadingState } from '@/hooks/utils/use-loading-state';
 import { PAYMENT_METHOD_LABELS, SALES_MESSAGES, UNLIMITED_STOCK } from '@/lib/constants';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase/client';
 import { formatDateWithGreekAmPm } from '@/lib/utils/date';
 import { cn } from '@/lib/utils/format';
+import { toast } from '@/lib/utils/toast';
 import type { OrderItem, Product } from '@/types/database';
 
 // Constants - removed TIME constants as they're now in useEditability hook

@@ -3,11 +3,12 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import StatisticsWrapper from '@/components/dashboard/statistics/statistics-wrapper';
 import { PageWrapper } from '@/components/ui/page-wrapper';
+import type { UserRole } from '@/lib/constants';
 import { ALLOWED_USER_ROLES } from '@/lib/constants';
 import { env } from '@/lib/env';
 import type { SaleLike } from '@/lib/utils/chart-utils';
 import type { OrderItemWithProduct, OrderWithItems } from '@/types/database';
-import type { Database, UserRole } from '@/types/supabase';
+import type { Database } from '@/types/supabase';
 
 type UserData = { role: UserRole };
 

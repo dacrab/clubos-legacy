@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
-import { Toaster } from 'sonner';
-
 import { LoadingProvider } from '@/components/providers/loading-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { PageWrapper } from '@/components/ui/page-wrapper';
+import { Toaster } from '@/components/ui/toast';
 
 import './globals.css';
 

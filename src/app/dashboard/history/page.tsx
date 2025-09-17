@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import SalesFilter from '@/components/dashboard/sales/sales-filter';
 import SalesTable from '@/components/dashboard/sales/sales-table';
-import { LoadingAnimation } from '@/components/ui/loading-animation';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import type { SalesDateRange, SalesFilters, TimeRange } from '@/hooks/use-sales-data';
 import { useSalesData } from '@/hooks/use-sales-data';
 
@@ -18,7 +18,7 @@ export default function HistoryPage() {
   };
 
   if (isLoading) {
-    return <LoadingAnimation />;
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
   return (
