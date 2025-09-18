@@ -1,20 +1,19 @@
 'use client';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react';
+import type { DateRange } from 'react-day-picker';
 import {
   addDays,
   addMonths,
   endOfMonth,
+  formatDate,
   isSameDay,
   isSameMonth,
   setDay,
   startOfMonth,
   subMonths,
-} from 'date-fns';
-import type { el } from 'date-fns/locale/el';
-import { format } from 'date-fns-tz';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React from 'react';
-import type { DateRange } from 'react-day-picker';
+} from '@/lib/utils/date-utils';
 import { cn } from '@/lib/utils/format';
 
 // Types
@@ -25,7 +24,7 @@ type CalendarProps = {
   className?: string;
   defaultMonth?: Date;
   numberOfMonths?: number;
-  locale?: typeof el;
+  locale?: unknown;
   initialFocus?: boolean;
 };
 
@@ -50,7 +49,7 @@ const formatWithLocale = (date: Date, formatStr: string) => {
     case 'd':
       return new Intl.DateTimeFormat('el', { day: 'numeric' }).format(date);
     default:
-      return format(date, formatStr); // fallback to date-fns format
+      return formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' });
   }
 };
 

@@ -157,7 +157,7 @@ export default function EditProductDialog({ product, onClose }: EditProductDialo
 
         setCategories(categories);
         setGroupedCategories(grouped);
-      } catch (fetchError) {
+      } catch (_fetchError) {
         toast.error(API_ERROR_MESSAGES.FETCH_CATEGORIES_ERROR);
       } finally {
         setIsLoadingCategories(false);
@@ -165,7 +165,7 @@ export default function EditProductDialog({ product, onClose }: EditProductDialo
     };
 
     fetchCategories();
-  }, [onClose, supabase]);
+  }, [supabase]);
 
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {

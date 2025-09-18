@@ -1,11 +1,8 @@
 'use client';
 
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale/el';
 import { CalendarIcon, Filter, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
-
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
@@ -17,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from '@/lib/constants';
-import { formatDateToYYYYMMDD } from '@/lib/utils/date';
+import { QUICK_SELECT_OPTIONS } from '@/lib/constants';
+import { formatDate, formatDateToYYYYMMDD, greekLocale } from '@/lib/utils/date-utils';
 import { cn } from '@/lib/utils/format';
 
 type DateRangeType = {
@@ -143,12 +140,12 @@ export default function StatisticsFilter({ onFilterChange }: StatisticsFilterPro
       return 'Επιλέξτε ημερομηνίες';
     }
     if (selectedRange.to) {
-      return `${format(selectedRange.from, DATE_FORMAT.DISPLAY)} - ${format(
+      return `${formatDate(selectedRange.from, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${formatDate(
         selectedRange.to,
-        DATE_FORMAT.DISPLAY
+        { day: '2-digit', month: '2-digit', year: 'numeric' }
       )}`;
     }
-    return format(selectedRange.from, DATE_FORMAT.DISPLAY);
+    return formatDate(selectedRange.from, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   return (
@@ -201,7 +198,7 @@ export default function StatisticsFilter({ onFilterChange }: StatisticsFilterPro
                   <Calendar
                     defaultMonth={selectedRange?.from ?? new Date()}
                     initialFocus
-                    locale={el}
+                    locale={greekLocale}
                     mode="range"
                     numberOfMonths={2}
                     onSelect={handleDateRangeSelect}

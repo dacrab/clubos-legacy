@@ -11,7 +11,3 @@ export type Appointment = {
   created_at: string;
   created_by: string;
 };
-
-export type AppointmentInsert = Omit<Appointment, 'id' | 'created_at'>;
-export type AppointmentUpdate = Partial<AppointmentInsert>;
-export type AppointmentFormData = Omit<AppointmentInsert, 'created_at' | 'id'>;

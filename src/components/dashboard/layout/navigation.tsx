@@ -12,7 +12,7 @@ export type NavigationItem = {
 };
 
 // Navigation config
-export const navigation: NavigationItem[] = [
+const navigation: NavigationItem[] = [
   {
     name: 'Πίνακας',
     href: '/dashboard',

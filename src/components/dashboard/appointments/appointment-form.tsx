@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -12,12 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   APPOINTMENT_MESSAGES,
   BUTTON_LABELS,
-  DATE_FORMAT,
   DIALOG_MESSAGES,
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
+import { formatDate } from '@/lib/utils/date-utils';
 import { cn } from '@/lib/utils/format';
 import { toast } from '@/lib/utils/toast';
 // Use direct Insert type to help Supabase inference
@@ -161,8 +159,10 @@ export const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess }) =
                   >
                     <CalendarIcon className="mr-1 h-3.5 w-3.5 shrink-0 sm:mr-2 sm:h-4 sm:w-4" />
                     {formData.date
-                      ? format(formData.date, DATE_FORMAT.DISPLAY, {
-                          locale: el,
+                      ? formatDate(formData.date, {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
                         })
                       : 'Επιλέξτε ημερομηνία'}
                   </Button>

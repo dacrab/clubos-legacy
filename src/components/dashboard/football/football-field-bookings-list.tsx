@@ -1,8 +1,6 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import { addDays, format, formatDistanceToNow, isWithinInterval, parseISO } from 'date-fns';
-import { el } from 'date-fns/locale';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
@@ -23,13 +21,19 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import {
   BUTTON_LABELS,
-  DATE_FORMAT,
   DIALOG_MESSAGES,
   FOOTBALL_BOOKING_MESSAGES,
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
 import { env } from '@/lib/env';
+import {
+  addDays,
+  formatDate,
+  formatDistanceToNow,
+  isWithinInterval,
+  parseISO,
+} from '@/lib/utils/date-utils';
 import { toast } from '@/lib/utils/toast';
 import type { Database } from '@/types/supabase';
 
@@ -49,8 +53,13 @@ type FootballFieldBooking = Database['public']['Tables']['football_bookings']['R
 
 const formatDateWithGreekAmPm = (dateString: string) => {
   try {
-    return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, {
-      locale: el,
+    return formatDate(new Date(dateString), {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
   } catch {
     return dateString;
@@ -392,11 +401,7 @@ export default function FootballFieldBookingsList({
                       </p>
                       <p className="mt-1 text-[10px] text-muted-foreground xs:text-xs">
                         {FORM_LABELS.CREATED_AT}: {formatDateWithGreekAmPm(booking.created_at)} (
-                        {formatDistanceToNow(new Date(booking.created_at), {
-                          addSuffix: true,
-                          locale: el,
-                        })}
-                        )
+                        {formatDistanceToNow(new Date(booking.created_at))})
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">

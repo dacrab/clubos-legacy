@@ -1,14 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { UNLIMITED_STOCK } from '@/lib/constants';
+import type { ProductWithCategory } from '@/types/database';
 import type { Database } from '@/types/supabase';
-
-export type ProductWithCategory = Database['public']['Tables']['products']['Row'] & {
-  category?:
-    | (Database['public']['Tables']['categories']['Row'] & {
-        parent?: Database['public']['Tables']['categories']['Row'] | null;
-      })
-    | null;
-};
 
 export function getProductsQuery(
   supabase: SupabaseClient<Database>,

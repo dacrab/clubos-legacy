@@ -9,7 +9,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { type SalesFilters, useSalesData } from '@/hooks/use-sales-data';
 import { useSearch } from '@/hooks/utils/use-search';
 import type { GroupedSale, SaleLike } from '@/lib/utils/chart-utils';
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
+import { formatDate } from '@/lib/utils/date-utils';
 import { cn, formatPrice } from '@/lib/utils/format';
 import { computeGroupedSaleTotals } from '@/lib/utils/sales-totals';
 import type { SaleLike as Sale } from '@/types/sales';
@@ -112,7 +112,7 @@ const SaleHeader = memo(({ group, isExpanded, onToggle }: SaleHeaderProps) => {
   return (
     <button
       aria-expanded={isExpanded}
-      aria-label={`Επέκταση πώλησης ${formatDateWithGreekAmPm(new Date(group.created_at))}`}
+      aria-label={`Επέκταση πώλησης ${formatDate(new Date(group.created_at))}`}
       className="group/item flex w-full items-start justify-between rounded-md px-1 py-2 transition-colors hover:bg-muted/50"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -120,7 +120,7 @@ const SaleHeader = memo(({ group, isExpanded, onToggle }: SaleHeaderProps) => {
     >
       <div className="space-y-1.5">
         <p className="text-muted-foreground text-xs sm:text-sm">
-          {formatDateWithGreekAmPm(new Date(group.created_at))}
+          {formatDate(new Date(group.created_at))}
         </p>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {group.treats_count > 0 && (

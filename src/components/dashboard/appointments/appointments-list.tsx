@@ -1,7 +1,5 @@
 'use client';
 
-import { addDays, format, formatDistanceToNow, isWithinInterval, parseISO } from 'date-fns';
-import { el } from 'date-fns/locale';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
 import React, { useState } from 'react';
 import useSWR from 'swr';
@@ -16,12 +14,18 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   APPOINTMENT_MESSAGES,
   BUTTON_LABELS,
-  DATE_FORMAT,
   DIALOG_MESSAGES,
   FORM_LABELS,
   PLACEHOLDERS,
 } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
+import {
+  addDays,
+  formatDate,
+  formatDistanceToNow,
+  isWithinInterval,
+  parseISO,
+} from '@/lib/utils/date-utils';
 import { toast } from '@/lib/utils/toast';
 import type { Appointment } from '@/types/appointment';
 import type { Database } from '@/types/supabase';
@@ -42,8 +46,13 @@ type AppointmentsListProps = {
 // Utility functions
 const formatDateWithGreekAmPm = (dateString: string): string => {
   try {
-    return format(new Date(dateString), DATE_FORMAT.FULL_WITH_TIME, {
-      locale: el,
+    return formatDate(new Date(dateString), {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
   } catch {
     return dateString;
@@ -374,11 +383,7 @@ export const AppointmentsList = ({
           </p>
           <p className="mt-1 text-[10px] text-muted-foreground xs:text-xs">
             {FORM_LABELS.CREATED_AT}: {formatDateWithGreekAmPm(appointment.created_at)} (
-            {formatDistanceToNow(new Date(appointment.created_at), {
-              addSuffix: true,
-              locale: el,
-            })}
-            )
+            {formatDistanceToNow(new Date(appointment.created_at))})
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">

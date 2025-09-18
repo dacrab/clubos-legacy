@@ -2,7 +2,6 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 // Re-export date formatting from date.ts to maintain backward compatibility
-export { formatDate } from './date';
 
 // Price formatting constants
 const CURRENCY_SYMBOL = '€' as const;
@@ -24,13 +23,4 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatPrice(price: number): string {
   return `${price.toFixed(DECIMAL_PLACES)}${CURRENCY_SYMBOL}`;
-}
-
-/**
- * Formats a price without currency symbol
- * @param price Price to format
- * @returns Formatted price string
- */
-export function formatPriceNumber(price: number): string {
-  return price.toFixed(DECIMAL_PLACES);
 }

@@ -1,12 +1,11 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { env } from '@/lib/env';
+import { formatDate } from '@/lib/utils/date-utils';
 import { toast } from '@/lib/utils/toast';
 
 // Types
@@ -31,7 +30,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import {
   BUTTON_LABELS,
-  DATE_FORMAT,
   DIALOG_MESSAGES,
   FOOTBALL_BOOKING_MESSAGES,
   FORM_LABELS,
@@ -190,8 +188,10 @@ export default function FootballFieldBookingForm({ onSuccess }: FootballFieldBoo
                   >
                     <CalendarIcon className="mr-1 h-3.5 w-3.5 shrink-0 sm:mr-2 sm:h-4 sm:w-4" />
                     {formData.date
-                      ? format(formData.date, DATE_FORMAT.DISPLAY, {
-                          locale: el,
+                      ? formatDate(formData.date, {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
                         })
                       : 'Επιλέξτε ημερομηνία'}
                   </Button>

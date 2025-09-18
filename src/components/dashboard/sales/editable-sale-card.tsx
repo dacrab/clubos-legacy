@@ -23,7 +23,7 @@ import { useProductManagement } from '@/hooks/use-product-management';
 import { useLoadingState } from '@/hooks/utils/use-loading-state';
 import { PAYMENT_METHOD_LABELS, SALES_MESSAGES, UNLIMITED_STOCK } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
-import { formatDateWithGreekAmPm } from '@/lib/utils/date';
+import { formatDate } from '@/lib/utils/date-utils';
 import { cn } from '@/lib/utils/format';
 import { toast } from '@/lib/utils/toast';
 import type { OrderItem, Product } from '@/types/database';
@@ -406,9 +406,7 @@ function SaleCard({
           />
           <div className="ml-4 flex-1 space-y-1">
             <p className="font-semibold">{product.name}</p>
-            <p className="text-muted-foreground text-sm">
-              {formatDateWithGreekAmPm(new Date(created_at))}
-            </p>
+            <p className="text-muted-foreground text-sm">{formatDate(new Date(created_at))}</p>
             <div className="flex items-center gap-2 text-sm">
               <span>{quantity}x</span>
               {is_treat ? (

@@ -1,5 +1,3 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
-
 export type Database = {
   public: {
     Tables: {
@@ -245,7 +243,7 @@ export type Database = {
           treat_count: number;
           treat_total: number;
           total_discounts: number;
-          notes: Json | null;
+          notes: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
           created_at: string;
         };
         Insert: {
@@ -258,7 +256,7 @@ export type Database = {
           treat_count?: number;
           treat_total?: number;
           total_discounts?: number;
-          notes?: Json | null;
+          notes?: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
           created_at?: string;
         };
         Update: {
@@ -271,7 +269,7 @@ export type Database = {
           treat_count?: number;
           treat_total?: number;
           total_discounts?: number;
-          notes?: Json | null;
+          notes?: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
           created_at?: string;
         };
         Relationships: [];
@@ -283,7 +281,7 @@ export type Database = {
           opened_by: string;
           closed_at: string | null;
           closed_by: string | null;
-          notes: Json | null;
+          notes: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
         };
         Insert: {
           id?: string;
@@ -291,7 +289,7 @@ export type Database = {
           opened_by: string;
           closed_at?: string | null;
           closed_by?: string | null;
-          notes?: Json | null;
+          notes?: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
         };
         Update: {
           id?: string;
@@ -299,7 +297,7 @@ export type Database = {
           opened_by?: string;
           closed_at?: string | null;
           closed_by?: string | null;
-          notes?: Json | null;
+          notes?: string | number | boolean | null | { [key: string]: unknown } | unknown[] | null;
         };
         Relationships: [];
       };

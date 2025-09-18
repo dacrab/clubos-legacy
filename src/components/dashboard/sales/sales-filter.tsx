@@ -1,11 +1,8 @@
 'use client';
 
-import { format } from 'date-fns';
-import { el } from 'date-fns/locale/el';
 import { CalendarIcon, Filter, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
-
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -18,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DATE_FORMAT, QUICK_SELECT_OPTIONS } from '@/lib/constants';
+import { QUICK_SELECT_OPTIONS } from '@/lib/constants';
+import { formatDate, formatDateToYYYYMMDD, greekLocale } from '@/lib/utils/date-utils';
 import { cn } from '@/lib/utils/format';
 
 type SalesDateRange = {
@@ -176,11 +174,11 @@ function FilterContent({
               {date?.from ? (
                 date.to ? (
                   <>
-                    {format(date.from, DATE_FORMAT.DISPLAY)} -{' '}
-                    {format(date.to, DATE_FORMAT.DISPLAY)}
+                    {formatDate(date.from, { day: '2-digit', month: '2-digit', year: 'numeric' })} -{' '}
+                    {formatDate(date.to, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </>
                 ) : (
-                  format(date.from, DATE_FORMAT.DISPLAY)
+                  formatDate(date.from, { day: '2-digit', month: '2-digit', year: 'numeric' })
                 )
               ) : (
                 'Επιλέξτε ημερομηνίες'
@@ -192,7 +190,7 @@ function FilterContent({
               className="scale-100 p-3 sm:p-4"
               defaultMonth={date?.from || new Date()}
               initialFocus
-              locale={el}
+              locale={greekLocale}
               mode="range"
               numberOfMonths={window.innerWidth < MOBILE_BREAKPOINT ? 1 : 2}
               onSelect={handleDateChange}
@@ -273,7 +271,10 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
       const { start, end } = range;
       const newTimeRange = {
         startTime: '00:00',
-        endTime: value === 'TODAY' ? format(new Date(), 'HH:mm') : '23:59',
+        endTime:
+          value === 'TODAY'
+            ? formatDate(new Date(), { hour: '2-digit', minute: '2-digit', hour12: false })
+            : '23:59',
       };
 
       setDate({ from: start, to: end });
@@ -283,8 +284,8 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
 
       updateFilters(
         {
-          startDate: format(start, DATE_FORMAT.API),
-          endDate: format(end, DATE_FORMAT.API),
+          startDate: formatDateToYYYYMMDD(start),
+          endDate: formatDateToYYYYMMDD(end),
         },
         newTimeRange
       );
@@ -308,8 +309,8 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
 
     updateFilters(
       {
-        startDate: format(range.from, DATE_FORMAT.API),
-        endDate: format(range.to || range.from, DATE_FORMAT.API),
+        startDate: formatDateToYYYYMMDD(range.from),
+        endDate: formatDateToYYYYMMDD(range.to || range.from),
       },
       timeRangeState
     );
@@ -327,7 +328,7 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
     if (isValidTimeFormat(value)) {
       updateFilters(
         {
-          startDate: date?.from ? format(date.from, DATE_FORMAT.API) : '',
+          startDate: date?.from ? formatDateToYYYYMMDD(date.from) : '',
           endDate: getEndDate(),
         },
         {
@@ -348,10 +349,10 @@ export default function SalesFilter({ onFilterChange }: SalesFilterProps) {
 
   const getEndDate = () => {
     if (date?.to) {
-      return format(date.to, DATE_FORMAT.API);
+      return formatDateToYYYYMMDD(date.to);
     }
     if (date?.from) {
-      return format(date.from, DATE_FORMAT.API);
+      return formatDateToYYYYMMDD(date.from);
     }
     return '';
   };

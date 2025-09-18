@@ -57,13 +57,6 @@ export const STATISTICS = {
   MAX_DAYS_TO_SHOW: 30,
 } as const;
 
-// Date Formatting
-export const DATE_FORMAT = {
-  DISPLAY: 'dd/MM/yyyy',
-  API: 'yyyy-MM-dd',
-  FULL_WITH_TIME: 'd MMMM yyyy, HH:mm',
-} as const;
-
 export const QUICK_SELECT_OPTIONS = {
   CUSTOM: 'Προσαρμοσμένη',
   TODAY: 'Σήμερα',
@@ -76,7 +69,7 @@ export const QUICK_SELECT_OPTIONS = {
   LAST_YEAR: 'Προηγούμενο έτος',
 } as const;
 
-export const REQUIRED_FIELDS_MESSAGE = 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία';
+const REQUIRED_FIELDS_MESSAGE = 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία';
 
 // UI Messages - API Errors
 export const API_ERROR_MESSAGES = {

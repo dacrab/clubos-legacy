@@ -1,15 +1,6 @@
 'use client';
 
-import {
-  Close,
-  Content,
-  Description,
-  Overlay,
-  Portal,
-  Root,
-  Title,
-  Trigger,
-} from '@radix-ui/react-dialog';
+import { Close, Content, Description, Overlay, Portal, Root, Title } from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import React from 'react';
 
@@ -17,11 +8,7 @@ import { cn } from '@/lib/utils/format';
 
 const Dialog = Root;
 
-const DialogTrigger = Trigger;
-
 const DialogPortal = Portal;
-
-const DialogClose = Close;
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof Overlay>,
@@ -95,15 +82,4 @@ const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = Description.displayName;
 
-export {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogClose,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-};
+export { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription };

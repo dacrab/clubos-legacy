@@ -1,46 +1,3 @@
-export type PaymentMethodType = 'cash' | 'card' | 'treat';
-
-// Additional register-specific types
-export type OrderSummary = {
-  total: number;
-  discount_applied: boolean;
-};
-
-// Define SalesCode type locally to avoid circular imports
-export type SalesCode = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  image_url: string | null;
-  created_at: string;
-  updated_at: string | null;
-  created_by: string;
-  category_id: string | null;
-};
-
-export type CartItem = {
-  id: string;
-  code: SalesCode;
-  codeId: string;
-  quantity: number;
-  isTreat: boolean;
-  dosageCount?: number;
-};
-
-export type NewOrderItem = {
-  product: SalesCode | null;
-  quantity: number;
-  isTreat: boolean;
-  paymentMethod: PaymentMethodType;
-};
-
-export type OrderItemUpdate = {
-  quantity: number;
-  product_id: string;
-  is_treat: boolean;
-};
-
 export type OrderWithSales = {
   id: string;
   session_id: string;
@@ -67,33 +24,6 @@ export type OrderWithSales = {
     original_code: string | null;
     original_quantity: number | null;
   }[];
-};
-
-export type OrderItemWithProduct = {
-  id: string;
-  order_id: string;
-  product_id: string;
-  quantity: number;
-  unit_price: number;
-  line_total: number;
-  is_treat: boolean;
-  is_deleted: boolean;
-  deleted_at: string | null;
-  deleted_by: string | null;
-  created_at: string;
-  updated_at: string | null;
-  is_edited: boolean;
-  original_quantity: number | null;
-  original_code: string | null;
-  product: {
-    name: string;
-    price: number;
-    image_url?: string | null;
-    category?: {
-      id: string;
-      name: string;
-    };
-  };
 };
 
 export type RegisterSessionWithDetails = {

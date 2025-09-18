@@ -6,7 +6,7 @@ export type SaleLike = Database['public']['Tables']['sales']['Row'] & {
 };
 
 // Types
-export type ChartDataItem = {
+type ChartDataItem = {
   name: string;
   value: number;
   total: number;
@@ -29,7 +29,6 @@ const HOURS_IN_DAY = 23;
 const MINUTES_IN_HOUR = 59;
 const SECONDS_IN_MINUTE = 59;
 const MILLISECONDS_IN_SECOND = 999;
-const PERCENTAGE_MULTIPLIER = 100;
 
 export const CHART_STYLES = {
   colors: {
@@ -121,44 +120,6 @@ export function aggregateSalesByDate(
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-STATISTICS.DEFAULT_DAYS_TO_SHOW);
-}
-
-/**
- * Groups sales by code and aggregates quantities
- */
-export function aggregateSalesByCode(
-  sales: SaleLike[],
-  topCount: number = STATISTICS.DEFAULT_TOP_CODES_COUNT,
-  showAll = false
-): ChartDataItem[] {
-  // Filter out deleted sales
-  const activeSales = sales.filter((sale) => !sale.is_deleted);
-
-  // Group sales by code, excluding treats
-  const codesSales = activeSales.reduce(
-    (acc, sale) => {
-      if (sale.code?.name && !sale.is_treat) {
-        const codeName = sale.code.name;
-        acc[codeName] = acc[codeName] ?? { name: codeName, value: 0, total: 0 };
-        acc[codeName].value += sale.quantity;
-        acc[codeName].total += sale.total_price;
-      }
-      return acc;
-    },
-    {} as Record<string, ChartDataItem>
-  );
-
-  // Sort and slice data
-  const sortedData = Object.values(codesSales)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, showAll ? undefined : topCount);
-
-  // Calculate percentages
-  const total = sortedData.reduce((sum, item) => sum + item.value, 0);
-  return sortedData.map((item) => ({
-    ...item,
-    percentage: ((item.value / total) * PERCENTAGE_MULTIPLIER).toFixed(1),
-  }));
 }
 
 /**

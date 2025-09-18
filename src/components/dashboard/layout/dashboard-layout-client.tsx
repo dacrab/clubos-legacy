@@ -86,13 +86,11 @@ export default function DashboardLayoutClient({ profile }: DashboardLayoutClient
               <main className="flex-1 overflow-auto p-4 pb-16 sm:p-6 lg:p-8">
                 <Header profile={profile} user={user as unknown as User} />
                 <AnimatedContent>
-                  {profile.role === 'admin' ? (
+                  {profile.role === 'admin' && (
                     <AdminDashboard lowStock={lowStock} recentSales={recentSales} />
-                  ) : profile.role === 'staff' ? (
-                    <EmployeeDashboard />
-                  ) : (
-                    <SecretariatDashboard />
                   )}
+                  {profile.role === 'staff' && <EmployeeDashboard />}
+                  {profile.role !== 'admin' && profile.role !== 'staff' && <SecretariatDashboard />}
                 </AnimatedContent>
                 <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background lg:hidden">
                   <MobileSidebar role={profile.role} />

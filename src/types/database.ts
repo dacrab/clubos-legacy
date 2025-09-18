@@ -15,15 +15,6 @@ export type ProductWithCategory = Product & {
   category?: Category | null;
 };
 
-export type ProductSummary = {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  is_treat: boolean;
-  categories?: string[];
-};
-
 // ======= Category Types =======
 export type Category = {
   id: string;
@@ -34,19 +25,6 @@ export type Category = {
   created_at: string;
   updated_at: string | null;
   created_by: string;
-};
-
-// ======= Sales Code Types =======
-export type SalesCode = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  image_url: string | null;
-  created_at: string;
-  updated_at: string | null;
-  created_by: string;
-  category_id: string | null;
 };
 
 // ======= Order Types =======
@@ -110,18 +88,4 @@ export type RegisterClosing = {
   total_discounts: number;
   notes: string | null;
   created_at: string;
-};
-
-export type RegisterSessionWithClosings = RegisterSession & {
-  register_closings: RegisterClosing[];
-};
-
-// ======= Football Booking Types =======
-export type FootballBooking = {
-  id: string;
-  date: string;
-  time: string;
-  duration: number;
-  created_at: string;
-  updated_at: string | null;
 };

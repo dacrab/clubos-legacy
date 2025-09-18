@@ -80,11 +80,4 @@ const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCel
 );
 TableCell.displayName = 'TableCell';
 
-const TableCaption = forwardRef<HTMLTableCaptionElement, HTMLAttributes<HTMLTableCaptionElement>>(
-  ({ className, ...props }, ref) => (
-    <caption className={cn('mt-4 text-muted-foreground text-sm', className)} ref={ref} {...props} />
-  )
-);
-TableCaption.displayName = 'TableCaption';
-
-export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow };
+export { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow };
