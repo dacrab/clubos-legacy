@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import DashboardLayoutClient from '@/components/dashboard/layout/dashboard-layout-client';
-import { PageWrapper } from '@/components/ui/page-wrapper';
 import type { UserRole } from '@/lib/constants';
 import { env } from '@/lib/env';
 import type { Database } from '@/types/supabase';
@@ -73,9 +72,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     };
 
     return (
-      <PageWrapper variant="dashboard">
-        <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>
-      </PageWrapper>
+      <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>
     );
   } catch (_error) {
     return redirect('/');

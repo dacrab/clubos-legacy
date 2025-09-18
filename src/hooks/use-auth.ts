@@ -1,10 +1,8 @@
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-
+import { useRouter } from 'next/navigation';
 import { ALLOWED_USER_ROLES, DEFAULT_USER_ROLE } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
-
 import { useErrorHandling } from './use-error-handling';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -18,12 +16,14 @@ type UserProfile = {
   updated_at: string;
 };
 
-type UseUserManagementProps = {
+type UseAuthProps = {
   redirectOnUnauthorized?: boolean;
   redirectPath?: string;
+  requireAdmin?: boolean;
+  enableErrorToasts?: boolean;
 };
 
-type UserManagementState = {
+type AuthState = {
   user: User | null;
   profile: UserProfile | null;
   isAdmin: boolean;
@@ -31,20 +31,24 @@ type UserManagementState = {
   error: string | null;
 };
 
-type UserManagementActions = {
+type AuthActions = {
   refetch: () => Promise<void>;
   reset: () => void;
+  signOut: () => Promise<void>;
 };
 
-export function useUserManagement({
+export function useAuth({
   redirectOnUnauthorized = true,
   redirectPath = '/',
-}: UseUserManagementProps = {}): UserManagementState & UserManagementActions {
+  requireAdmin = false,
+  enableErrorToasts = true,
+}: UseAuthProps = {}): AuthState & AuthActions {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { error, handleError, reset } = useErrorHandling({
-    defaultErrorMessage: 'Σφάλμα φόρτωσης χρήστη',
+    showToasts: enableErrorToasts,
+    defaultErrorMessage: 'Σφάλμα πιστοποίησης',
   });
   const router = useRouter();
   const supabase = createClientSupabase();
@@ -78,6 +82,14 @@ export function useUserManagement({
 
       const role = (userProfile?.role as UserRole) || DEFAULT_USER_ROLE;
 
+      // Check admin requirement
+      if (requireAdmin && !ALLOWED_USER_ROLES.includes(role)) {
+        if (redirectOnUnauthorized) {
+          router.push('/dashboard');
+        }
+        return;
+      }
+
       setUser({
         id: currentUser.id,
         username: userProfile.username,
@@ -98,11 +110,16 @@ export function useUserManagement({
     } finally {
       setLoading(false);
     }
-  }, [supabase, router, redirectOnUnauthorized, redirectPath, handleError, reset]);
+  }, [supabase, router, redirectOnUnauthorized, redirectPath, requireAdmin, handleError, reset]);
 
   const refetch = useCallback(() => {
     return fetchUserData();
   }, [fetchUserData]);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  }, [supabase, router]);
 
   useEffect(() => {
     fetchUserData();
@@ -118,5 +135,6 @@ export function useUserManagement({
     error,
     refetch,
     reset,
+    signOut,
   };
 }

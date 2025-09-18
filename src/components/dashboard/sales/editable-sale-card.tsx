@@ -19,7 +19,7 @@ import { ProductImage } from '@/components/ui/product-image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEditability } from '@/hooks/use-editability';
 import { useErrorHandling } from '@/hooks/use-error-handling';
-import { useProductManagement } from '@/hooks/use-product-management';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { useLoadingState } from '@/hooks/utils/use-loading-state';
 import { PAYMENT_METHOD_LABELS, SALES_MESSAGES, UNLIMITED_STOCK } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
@@ -58,7 +58,7 @@ function EditDialog({ open, onOpenChange, onSave, orderItem }: EditDialogProps) 
   });
   const [selectedProductId, setSelectedProductId] = useState<string>(orderItem.product_id);
   // Use custom hooks
-  const { products, loading } = useProductManagement({
+  const { products, loading } = useDashboardData({
     isAdmin: false,
     autoFetch: open,
   });

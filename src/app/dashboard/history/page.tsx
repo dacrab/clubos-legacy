@@ -5,17 +5,25 @@ import { useState } from 'react';
 
 import SalesFilter from '@/components/dashboard/sales/sales-filter';
 import SalesTable from '@/components/dashboard/sales/sales-table';
+import { PageHeader } from '@/components/dashboard/common/page-header';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { useAuth } from '@/hooks/use-auth';
 import type { SalesDateRange, SalesFilters, TimeRange } from '@/hooks/use-sales-data';
 import { useSalesData } from '@/hooks/use-sales-data';
 
 export default function HistoryPage() {
+  const { loading: authLoading } = useAuth({
+    redirectOnUnauthorized: true,
+  });
+
   const [filters, setFilters] = useState<SalesFilters>({});
-  const { sales: filteredSales, isLoading } = useSalesData(filters);
+  const { sales: filteredSales, isLoading: dataLoading } = useSalesData(filters);
 
   const handleFilterChange = (dateRange: SalesDateRange, timeRange: TimeRange) => {
     setFilters({ dateRange, timeRange });
   };
+
+  const isLoading = authLoading || dataLoading;
 
   if (isLoading) {
     return <LoadingSkeleton className="h-10 w-full" count={4} />;
@@ -23,12 +31,11 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <div className="mb-2 flex items-center gap-3 sm:gap-4">
-        <div className="rounded-full bg-primary/10 p-2 sm:p-3">
-          <History className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
-        </div>
-        <h1 className="font-semibold text-xl sm:text-2xl">Ιστορικό Πωλήσεων</h1>
-      </div>
+      <PageHeader
+        icon={History}
+        title="Ιστορικό Πωλήσεων"
+        description="Προβολή και φιλτράρισμα του ιστορικού πωλήσεων"
+      />
 
       <div className="space-y-5 sm:space-y-6">
         <SalesFilter onFilterChange={handleFilterChange} />
