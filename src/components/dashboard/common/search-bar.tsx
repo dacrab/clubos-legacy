@@ -8,21 +8,16 @@ type SearchBarProps = {
   className?: string;
 };
 
-export function SearchBar({ 
-  value, 
-  onChange, 
+export function SearchBar({
+  value,
+  onChange,
   placeholder = 'Αναζήτηση...',
-  className = '' 
+  className = '',
 }: SearchBarProps) {
   return (
     <div className={`relative flex-1 ${className}`}>
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
-      <Input
-        className="w-full pl-9"
-        onChange={onChange}
-        placeholder={placeholder}
-        value={value}
-      />
+      <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-muted-foreground" />
+      <Input className="w-full pl-9" onChange={onChange} placeholder={placeholder} value={value} />
     </div>
   );
 }

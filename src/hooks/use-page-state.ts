@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useSearch } from './utils/use-search';
-import { useLoadingState } from './utils/use-loading-state';
+import { useCallback } from 'react';
 import { useErrorHandling } from './use-error-handling';
+import { useLoadingState } from './utils/use-loading-state';
+import { useSearch } from './utils/use-search';
 
 type UsePageStateProps = {
   initialSearchValue?: string;
@@ -17,14 +17,14 @@ type PageState = {
   handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   clearSearch: () => void;
   setSearch: (value: string) => void;
-  
+
   // Loading state
   loading: boolean;
   setLoading: (loading: boolean) => void;
   startLoading: () => void;
   stopLoading: () => void;
   withLoading: <T>(asyncFn: () => Promise<T>) => Promise<T>;
-  
+
   // Error state
   error: string | null;
   isError: boolean;
@@ -64,14 +64,14 @@ export function usePageState({
     handleSearchChange: search.handleSearchChange,
     clearSearch: search.clearSearch,
     setSearch: search.setSearch,
-    
+
     // Loading
     loading: loadingState.loading,
     setLoading: loadingState.setLoading,
     startLoading: loadingState.startLoading,
     stopLoading: loadingState.stopLoading,
     withLoading: loadingState.withLoading,
-    
+
     // Error
     error: errorHandling.error,
     isError: errorHandling.isError,

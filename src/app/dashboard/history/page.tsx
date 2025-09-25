@@ -2,10 +2,9 @@
 
 import { History } from 'lucide-react';
 import { useState } from 'react';
-
+import { PageHeader } from '@/components/dashboard/common/page-header';
 import SalesFilter from '@/components/dashboard/sales/sales-filter';
 import SalesTable from '@/components/dashboard/sales/sales-table';
-import { PageHeader } from '@/components/dashboard/common/page-header';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import type { SalesDateRange, SalesFilters, TimeRange } from '@/hooks/use-sales-data';
@@ -32,9 +31,9 @@ export default function HistoryPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <PageHeader
+        description="Προβολή και φιλτράρισμα του ιστορικού πωλήσεων"
         icon={History}
         title="Ιστορικό Πωλήσεων"
-        description="Προβολή και φιλτράρισμα του ιστορικού πωλήσεων"
       />
 
       <div className="space-y-5 sm:space-y-6">

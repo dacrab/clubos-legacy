@@ -1,9 +1,8 @@
 'use client';
 
 import { Calculator } from 'lucide-react';
-
-import { RegisterClosingsList } from '@/components/dashboard/register/register-closings-list';
 import { PageHeader } from '@/components/dashboard/common/page-header';
+import { RegisterClosingsList } from '@/components/dashboard/register/register-closings-list';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -19,9 +18,9 @@ export default function RegisterClosingsPage() {
   return (
     <div className="w-full max-w-screen space-y-4 px-2 sm:px-4">
       <PageHeader
+        description="Διαχείριση και προβολή των κλεισιμάτων ταμείου"
         icon={Calculator}
         title="Κλεισίματα Ταμείου"
-        description="Διαχείριση και προβολή των κλεισιμάτων ταμείου"
       />
       <RegisterClosingsList />
     </div>

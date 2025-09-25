@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
-  
+
   if (userError || !user) {
     redirect('/');
   }

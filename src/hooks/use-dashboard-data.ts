@@ -4,7 +4,6 @@ import { LOW_STOCK_THRESHOLD, UNLIMITED_STOCK } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
 import { fetchProductsForUI } from '@/lib/utils/products';
 import type { Database } from '@/types/supabase';
-import type { ProductWithCategory } from '@/types/database';
 import { useErrorHandling } from './use-error-handling';
 
 type Product = Database['public']['Tables']['products']['Row'] & {
@@ -43,15 +42,12 @@ const fetchProducts = async (isAdmin: boolean): Promise<Product[]> => {
 
 const fetchUsers = async (): Promise<User[]> => {
   const supabase = createClientSupabase();
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .order('username');
-  
+  const { data, error } = await supabase.from('users').select('*').order('username');
+
   if (error) {
     throw new Error(error.message);
   }
-  
+
   return (data as User[]) || [];
 };
 
@@ -79,7 +75,6 @@ export function useDashboardData({
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
   const { error, handleError, reset } = useErrorHandling({
     showToasts: enableErrorToasts,
     defaultErrorMessage: 'Σφάλμα φόρτωσης δεδομένων',
@@ -91,15 +86,11 @@ export function useDashboardData({
     error: productsError,
     isLoading: isLoadingProducts,
     mutate: mutateProducts,
-  } = useSWR(
-    autoFetch ? ['products', isAdmin] : null,
-    () => fetchProducts(isAdmin),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      refreshInterval: 30_000,
-    }
-  );
+  } = useSWR(autoFetch ? ['products', isAdmin] : null, () => fetchProducts(isAdmin), {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    refreshInterval: 30_000,
+  });
 
   // Use SWR for users (admin only)
   const {
@@ -107,15 +98,11 @@ export function useDashboardData({
     error: usersError,
     isLoading: isLoadingUsers,
     mutate: mutateUsers,
-  } = useSWR(
-    autoFetch && isAdmin ? 'users' : null,
-    fetchUsers,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      refreshInterval: 60_000,
-    }
-  );
+  } = useSWR(autoFetch && isAdmin ? 'users' : null, fetchUsers, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    refreshInterval: 60_000,
+  });
 
   // Use SWR for low stock products (admin only)
   const {
@@ -123,15 +110,11 @@ export function useDashboardData({
     error: lowStockError,
     isLoading: isLoadingLowStock,
     mutate: mutateLowStock,
-  } = useSWR(
-    autoFetch && isAdmin ? 'low-stock' : null,
-    fetchLowStockProducts,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      refreshInterval: 60_000,
-    }
-  );
+  } = useSWR(autoFetch && isAdmin ? 'low-stock' : null, fetchLowStockProducts, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    refreshInterval: 60_000,
+  });
 
   // Update local state when SWR data changes
   useEffect(() => {
@@ -154,9 +137,9 @@ export function useDashboardData({
 
   // Handle errors
   useEffect(() => {
-    const error = productsError || usersError || lowStockError;
-    if (error) {
-      handleError(error);
+    const combinedError = productsError || usersError || lowStockError;
+    if (combinedError) {
+      handleError(combinedError);
     }
   }, [productsError, usersError, lowStockError, handleError]);
 

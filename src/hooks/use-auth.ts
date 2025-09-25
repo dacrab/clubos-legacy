@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { ALLOWED_USER_ROLES, DEFAULT_USER_ROLE } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
@@ -57,6 +57,19 @@ export function useAuth({
     setLoading(true);
     reset();
 
+    // Small helpers to reduce complexity inside this function
+    const redirectIfEnabled = (path: string) => {
+      if (redirectOnUnauthorized) {
+        router.push(path);
+      }
+    };
+
+    const assertNoProfileError = (err: unknown) => {
+      if (err) {
+        throw new Error('Σφάλμα φόρτωσης προφίλ χρήστη');
+      }
+    };
+
     try {
       const {
         data: { user: currentUser },
@@ -64,9 +77,7 @@ export function useAuth({
       } = await supabase.auth.getUser();
 
       if (userError || !currentUser) {
-        if (redirectOnUnauthorized) {
-          router.push(redirectPath);
-        }
+        redirectIfEnabled(redirectPath);
         return;
       }
 
@@ -76,17 +87,13 @@ export function useAuth({
         .eq('id', currentUser.id)
         .single();
 
-      if (profileError) {
-        throw new Error('Σφάλμα φόρτωσης προφίλ χρήστη');
-      }
+      assertNoProfileError(profileError);
 
       const role = (userProfile?.role as UserRole) || DEFAULT_USER_ROLE;
 
       // Check admin requirement
       if (requireAdmin && !ALLOWED_USER_ROLES.includes(role)) {
-        if (redirectOnUnauthorized) {
-          router.push('/dashboard');
-        }
+        redirectIfEnabled('/dashboard');
         return;
       }
 

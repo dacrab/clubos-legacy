@@ -6,12 +6,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "ultracite lint .",
+    "lint": "ultracite lint . && knip",
     "format": "ultracite format .",
     "start": "next start",
     "db:restart": "supabase stop && supabase start",
-    "db:reset": "supabase db reset && bunx tsx scripts/seed.ts",
-    "knip": "knip"
+    "db:reset": "supabase db reset && bunx tsx scripts/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -53,6 +52,7 @@
     "@types/node": "^24.5.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "dotenv": "^16.4.5",
     "knip": "^5.63.1",
     "postcss": "^8.5.6",
     "postcss-load-config": "^6.0.1",

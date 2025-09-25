@@ -71,9 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       updated_at: userData.updated_at,
     };
 
-    return (
-      <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>
-    );
+    return <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>;
   } catch (_error) {
     return redirect('/');
   }

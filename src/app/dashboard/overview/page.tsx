@@ -1,10 +1,10 @@
 'use client';
 
 import { Package } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { PageHeader } from '@/components/dashboard/common/page-header';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { useAuth } from '@/hooks/use-auth';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { LOW_STOCK_THRESHOLD, UNLIMITED_STOCK } from '@/lib/constants';
 import { cn } from '@/lib/utils/format';
 
@@ -40,9 +40,9 @@ export default function OverviewPage() {
   return (
     <div className="space-y-4">
       <PageHeader
+        description="Προβολή όλων των διαθέσιμων προϊόντων"
         icon={Package}
         title="Διαθέσιμοι Κωδικοί"
-        description="Προβολή όλων των διαθέσιμων προϊόντων"
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((code) => (
