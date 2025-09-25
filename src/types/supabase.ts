@@ -118,33 +118,30 @@ export type Database = {
           session_id: string;
           created_at: string;
           created_by: string;
-          payment_method: Database['public']['Enums']['payment_method'];
           subtotal: number;
           discount_amount: number;
           total_amount: number;
-          card_discounts_applied: number;
+          coupon_count: number;
         };
         Insert: {
           id?: string;
           session_id: string;
           created_at?: string;
           created_by: string;
-          payment_method: Database['public']['Enums']['payment_method'];
           subtotal: number;
           discount_amount?: number;
           total_amount: number;
-          card_discounts_applied?: number;
+          coupon_count?: number;
         };
         Update: {
           id?: string;
           session_id?: string;
           created_at?: string;
           created_by?: string;
-          payment_method?: Database['public']['Enums']['payment_method'];
           subtotal?: number;
           discount_amount?: number;
           total_amount?: number;
-          card_discounts_applied?: number;
+          coupon_count?: number;
         };
         Relationships: [];
       };

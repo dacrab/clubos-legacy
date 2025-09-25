@@ -5,12 +5,8 @@ import { Suspense, useEffect, useState } from 'react';
 import DashboardProvider from '@/components/providers/dashboard-provider';
 import { ErrorBoundary } from '@/components/providers/error-boundary';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
-import { useSalesData } from '@/hooks/use-sales-data';
 import type { UserRole } from '@/lib/constants';
 import { createClientSupabase } from '@/lib/supabase/client';
-import AdminDashboard from '../dashboards/admin-dashboard';
-import EmployeeDashboard from '../dashboards/employee-dashboard';
-import SecretariatDashboard from '../dashboards/secretariat-dashboard';
 import AnimatedContent from './animated-content';
 import Header from './header';
 import MobileSidebar from './mobile-sidebar';
@@ -31,10 +27,11 @@ type DashboardLayoutClientProps = {
 
 const ROUTE_CHANGE_LOADING_DURATION = 500;
 
-export default function DashboardLayoutClient({ profile }: DashboardLayoutClientProps) {
+export default function DashboardLayoutClient({
+  profile,
+  children,
+}: DashboardLayoutClientProps & { children?: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
-
-  const { sales: recentSales, lowStock } = useSalesData();
   const [user, setUser] = useState<User | null>(null);
 
   // Fetch current user for header (client-side)
@@ -83,15 +80,9 @@ export default function DashboardLayoutClient({ profile }: DashboardLayoutClient
                 </div>
               )}
 
-              <main className="flex-1 overflow-auto p-4 pb-16 sm:p-6 lg:p-8">
+              <main className="flex-1 overflow-auto p-4 pb-16 sm:p-6 lg:ml-72 lg:p-8">
                 <Header profile={profile} user={user as unknown as User} />
-                <AnimatedContent>
-                  {profile.role === 'admin' && (
-                    <AdminDashboard lowStock={lowStock} recentSales={recentSales} />
-                  )}
-                  {profile.role === 'staff' && <EmployeeDashboard />}
-                  {profile.role !== 'admin' && profile.role !== 'staff' && <SecretariatDashboard />}
-                </AnimatedContent>
+                <AnimatedContent>{children}</AnimatedContent>
                 <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background lg:hidden">
                   <MobileSidebar role={profile.role} />
                 </div>

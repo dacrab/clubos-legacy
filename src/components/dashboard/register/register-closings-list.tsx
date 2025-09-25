@@ -105,29 +105,19 @@ export function RegisterClosingsList() {
     mutate,
   } = useRegisterSessions();
 
-  // Permission check
+  // Permission check (simplified): require authenticated user; admins get extra UI
   useEffect(() => {
     const checkPermissions = async () => {
       try {
-        const { data, error: rpcError } = await supabase.rpc('has_permission', {
-          p_permission: 'registers:read',
-        });
-
-        if (rpcError) {
-          throw rpcError;
-        }
-
-        if (!data) {
-          setError(REGISTER_MESSAGES.NO_PERMISSION);
+        const { data, error: userError } = await supabase.auth.getUser();
+        if (userError || !data.user) {
+          setError(REGISTER_MESSAGES.NOT_LOGGED_IN);
           setIsAuthorized(false);
-          // Optional: redirect to a more appropriate page
-          // router.push('/dashboard');
           return;
         }
-
         setIsAuthorized(true);
-      } catch (err: unknown) {
-        setError((err as Error).message || REGISTER_MESSAGES.FETCH_ERROR);
+      } catch (_err) {
+        setError(REGISTER_MESSAGES.FETCH_ERROR);
         setIsAuthorized(false);
       }
     };

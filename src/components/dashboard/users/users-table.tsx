@@ -255,7 +255,8 @@ const ESTIMATED_MOBILE_ROW_HEIGHT = 90;
 
 export default function UsersTable({ users: initialUsers }: UsersTableProps) {
   const router = useRouter();
-  const [users] = useState(initialUsers);
+  // Use props directly so table updates when data loads/refetches
+  const users = initialUsers;
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);

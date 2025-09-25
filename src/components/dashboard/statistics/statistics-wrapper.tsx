@@ -17,8 +17,8 @@ type StatisticsWrapperProps = {
 
 export default function StatisticsWrapper({ initialSales }: StatisticsWrapperProps) {
   const [dateRange, setDateRange] = useState<{
-    startDate: string;
-    endDate: string;
+    startDate: string | null;
+    endDate: string | null;
   } | null>(null);
 
   const filteredSales = useMemo((): SaleLike[] => {
@@ -39,9 +39,12 @@ export default function StatisticsWrapper({ initialSales }: StatisticsWrapperPro
           </div>
         </div>
         <StatisticsFilter
-          onFilterChange={(range) => {
-            setDateRange(range);
-          }}
+          onFilterChange={(range) =>
+            setDateRange({
+              startDate: range.startDate || null,
+              endDate: range.endDate || null,
+            })
+          }
         />
       </div>
 

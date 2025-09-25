@@ -33,10 +33,10 @@ export type Order = {
   session_id: string;
   created_at: string;
   created_by: string;
-  payment_method: string;
   subtotal: number;
   discount_amount: number;
   total_amount: number;
+  coupon_count?: number;
   card_discounts_applied: number;
 };
 

@@ -31,8 +31,8 @@ export function useRegisterSessions(options?: SWRConfiguration) {
       *,
       register_closings:register_closings(*),
       orders:orders(
-        id, created_at, payment_method, created_by,
-        subtotal, discount_amount, total_amount, card_discounts_applied,
+        id, created_at, created_by,
+        subtotal, discount_amount, total_amount, coupon_count,
         order_items:order_items(*, product:products(*, category:categories(*)))
       )
     `);

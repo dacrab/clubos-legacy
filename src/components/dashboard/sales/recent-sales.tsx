@@ -35,7 +35,10 @@ type OrderCardHeaderProps = {
 
 function OrderCardHeader({ order, expanded, onToggle }: OrderCardHeaderProps) {
   const treatsCount = order.order_items.reduce((n, i) => n + (i.is_treat ? i.quantity : 0), 0);
-  const coupons = (order as { card_discounts_applied?: number }).card_discounts_applied || 0;
+  const coupons =
+    (order as { coupon_count?: number; card_discounts_applied?: number }).coupon_count ||
+    (order as { card_discounts_applied?: number }).card_discounts_applied ||
+    0;
   const { grossSubtotal, finalAmount } = computeOrderTotalsFromItems(
     order.order_items.map((i) => ({
       is_treat: i.is_treat,
@@ -171,7 +174,11 @@ function RecentSalesContent({
 
 export default function RecentSales() {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
-  const { sessions, isLoading, mutate } = useRegisterSessions();
+  // Disable auto-updating: prevent focus/reconnect revalidation
+  const { sessions, isLoading, mutate } = useRegisterSessions({
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
   // Removed useSaleActions - not needed in this component
 
   const orders = useMemo(() => {
@@ -191,7 +198,7 @@ export default function RecentSales() {
   };
 
   const handleUpdateSale = (_orderItem: OrderItem) => {
-    // Placeholder for update logic
+    // Manual refresh only when explicitly triggered by an edit
     mutate();
   };
 

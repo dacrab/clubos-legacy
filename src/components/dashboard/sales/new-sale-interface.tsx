@@ -1,8 +1,8 @@
 'use client';
 
+import { randomUUID as uuidv4 } from 'node:crypto';
 import { ChevronLeft, Gift, Menu, Search, ShoppingCart, Tag, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -597,9 +597,12 @@ export default function NewSaleInterface({ open, onOpenChange }: NewSaleInterfac
     [setSelectedSubcategory, isMobile]
   );
 
-  const handleCashPayment = useCallback(() => {
-    handlePayment('cash');
-  }, [handlePayment]);
+  const handleCashPayment = useCallback(async () => {
+    const ok = await handlePayment('cash');
+    if (ok) {
+      onOpenChange(false);
+    }
+  }, [handlePayment, onOpenChange]);
 
   // Render mobile view
   const renderMobileView = () => {

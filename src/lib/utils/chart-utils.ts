@@ -71,7 +71,7 @@ export function filterSalesByDateRange(
   // First filter out deleted sales
   const activeSales = sales.filter((sale) => !sale.is_deleted);
 
-  if (!(dateRange?.startDate && dateRange.endDate)) {
+  if (!(dateRange?.startDate && dateRange?.endDate)) {
     return activeSales;
   }
 
@@ -92,7 +92,7 @@ export function aggregateSalesByDate(
   sales: SaleLike[],
   valueKey: 'quantity' | 'total_price',
   dataKey?: string
-): Array<{ date: string; [key: string]: number | string | undefined }> {
+): Array<{ date: string;[key: string]: number | string | undefined }> {
   // Filter out deleted sales
   const activeSales = sales.filter((sale) => !sale.is_deleted);
 

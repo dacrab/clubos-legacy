@@ -1,18 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import AdminDashboard from '@/components/dashboard/dashboards/admin-dashboard';
-import EmployeeDashboard from '@/components/dashboard/dashboards/employee-dashboard';
-import type { UserRole } from '@/lib/constants';
 import { env } from '@/lib/env';
-import { getProductsQuery } from '@/lib/utils/products';
 import type { Database } from '@/types/supabase';
-
-type ProductRow = Database['public']['Tables']['products']['Row'] & {
-  category?: Database['public']['Tables']['categories']['Row'];
-};
-
-type UserData = { role: UserRole };
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -51,30 +41,6 @@ export default async function DashboardPage() {
     redirect('/');
   }
 
-  // If admin, fetch low stock items with category details
-  if ((userData as UserData).role === 'admin') {
-    const { data: lowStock = [] } = await getProductsQuery(
-      supabase as unknown as Parameters<typeof getProductsQuery>[0],
-      {
-        onlyAvailableForNonAdmin: false,
-      }
-    )
-      .lt('stock_quantity', 10)
-      .neq('stock_quantity', -1)
-      .order('stock_quantity', { ascending: true })
-      .limit(10);
-
-    return (
-      <AdminDashboard
-        lowStock={
-          (lowStock as unknown as ProductRow[]).map((p) => ({
-            ...p,
-          })) as ProductRow[]
-        }
-        recentSales={[]}
-      />
-    );
-  }
-
-  return <EmployeeDashboard />;
+  // Default dashboard page content (could be a simple overview or redirect to overview route)
+  return <div />;
 }

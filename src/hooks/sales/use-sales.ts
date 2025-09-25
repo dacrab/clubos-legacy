@@ -32,7 +32,6 @@ type CreateOrderParams = {
   registerSessionId: string;
   orderTotal: number;
   cardDiscountCount: number;
-  paymentMethod: keyof typeof PAYMENT_METHOD_LABELS;
 };
 
 async function getUser(supabase: SupabaseClient<Database>) {
@@ -75,7 +74,6 @@ async function createOrder({
   registerSessionId,
   orderTotal,
   cardDiscountCount,
-  paymentMethod,
 }: CreateOrderParams) {
   const user = await getUser(supabase);
   const finalAmount = Math.max(0, orderTotal - cardDiscountCount * CARD_DISCOUNT);
@@ -87,8 +85,7 @@ async function createOrder({
       subtotal: orderTotal,
       discount_amount: orderTotal - finalAmount,
       total_amount: finalAmount,
-      card_discounts_applied: cardDiscountCount,
-      payment_method: paymentMethod,
+      coupon_count: cardDiscountCount,
       created_by: user.id,
     })
     .select('id')
@@ -218,11 +215,11 @@ export function useSales() {
       filtered = selectedSubcategory
         ? filtered.filter((code) => code.category?.name === selectedSubcategory)
         : filtered.filter(
-            (code) =>
-              code.category?.name === selectedCategory ||
-              (categoryId &&
-                categoriesMap[categoryId]?.some((subCat) => subCat.name === code.category?.name))
-          );
+          (code) =>
+            code.category?.name === selectedCategory ||
+            (categoryId &&
+              categoriesMap[categoryId]?.some((subCat) => subCat.name === code.category?.name))
+        );
     }
 
     setFilteredCodes(filtered);
@@ -253,10 +250,10 @@ export function useSales() {
   }, []);
 
   const handlePayment = useCallback(
-    async (paymentMethod: keyof typeof PAYMENT_METHOD_LABELS) => {
+    async (paymentMethod: keyof typeof PAYMENT_METHOD_LABELS): Promise<boolean> => {
       if (!orderItems.length) {
         toast.error(SALES_MESSAGES.NO_ITEMS);
-        return;
+        return false;
       }
 
       setLoading(true);
@@ -276,7 +273,6 @@ export function useSales() {
           registerSessionId: registerSession.id,
           orderTotal,
           cardDiscountCount,
-          paymentMethod,
         });
 
         for (const item of orderItems) {
@@ -292,10 +288,12 @@ export function useSales() {
         router.refresh();
         setOrderItems([]);
         setCardDiscountCount(0);
+        return true;
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : API_ERROR_MESSAGES.SERVER_ERROR;
         toast.error(errorMessage);
+        return false;
       } finally {
         setLoading(false);
       }

@@ -78,19 +78,18 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<SaleLike[]> => {
   let startDate: string | undefined;
   let endDate: string | undefined;
   if (filters?.dateRange?.startDate && filters.dateRange.endDate) {
-    startDate = `${filters.dateRange.startDate}T${
-      filters.timeRange?.startTime ? `${filters.timeRange.startTime}:00` : '00:00:00'
-    }`;
-    endDate = `${filters.dateRange.endDate}T${
-      filters.timeRange?.endTime ? `${filters.timeRange.endTime}:00` : '23:59:59'
-    }`;
+    startDate = `${filters.dateRange.startDate}T${filters.timeRange?.startTime ? `${filters.timeRange.startTime}:00` : '00:00:00'
+      }`;
+    endDate = `${filters.dateRange.endDate}T${filters.timeRange?.endTime ? `${filters.timeRange.endTime}:00` : '23:59:59'
+      }`;
   }
 
   let query = supabase
     .from('orders')
     .select(
       `
-      id, created_at, created_by, payment_method, card_discounts_applied,
+      id, created_at, created_by,
+      subtotal, discount_amount, total_amount, coupon_count,
       order_items:order_items(
         id, order_id, quantity, unit_price, line_total, is_treat, is_deleted,
         product:products(id, name, category:categories(id, name))
@@ -130,7 +129,7 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<SaleLike[]> => {
       unit_price: item.unit_price,
       total_price: item.line_total,
       is_treat: item.is_treat,
-      payment_method: order.payment_method,
+      payment_method: 'cash',
       sold_by: order.created_by,
       created_at: order.created_at,
       // soft-deletion flags mapped
@@ -142,13 +141,13 @@ const fetchSalesData = async (filters?: SalesFilters): Promise<SaleLike[]> => {
         name: item.product.name,
         category: (item.product as unknown as { category?: { name: string } }).category
           ? {
-              name: (item.product as unknown as { category: { name: string } }).category.name,
-            }
+            name: (item.product as unknown as { category: { name: string } }).category.name,
+          }
           : null,
       },
       order: {
         id: order.id,
-        card_discounts_applied: order.card_discounts_applied,
+        card_discounts_applied: (order as unknown as { coupon_count?: number }).coupon_count || 0,
       },
     }));
   });

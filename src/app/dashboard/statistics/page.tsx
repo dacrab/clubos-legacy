@@ -56,7 +56,8 @@ export default async function StatisticsPage() {
   const { data: ordersData, error: salesError } = await supabase
     .from('orders')
     .select(`
-      id, created_at, created_by, payment_method, card_discounts_applied,
+      id, created_at, created_by,
+      subtotal, discount_amount, total_amount, coupon_count,
       order_items:order_items(
         id, order_id, quantity, unit_price, line_total, is_treat, is_deleted,
         product:products(id, name, image_url, category:categories(id, name))
@@ -89,7 +90,7 @@ export default async function StatisticsPage() {
               unit_price: item.unit_price,
               total_price: item.line_total,
               is_treat: item.is_treat,
-              payment_method: order.payment_method,
+              payment_method: 'cash',
               sold_by: order.created_by,
               created_at: order.created_at,
               is_deleted: item.is_deleted,
@@ -97,14 +98,15 @@ export default async function StatisticsPage() {
                 name: item.product.name,
                 category: (item.product as unknown as { category?: { name: string } }).category
                   ? {
-                      name: (item.product as unknown as { category: { name: string } }).category
-                        .name,
-                    }
+                    name: (item.product as unknown as { category: { name: string } }).category
+                      .name,
+                  }
                   : null,
               },
               order: {
                 id: order.id,
-                card_discounts_applied: order.card_discounts_applied,
+                card_discounts_applied:
+                  (order as unknown as { coupon_count?: number }).coupon_count || 0,
               },
             }))
           ) as unknown as SaleLike[]

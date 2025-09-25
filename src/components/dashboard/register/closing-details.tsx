@@ -172,7 +172,9 @@ const processOrderItems = (acc: TransactionTotals, order: OrderWithItems) => {
     }
   }
   acc.couponCount +=
-    (order as unknown as { card_discounts_applied?: number }).card_discounts_applied || 0;
+    (order as unknown as { coupon_count?: number; card_discounts_applied?: number }).coupon_count ||
+    (order as unknown as { card_discounts_applied?: number }).card_discounts_applied ||
+    0;
 };
 
 const processLegacySales = (acc: TransactionTotals, order: OrderWithSales) => {
@@ -226,17 +228,32 @@ export default function ClosingDetails({ session, closing, orders = [] }: Closin
     return a.isDeleted ? 1 : -1;
   });
 
+  // Aggregates for compact footer in the products table
+  const totalQuantity = sortedProducts.reduce((sum, p) => sum + (p.isDeleted ? 0 : p.quantity), 0);
+
   return (
     <div>
       <h3 className="mb-4 font-semibold text-lg">Ανάλυση Πωλήσεων</h3>
-      <ProductSummaryTable products={sortedProducts} />
+      <ProductSummaryTable
+        products={sortedProducts}
+        totalQuantity={totalQuantity}
+        totals={totals}
+      />
       <TransactionSummaryTable totals={totals} />
       <NotesSection closing={closing} session={session} />
     </div>
   );
 }
 
-const ProductSummaryTable = ({ products }: { products: ProductSummary[] }) => (
+const ProductSummaryTable = ({
+  products,
+  totalQuantity,
+  totals,
+}: {
+  products: ProductSummary[];
+  totalQuantity: number;
+  totals: TransactionTotals;
+}) => (
   <Table>
     <TableHeader>
       <TableRow>
@@ -258,6 +275,14 @@ const ProductSummaryTable = ({ products }: { products: ProductSummary[] }) => (
         </TableRow>
       ))}
     </TableBody>
+    <TableFooter>
+      <TableRow>
+        <TableCell>Σύνολα</TableCell>
+        <TableCell className="text-right">{totalQuantity}</TableCell>
+        <TableCell className="text-right">{totals.treats || '—'}</TableCell>
+        <TableCell className="text-right">{formatPrice(totals.totalBeforeDiscounts)}</TableCell>
+      </TableRow>
+    </TableFooter>
   </Table>
 );
 
