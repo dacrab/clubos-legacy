@@ -1,15 +1,35 @@
-import type { SaleWithDetails } from '@/types/sales';
 import { CARD_DISCOUNT, STATISTICS } from '@/lib/constants';
+import type { Database } from '@/types/supabase';
+export type SaleLike = Database['public']['Tables']['sales']['Row'] & {
+  code?: { name: string; category?: { name: string } | null } | null;
+  order?: { id: string; card_discounts_applied: number } | null;
+};
 
 // Types
-export type ChartDataItem = {
+type ChartDataItem = {
   name: string;
   value: number;
   total: number;
   percentage?: string;
 };
 
+export type GroupedSale = {
+  id: string;
+  created_at: string;
+  total: number;
+  items: SaleLike[];
+  treats_count: number;
+  card_discount_count: number; // kept for UI, derived from order.card_discounts_applied
+  final_amount: number;
+  is_card_payment: boolean;
+};
+
 // Constants
+const HOURS_IN_DAY = 23;
+const MINUTES_IN_HOUR = 59;
+const SECONDS_IN_MINUTE = 59;
+const MILLISECONDS_IN_SECOND = 999;
+
 export const CHART_STYLES = {
   colors: {
     primary: 'hsl(var(--primary))',
@@ -45,24 +65,21 @@ export const MEDAL_COLORS = {
  * Filters sales by date range
  */
 export function filterSalesByDateRange(
-  sales: SaleWithDetails[],
+  sales: SaleLike[],
   dateRange: { startDate: string | null; endDate: string | null } | null
-): SaleWithDetails[] {
-  // No need to filter deleted sales - Drizzle only returns active records
-  const activeSales = sales;
+): SaleLike[] {
+  // First filter out deleted sales
+  const activeSales = sales.filter((sale) => !sale.is_deleted);
 
-  if (!dateRange?.startDate || !dateRange?.endDate) {
+  if (!(dateRange?.startDate && dateRange?.endDate)) {
     return activeSales;
   }
 
-  return activeSales.filter(sale => {
-    const saleDate = new Date(sale.createdAt);
-    if (!dateRange.startDate || !dateRange.endDate) {
-      return true;
-    }
-    const startDate = new Date(dateRange.startDate);
-    const endDate = new Date(dateRange.endDate);
-    endDate.setHours(23, 59, 59, 999); // Include the entire end day
+  return activeSales.filter((sale) => {
+    const saleDate = new Date(sale.created_at);
+    const startDate = new Date(dateRange.startDate ?? '');
+    const endDate = new Date(dateRange.endDate ?? '');
+    endDate.setHours(HOURS_IN_DAY, MINUTES_IN_HOUR, SECONDS_IN_MINUTE, MILLISECONDS_IN_SECOND); // Include the entire end day
 
     return saleDate >= startDate && saleDate <= endDate;
   });
@@ -72,20 +89,21 @@ export function filterSalesByDateRange(
  * Groups sales by date and aggregates quantities
  */
 export function aggregateSalesByDate(
-  sales: SaleWithDetails[],
-  valueKey: 'quantity' | 'totalPrice'
-): Array<{ date: string; revenue?: number; quantity?: number }> {
-  // No need to filter deleted sales - Drizzle only returns active records
-  const activeSales = sales;
+  sales: SaleLike[],
+  valueKey: 'quantity' | 'total_price',
+  dataKey?: string
+): Array<{ date: string;[key: string]: number | string | undefined }> {
+  // Filter out deleted sales
+  const activeSales = sales.filter((sale) => !sale.is_deleted);
 
   const aggregated = activeSales.reduce(
     (acc, sale) => {
-      const date = new Date(sale.createdAt).toLocaleDateString('el');
+      const date = new Date(sale.created_at).toLocaleDateString('el');
       // Only include non-treat sales in the aggregation
-      if (!sale.isTreat) {
+      if (!sale.is_treat) {
         // Use exact precision for monetary values
-        if (valueKey === 'totalPrice') {
-          acc[date] = +((acc[date] || 0) + parseFloat(sale.totalPrice)).toFixed(2);
+        if (valueKey === 'total_price') {
+          acc[date] = (acc[date] || 0) + sale[valueKey];
         } else {
           acc[date] = (acc[date] || 0) + sale[valueKey];
         }
@@ -98,115 +116,64 @@ export function aggregateSalesByDate(
   return Object.entries(aggregated)
     .map(([date, value]) => ({
       date,
-      [valueKey === 'totalPrice' ? 'revenue' : 'quantity']: value,
+      [dataKey || (valueKey === 'total_price' ? 'revenue' : 'quantity')]: value,
     }))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(-STATISTICS.DEFAULT_DAYS_TO_SHOW);
 }
 
 /**
- * Groups sales by product and aggregates quantities
- */
-export function aggregateSalesByProduct(
-  sales: SaleWithDetails[],
-  topCount: number = STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT,
-  showAll: boolean = false
-): ChartDataItem[] {
-  // No need to filter deleted sales - Drizzle only returns active records
-  const activeSales = sales;
-
-  // Group sales by product, excluding treats
-  const productSales = activeSales.reduce(
-    (acc, sale) => {
-      if (!sale.product?.name || sale.isTreat) {
-        return acc;
-      }
-
-      const productName = sale.product.name;
-      if (!acc[productName]) {
-        acc[productName] = { name: productName, value: 0, total: 0 };
-      }
-      acc[productName].value += sale.quantity;
-      acc[productName].total += parseFloat(sale.totalPrice);
-      return acc;
-    },
-    {} as Record<string, ChartDataItem>
-  );
-
-  // Sort and slice data
-  const sortedData = (Object.values(productSales) as ChartDataItem[])
-    .sort((a, b) => b.value - a.value)
-    .slice(0, showAll ? undefined : topCount);
-
-  // Calculate percentages
-  const total = sortedData.reduce((sum, item) => sum + item.value, 0);
-  return sortedData.map(item => ({
-    ...item,
-    percentage: ((item.value / total) * 100).toFixed(1),
-  }));
-}
-
-/**
  * Aggregates sales by category and aggregates quantities
  */
-export function aggregateSalesByCategory(
-  sales: SaleWithDetails[],
-  categoryName: string
-): ChartDataItem[] {
+export function aggregateSalesByCategory(sales: SaleLike[], categoryName: string): ChartDataItem[] {
   if (!categoryName) {
     return [];
   }
 
-  // No need to filter deleted sales - Drizzle only returns active records
-  const activeSales = sales;
+  // Filter out deleted sales
+  const activeSales = sales.filter((sale) => !sale.is_deleted);
 
   const salesByItem = activeSales.reduce(
     (acc, sale) => {
-      if (sale.product?.category?.name === categoryName && !sale.isTreat) {
-        const itemName = sale.product.name;
-        if (!acc[itemName]) {
-          acc[itemName] = { name: itemName, value: 0, total: 0 };
-        }
+      if (sale.code?.category && sale.code.category.name === categoryName && !sale.is_treat) {
+        const itemName = sale.code.name;
+        acc[itemName] = acc[itemName] ?? { name: itemName, value: 0, total: 0 };
         acc[itemName].value += sale.quantity;
-        acc[itemName].total += parseFloat(sale.totalPrice);
+        acc[itemName].total += sale.total_price;
       }
       return acc;
     },
     {} as Record<string, ChartDataItem>
   );
 
-  return (Object.values(salesByItem) as ChartDataItem[])
+  return Object.values(salesByItem)
     .sort((a, b) => b.value - a.value)
-    .slice(0, STATISTICS.DEFAULT_TOP_PRODUCTS_COUNT);
+    .slice(0, STATISTICS.DEFAULT_TOP_CODES_COUNT);
 }
 
 /**
  * Calculates various sales statistics consistent with RegisterClosingsList and ClosingDetails
  */
-export function calculateSalesStats(sales: SaleWithDetails[]) {
-  // No need to filter deleted sales - Drizzle only returns active records
-  const activeSales = sales;
+export function calculateSalesStats(sales: SaleLike[]) {
+  // Filter out deleted sales
+  const activeSales = sales.filter((sale) => !sale.is_deleted);
 
   // Group sales by payment method and treat status
-  const nonTreatSales = activeSales.filter(s => !s.isTreat);
-  const treatSales = activeSales.filter(s => s.isTreat);
+  const nonTreatSales = activeSales.filter((s) => !s.is_treat);
+  const treatSales = activeSales.filter((s) => s.is_treat);
 
   // Group sales by payment type based on order's card discount count
-  const cashSales = activeSales.filter(
-    s => !s.isTreat && (!s.order?.cardDiscountCount || s.order.cardDiscountCount === 0)
-  );
-  const cardSales = activeSales.filter(
-    s => !s.isTreat && s.order?.cardDiscountCount && s.order.cardDiscountCount > 0
-  );
+  const cashSales = activeSales.filter((s) => !(s.is_treat || s.order?.card_discounts_applied));
+  const cardSales = activeSales.filter((s) => !s.is_treat && s.order?.card_discounts_applied);
 
   // Calculate card discount based on order data
   // We need to count each order's card_discount_count only once to avoid duplicates
-  const uniqueOrders = Array.from(new Set(cardSales.map(s => s.order?.id)))
-    .map(id => cardSales.find(s => s.order?.id === id)?.order)
-    .filter(Boolean);
+  const uniqueOrders = Array.from(new Set(cardSales.map((s) => s.order?.id)))
+    .map((id) => cardSales.find((s) => s.order?.id === id)?.order)
+    .filter((o): o is NonNullable<SaleLike['order']> => Boolean(o));
 
   const cardDiscountCount = uniqueOrders.reduce(
-    (sum, order) => sum + (order?.cardDiscountCount || 0),
+    (sum, order) => sum + (order.card_discounts_applied || 0),
     0
   );
   // Use exact precision for card discount amount
@@ -214,18 +181,16 @@ export function calculateSalesStats(sales: SaleWithDetails[]) {
 
   // Calculate treat value (actual monetary value of treats) with exact precision
   const treatsAmount = +treatSales
-    .reduce((sum, sale) => sum + +(parseFloat(sale.unitPrice) * sale.quantity).toFixed(2), 0)
+    .reduce((sum, sale) => sum + +(sale.unit_price * sale.quantity).toFixed(2), 0)
     .toFixed(2);
 
   // Calculate final amounts after discounts with exact precision
   const totalBeforeDiscounts = +nonTreatSales
-    .reduce((sum, sale) => sum + parseFloat(sale.totalPrice), 0)
+    .reduce((sum, sale) => sum + sale.total_price, 0)
     .toFixed(2);
 
   // Calculate cash and card revenues with exact precision
-  const cashRevenue = +cashSales
-    .reduce((sum, sale) => sum + parseFloat(sale.totalPrice), 0)
-    .toFixed(2);
+  const cashRevenue = +cashSales.reduce((sum, sale) => sum + sale.total_price, 0).toFixed(2);
 
   // We need to pro-rate the discount across all items in an order
   // First, group card sales by order
@@ -238,22 +203,20 @@ export function calculateSalesStats(sales: SaleWithDetails[]) {
       acc[orderId].push(sale);
       return acc;
     },
-    {} as Record<string, SaleWithDetails[]>
+    {} as Record<string, SaleLike[]>
   );
 
   // Then calculate the revenue for each order with proper discount distribution and exact precision
-  const cardRevenue = +(Object.values(salesByOrder) as SaleWithDetails[][])
-    .reduce((totalRevenue: number, orderSales: SaleWithDetails[]) => {
-      // Skip if there are no sales or first sale has no order
-      if (!orderSales.length || !orderSales[0].order) {
+  const cardRevenue = +Object.values(salesByOrder)
+    .reduce((totalRevenue, orderSales) => {
+      const firstSale = orderSales.at(0);
+      if (!firstSale?.order) {
         return totalRevenue;
       }
 
-      const order = orderSales[0].order;
-      const orderTotal = +orderSales
-        .reduce((sum: number, sale: SaleWithDetails) => sum + parseFloat(sale.totalPrice), 0)
-        .toFixed(2);
-      const orderDiscount = +(order.cardDiscountCount * CARD_DISCOUNT).toFixed(2);
+      const order = firstSale.order;
+      const orderTotal = +orderSales.reduce((sum, sale) => sum + sale.total_price, 0).toFixed(2);
+      const orderDiscount = +((order.card_discounts_applied || 0) * CARD_DISCOUNT).toFixed(2);
 
       // Apply the discount proportionally to the order total with exact precision
       const orderRevenue = Math.max(0, +(orderTotal - orderDiscount).toFixed(2));
@@ -282,24 +245,10 @@ export function calculateSalesStats(sales: SaleWithDetails[]) {
     cashRevenue,
     cardRevenue,
 
-    // Order-level stats
-    uniqueProducts: new Set(activeSales.map(sale => sale.productId)).size,
-    totalOrders: uniqueOrders.length,
-    averageOrderValue: uniqueOrders.length ? finalTotalAmount / uniqueOrders.length : 0,
+    // Analytics
+    averageOrderValue: nonTreatSales.length
+      ? +(totalBeforeDiscounts / nonTreatSales.length).toFixed(2)
+      : 0,
+    uniqueCodes: new Set(activeSales.map((sale) => sale.code_id)).size,
   };
-}
-
-/**
- * Calculates the "net" sales by removing treats before chart aggregation
- * This ensures that charts for revenue and quantity reflect actual sales, not giveaways
- */
-export function calculateNetSales(sales: SaleWithDetails[]): SaleWithDetails[] {
-  return sales.filter(sale => !sale.isTreat);
-}
-
-/**
- * Get total items from sales, excluding treats
- */
-export function getTotalItems(sales: SaleWithDetails[]): number {
-  return sales.filter(sale => !sale.isTreat).reduce((sum, sale) => sum + sale.quantity, 0);
 }

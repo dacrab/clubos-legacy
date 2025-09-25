@@ -1,63 +1,30 @@
 ---
-description:
-globs:
 alwaysApply: false
 ---
 # Project Structure
 
-This ClubOS POS application is built with Next.js App Router, TypeScript, NeonDB, and Stack Auth.
+This medical practice management application is built with Next.js App Router, TypeScript, and Supabase.
 
 ## Key Directories
 
-- **[src/app](mdc:src/app)**: Next.js App Router pages and API routes
-  - **[src/app/actions](mdc:src/app/actions)**: Server actions for form submissions
-  - **[src/app/dashboard](mdc:src/app/dashboard)**: Dashboard pages for different user roles
-  - **[src/app/api](mdc:src/app/api)**: API routes for backend functionality
-  - **[src/app/handler](mdc:src/app/handler)**: Stack Auth handler routes
+- [src/app](mdc:src/app): Next.js App Router pages and API routes
+  - [src/app/actions](mdc:src/app/actions): Server actions for form submissions
+  - [src/app/dashboard](mdc:src/app/dashboard): Dashboard pages for the application
+  - [src/app/api](mdc:src/app/api): API routes for backend functionality
 
-- **[src/components](mdc:src/components)**: Reusable React components
-  - **[src/components/ui](mdc:src/components/ui)**: Shared UI components based on shadcn/ui
-  - **[src/components/dashboard](mdc:src/components/dashboard)**: Dashboard-specific components
-  - **[src/components/auth](mdc:src/components/auth)**: Authentication components
+- [src/components](mdc:src/components): Reusable React components
+  - [src/components/ui](mdc:src/components/ui): Shared UI components based on shadcn/ui
+  - [src/components/dashboard](mdc:src/components/dashboard): Dashboard-specific components
+  - [src/components/layout](mdc:src/components/layout): Layout components
+  - [src/components/auth](mdc:src/components/auth): Authentication components
 
-- **[src/lib](mdc:src/lib)**: Utility functions and shared libraries
-  - **[src/lib/db](mdc:src/lib/db)**: Database configuration, schema, and services
-  - **[src/lib/db/services](mdc:src/lib/db/services)**: Drizzle ORM service layer
-  - **[src/lib/auth.ts](mdc:src/lib/auth.ts)**: Stack Auth server configuration
-  - **[src/lib/auth-client.ts](mdc:src/lib/auth-client.ts)**: Stack Auth client exports
-
-- **[src/hooks](mdc:src/hooks)**: Custom React hooks
-  - **[src/hooks/features](mdc:src/hooks/features)**: Feature-specific hooks (sales, products, etc.)
-  - **[src/hooks/auth](mdc:src/hooks/auth)**: Authentication-related hooks
-  - **[src/hooks/data](mdc:src/hooks/data)**: Data fetching hooks
-
-- **[src/types](mdc:src/types)**: TypeScript type definitions
-- **[scripts](mdc:scripts)**: Database seeding and utility scripts
+- [src/lib](mdc:src/lib): Utility functions and shared libraries
+- [src/hooks](mdc:src/hooks): Custom React hooks
+- [src/types](mdc:src/types): TypeScript type definitions
 
 ## Configuration Files
 
-- **[package.json](mdc:package.json)**: Project dependencies and scripts (using Bun)
-- **[tsconfig.json](mdc:tsconfig.json)**: TypeScript configuration
-- **[drizzle.config.ts](mdc:drizzle.config.ts)**: Drizzle ORM configuration
-- **[components.json](mdc:components.json)**: shadcn/ui component configuration
-- **[eslint.config.js](mdc:eslint.config.js)**: ESLint configuration (flat config)
-
-## Database Structure
-
-The application uses a PostgreSQL database (NeonDB) with the following main entities:
-- **users**: User accounts with role-based access
-- **categories**: Product categories (hierarchical)
-- **products**: Inventory items with stock tracking
-- **orders**: Sales transactions
-- **sales**: Individual line items within orders
-- **register_sessions**: Cash register opening/closing sessions
-- **appointments**: Service bookings
-- **football_field_bookings**: Sports facility reservations
-
-## Authentication Flow
-
-- Stack Auth handles authentication with cookie-based sessions
-- Server-side auth checks use `stackServerApp.getUser()`
-- Client-side auth uses `useUser()` and `useStackApp()` hooks
-- Middleware protects dashboard routes
-- Role-based access control for admin features
+- [package.json](mdc:package.json): Project dependencies and scripts
+- [tsconfig.json](mdc:tsconfig.json): TypeScript configuration
+- [tailwind.config.ts](mdc:tailwind.config.ts): Tailwind CSS configuration
+- [components.json](mdc:components.json): shadcn/ui component configuration

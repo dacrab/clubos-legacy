@@ -1,130 +1,46 @@
-import { notFound } from 'next/navigation';
-
-import type { Product } from '@/types/products';
-import type { Order, SaleWithDetails } from '@/types/sales';
-import { stackServerApp } from '@/lib/auth';
-import { getLowStockProducts } from '@/lib/db/services/products';
-import { getRecentOrders } from '@/lib/db/services/sales';
-import { getUserById } from '@/lib/db/services/users';
-import { logger } from '@/lib/utils/logger';
-import AddSaleButton from '@/components/dashboard/sales/AddSaleButton';
-import NewSaleInterface from '@/components/dashboard/sales/NewSaleInterface';
-import AdminDashboard from '@/components/dashboard/views/AdminDashboard';
-import EmployeeDashboard from '@/components/dashboard/views/EmployeeDashboard';
-import SecretariatDashboard from '@/components/dashboard/views/SecretariatDashboard';
-
-// Type for the order data returned from the database query
-interface DatabaseOrder {
-  id: string;
-  orderNumber: string;
-  registerSessionId: string;
-  customerName?: string | null;
-  subtotal?: string;
-  taxAmount?: string;
-  discountAmount?: string;
-  totalAmount?: string;
-  finalAmount: string;
-  paymentMethod: 'cash' | 'card' | 'treat';
-  cardDiscountCount: number;
-  isVoided: boolean;
-  voidReason?: string | null;
-  createdAt: Date;
-  createdBy: string;
-  voidedAt?: Date | null;
-  voidedBy?: string | null;
-  sales: Array<{
-    id: string;
-    orderId: string;
-    productId: string;
-    productName: string;
-    quantity: number;
-    unitPrice: string;
-    totalPrice: string;
-    isTreat: boolean;
-    isVoided: boolean;
-    voidReason?: string | null;
-    createdAt: Date;
-    voidedAt?: Date | null;
-    voidedBy?: string | null;
-    product: Product;
-  }>;
-}
-
-// This function can be moved to a utils file if it's used elsewhere
-const transformOrderToSales = (order: DatabaseOrder): SaleWithDetails[] => {
-  // Create the order object that matches the Order type
-  const orderData: Order = {
-    id: order.id,
-    orderNumber: order.orderNumber,
-    registerSessionId: order.registerSessionId,
-    customerName: order.customerName,
-    subtotal: order.subtotal || '0',
-    taxAmount: order.taxAmount || '0',
-    discountAmount: order.discountAmount || '0',
-    totalAmount: order.totalAmount || '0',
-    finalAmount: order.finalAmount,
-    paymentMethod: order.paymentMethod,
-    cardDiscountCount: order.cardDiscountCount,
-    isVoided: order.isVoided,
-    voidReason: order.voidReason,
-    createdAt: order.createdAt,
-    createdBy: order.createdBy,
-    voidedAt: order.voidedAt,
-    voidedBy: order.voidedBy,
-  };
-
-  return order.sales.map(sale => ({
-    ...sale,
-    order: orderData,
-  }));
-};
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { env } from '@/lib/env';
+import type { Database } from '@/types/supabase';
 
 export default async function DashboardPage() {
-  const user = await stackServerApp.getUser();
+  const cookieStore = await cookies();
 
-  if (!user) {
-    return notFound();
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    return redirect('/error');
   }
 
-  const profile = await getUserById(user.id);
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value ?? '';
+      },
+    },
+  });
 
-  if (!profile) {
-    return notFound();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect('/');
   }
 
-  // Common data for all roles
-  try {
-    const recentOrders = await getRecentOrders(5);
-    const recentSales = recentOrders?.flatMap(transformOrderToSales) || [];
+  const { data: userData, error: userDataError } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
 
-    // Role-specific data and component rendering
-    switch (profile.role) {
-      case 'admin': {
-        const lowStock = await getLowStockProducts();
-
-        return <AdminDashboard recentSales={recentSales} lowStock={lowStock as Product[]} />;
-      }
-      case 'employee':
-        return <EmployeeDashboard recentSales={recentSales} />;
-      case 'secretary':
-        return <SecretariatDashboard />;
-      default:
-        return (
-          <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold tracking-tight">Πωλήσεις</h1>
-                <AddSaleButton />
-              </div>
-              <NewSaleInterface open={false} onOpenChange={() => {}} />
-            </div>
-          </div>
-        );
-    }
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      logger.error('Error fetching dashboard data:', error);
-    }
-    return notFound();
+  if (userDataError || !userData) {
+    redirect('/');
   }
+
+  // Default dashboard page content (could be a simple overview or redirect to overview route)
+  return <div />;
 }

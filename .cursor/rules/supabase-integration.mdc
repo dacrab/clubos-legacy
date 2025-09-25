@@ -1,0 +1,94 @@
+---
+alwaysApply: false
+---
+# Supabase Integration
+
+This project uses Supabase for database, authentication, storage, and real-time features.
+
+## Data Access
+
+Always use typed responses from Supabase:
+
+```typescript
+// Define the response type based on your database schema
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+// Use the type with Supabase queries
+const { data, error } = await supabase
+  .from('users')
+  .select('*')
+  .returns<User[]>();
+
+if (error) {
+  // Handle error appropriately
+  console.error('Error fetching users:', error);
+  return [];
+}
+
+return data;
+```
+
+## Authentication
+
+Use the Supabase Auth module for user authentication:
+
+- Sign-in is handled through the Auth API
+- Protected routes check auth status server-side
+- Auth state is managed via the Supabase Auth helpers for Next.js
+
+## Real-time Subscriptions
+
+Real-time subscriptions should be defined in client components:
+
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase-client';
+
+export function RealtimeData() {
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    // Set up the subscription
+    const subscription = supabase
+      .from('table_name')
+      .on('*', (payload) => {
+        // Update local state with the new data
+        console.log('Change received!', payload);
+        // Update your state here
+      })
+      .subscribe();
+
+    // Clean up the subscription when the component unmounts
+    return () => {
+      supabase.removeSubscription(subscription);
+    };
+  }, []);
+
+  return <div>{/* Render your data */}</div>;
+}
+```
+
+## File Storage
+
+Use Supabase Storage for file uploads and downloads:
+
+```typescript
+// Upload a file
+const { data, error } = await supabase
+  .storage
+  .from('bucket_name')
+  .upload('file_path', file);
+
+// Get a public URL for a file
+const { data } = supabase
+  .storage
+  .from('bucket_name')
+  .getPublicUrl('file_path');
+```

@@ -1,9 +1,6 @@
-// UI Components & Icons
-import { Euro, Search } from 'lucide-react';
-
 // Authentication & Authorization
-export const DEFAULT_USER_ROLE = 'admin' as const;
-export const ALLOWED_USER_ROLES = ['admin', 'employee', 'secretary'] as const;
+export const DEFAULT_USER_ROLE = 'staff' as const;
+export const ALLOWED_USER_ROLES = ['admin', 'staff', 'secretary'] as const;
 export type UserRole = (typeof ALLOWED_USER_ROLES)[number];
 
 export const AUTH_PAGES = ['/'] as const;
@@ -11,9 +8,12 @@ export const PUBLIC_ROUTES = ['/'] as const;
 
 export const ROLE_TRANSLATIONS: Record<UserRole, string> = {
   admin: 'Διαχειριστής',
-  employee: 'Υπάλληλος',
+  staff: 'Υπάλληλος',
   secretary: 'Γραμματεία',
 } as const;
+
+// UI Components & Icons
+import { Euro, Search } from 'lucide-react';
 
 // Sales Interface Icons
 export const SALES_ICONS = {
@@ -21,20 +21,21 @@ export const SALES_ICONS = {
   EURO: Euro,
 } as const;
 
-export const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512] as const;
+// Icon sizes removed - unused
 
 export const VALIDATION = {
   USERNAME_MIN_LENGTH: 3,
   USERNAME_MAX_LENGTH: 20,
 } as const;
 
-export const PASSWORD_MIN_LENGTH = 1;
-export const DEFAULT_ITEMS_PER_PAGE = 10;
+export const PASSWORD_MIN_LENGTH = 8;
+// DEFAULT_ITEMS_PER_PAGE removed - unused
 
 // Business Logic - Inventory
 export const UNLIMITED_STOCK = -1;
-export const UNLIMITED_CATEGORY_ID = '250f2320-b578-4344-80f8-1addf0bf8b3f';
+// UNLIMITED_CATEGORY_ID removed - unused
 export const LOW_STOCK_THRESHOLD = 10;
+export const EDIT_WINDOW_MINUTES = 5;
 
 // Business Logic - Payments & Pricing
 export const EXTRA_SHOT_PRICE = 0.5;
@@ -48,19 +49,12 @@ export const PAYMENT_METHOD_LABELS = {
 
 // Business Logic - Statistics
 export const STATISTICS = {
-  DEFAULT_TOP_PRODUCTS_COUNT: 5,
-  MIN_TOP_PRODUCTS_COUNT: 3,
-  MAX_TOP_PRODUCTS_COUNT: 10,
+  DEFAULT_TOP_CODES_COUNT: 5,
+  MIN_TOP_CODES_COUNT: 3,
+  MAX_TOP_CODES_COUNT: 10,
   DEFAULT_DAYS_TO_SHOW: 7,
   MIN_DAYS_TO_SHOW: 3,
   MAX_DAYS_TO_SHOW: 30,
-} as const;
-
-// Date Formatting
-export const DATE_FORMAT = {
-  DISPLAY: 'dd/MM/yyyy',
-  API: 'yyyy-MM-dd',
-  FULL_WITH_TIME: 'd MMMM yyyy, HH:mm',
 } as const;
 
 export const QUICK_SELECT_OPTIONS = {
@@ -75,6 +69,8 @@ export const QUICK_SELECT_OPTIONS = {
   LAST_YEAR: 'Προηγούμενο έτος',
 } as const;
 
+const REQUIRED_FIELDS_MESSAGE = 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία';
+
 // UI Messages - API Errors
 export const API_ERROR_MESSAGES = {
   UNAUTHORIZED: 'Μη εξουσιοδοτημένη πρόσβαση',
@@ -87,17 +83,16 @@ export const API_ERROR_MESSAGES = {
   SERVER_ERROR: 'Σφάλμα διακομιστή',
   TOO_MANY_ATTEMPTS: 'Πάρα πολλές προσπάθειες σύνδεσης. Παρακαλώ δοκιμάστε ξανά αργότερα',
   FETCH_CATEGORIES_ERROR: 'Σφάλμα κατά την ανάκτηση των κατηγοριών',
-  CHECK_CODE_ERROR: 'Σφάλμα κατά τον έλεγχο του κωδικού',
-  CODE_EXISTS: 'Ο κωδικός υπάρχει ήδη',
+  CHECK_CODE_ERROR: 'Σφάλμα κατά τον έλεγχο του προϊόντος',
+  CODE_EXISTS: 'Το προϊόν υπάρχει ήδη',
   AUTH_ERROR: 'Σφάλμα ταυτοποίησης χρήστη',
   UPLOAD_ERROR: 'Σφάλμα κατά το ανέβασμα της εικόνας',
-  CREATE_CODE_ERROR: 'Σφάλμα κατά την δημιουργία του κωδικού',
-  CODE_CREATED: 'Ο κωδικός δημιουργήθηκε επιτυχώς',
+  CREATE_CODE_ERROR: 'Σφάλμα κατά την δημιουργία του προϊόντος',
+  CODE_CREATED: 'Το προϊόν δημιουργήθηκε επιτυχώς',
   GENERIC_ERROR: 'Κάτι πήγε στραβά',
-  DELETE_ERROR: 'Σφάλμα κατά τη διαγραφή',
   INVALID_IMAGE_TYPE: 'Παρακαλώ επιλέξτε μια εικόνα',
   IMAGE_TOO_LARGE: 'Η εικόνα δεν πρέπει να ξεπερνά τα 5MB',
-  MISSING_REQUIRED_FIELDS: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία',
+  MISSING_REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
 } as const;
 
 // UI Messages - Dialogs
@@ -124,19 +119,15 @@ export const USER_MESSAGES = {
   DELETE_SUCCESS: 'Ο χρήστης διαγράφηκε επιτυχώς',
   PASSWORD_RESET_SUCCESS: 'Ο κωδικός άλλαξε επιτυχώς',
   UNEXPECTED_ERROR: 'Απρόσμενο σφάλμα',
-  USER_ALREADY_EXISTS: 'Αυτό το όνομα χρήστη υπάρχει ήδη',
 } as const;
 
-// UI Messages - Product Management
+// UI Messages - Code Management
 export const PRODUCT_MESSAGES = {
   CREATE_SUCCESS: 'Το προϊόν προστέθηκε επιτυχώς',
   UPDATE_SUCCESS: 'Το προϊόν ενημερώθηκε επιτυχώς',
   DELETE_SUCCESS: 'Το προϊόν διαγράφηκε επιτυχώς',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το προϊόν;',
   GENERIC_ERROR: 'Κάτι πήγε στραβά',
-  PRODUCT_IN_USE_ERROR: 'Το προϊόν χρησιμοποιείται σε πωλήσεις και δεν μπορεί να διαγραφεί',
-  ERROR_CHECKING_SALES: 'Σφάλμα κατά τον έλεγχο των πωλήσεων',
-  ERROR_DELETING_PRODUCT: 'Σφάλμα κατά τη διαγραφή του προϊόντος',
 } as const;
 
 // UI Messages - Stock Management
@@ -158,12 +149,15 @@ export const SALES_MESSAGES = {
   NO_ITEMS: 'Δεν έχουν προστεθεί προϊόντα',
   EDIT_WINDOW_EXPIRED: 'Το χρονικό διάστημα επεξεργασίας έχει λήξει',
   PRODUCT_NOT_FOUND: 'Το προϊόν δεν βρέθηκε',
+  INSUFFICIENT_STOCK: 'Ανεπαρκές απόθεμα',
+  CODE_NOT_FOUND: 'Το προϊόν δεν βρέθηκε',
 } as const;
 
 // UI Messages - Register Management
 export const REGISTER_MESSAGES = {
   NOT_LOGGED_IN: 'Πρέπει να συνδεθείτε για να δείτε το ταμείο',
   FETCH_ERROR: 'Σφάλμα κατά τη φόρτωση των ταμειακών περιόδων',
+  NO_PERMISSION: 'Δεν έχετε δικαιώματα για πρόσβαση στο ταμείο',
   NO_ACTIVE_SESSION: 'Δεν υπάρχει ενεργή ταμειακή περίοδος',
   SESSION_CREATED: 'Δημιουργήθηκε νέα ταμειακή περίοδος',
   CLOSE_SUCCESS: 'Η ταμειακή περίοδος έκλεισε επιτυχώς',
@@ -187,7 +181,7 @@ export const APPOINTMENT_MESSAGES = {
   UPDATE_SUCCESS: 'Το παιδικό πάρτυ ενημερώθηκε με επιτυχία!',
   DELETE_SUCCESS: 'Το παιδικό πάρτυ διαγράφηκε με επιτυχία!',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το παιδικό πάρτυ;',
-  REQUIRED_FIELDS: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία',
+  REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
   INVALID_DATE: 'Παρακαλώ επιλέξτε μια έγκυρη ημερομηνία και ώρα',
   MIN_CHILDREN: 'Ο αριθμός των παιδιών πρέπει να είναι τουλάχιστον 1',
   MIN_ADULTS: 'Ο αριθμός των ενηλίκων πρέπει να είναι 0 ή μεγαλύτερος',
@@ -203,7 +197,7 @@ export const FOOTBALL_BOOKING_MESSAGES = {
   UPDATE_SUCCESS: 'Η κράτηση ενημερώθηκε με επιτυχία!',
   DELETE_SUCCESS: 'Η κράτηση διαγράφηκε με επιτυχία!',
   DELETE_CONFIRM: 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κράτηση;',
-  REQUIRED_FIELDS: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία',
+  REQUIRED_FIELDS: REQUIRED_FIELDS_MESSAGE,
   INVALID_DATE: 'Παρακαλώ επιλέξτε μια έγκυρη ημερομηνία και ώρα',
   MIN_PLAYERS: 'Ο αριθμός των παικτών πρέπει να είναι μεταξύ 2 και 12',
   INVALID_FIELD: 'Παρακαλώ επιλέξτε ένα έγκυρο γήπεδο (1-5)',

@@ -1,59 +1,78 @@
-import { NextResponse } from 'next/server';
+// no service role usage
+import {
+  ALLOWED_USER_ROLES,
+  API_ERROR_MESSAGES,
+  DEFAULT_USER_ROLE,
+  USER_MESSAGES,
+} from '@/lib/constants';
+import {
+  checkAdminAccess,
+  createApiClient,
+  errorResponse,
+  handleApiError,
+  successResponse,
+} from '@/lib/utils/api-utils';
 
-import { stackServerApp } from '@/lib/auth';
-import { createUser, getUsers } from '@/lib/db/services/users';
+const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_FORBIDDEN = 403;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
 export async function POST(request: Request) {
   try {
-    // Check if user is authenticated and is admin
-    const user = await stackServerApp.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Require admin
+    const adminAccess = await checkAdminAccess();
+    if (!adminAccess) {
+      return errorResponse('Unauthorized', HTTP_STATUS_FORBIDDEN);
     }
 
-    const { username, password, role = 'employee', email } = await request.json();
+    const { email, password, username, role = DEFAULT_USER_ROLE } = await request.json();
 
-    if (!username || !password || !email) {
-      return NextResponse.json({ error: 'Username, email and password required' }, { status: 400 });
+    if (!(email && password && username)) {
+      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Create user with Stack Auth
-    const newStackUser = await stackServerApp.createUser({
-      primaryEmail: email,
-      displayName: username,
-      password,
+    if (!ALLOWED_USER_ROLES.includes(role)) {
+      return errorResponse(API_ERROR_MESSAGES.INVALID_ROLE, HTTP_STATUS_BAD_REQUEST);
+    }
+
+    // Delegate to Supabase Edge Function which holds service role securely
+    const supabase = createApiClient();
+    const { error: fnError } = await supabase.functions.invoke('admin-create-user', {
+      body: { email, password, username, role },
     });
 
-    // Create user record in our database
-    const newUser = await createUser({
-      id: newStackUser.id,
-      email,
-      username,
-      role: role as 'admin' | 'employee' | 'secretary',
-    });
+    if (fnError) {
+      return errorResponse(API_ERROR_MESSAGES.SERVER_ERROR, HTTP_STATUS_BAD_REQUEST, fnError);
+    }
 
-    return NextResponse.json(newUser);
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    const status = message.includes('already exists') ? 409 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return successResponse(null, USER_MESSAGES.CREATE_SUCCESS);
+  } catch (error) {
+    return handleApiError(error);
   }
 }
 
 export async function GET() {
   try {
-    // Check if user is authenticated
-    const user = await stackServerApp.getUser();
+    const adminAccess = await checkAdminAccess();
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!adminAccess) {
+      return errorResponse('Unauthorized', HTTP_STATUS_FORBIDDEN);
     }
 
-    const users = await getUsers();
-    return NextResponse.json({ users });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const supabase = await createApiClient();
+
+    // Get all users
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (usersError) {
+      return errorResponse('Error fetching users', HTTP_STATUS_INTERNAL_SERVER_ERROR, usersError);
+    }
+
+    return successResponse(users);
+  } catch (error) {
+    return handleApiError(error);
   }
 }

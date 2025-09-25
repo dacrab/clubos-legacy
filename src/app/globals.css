@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
 
@@ -6,10 +6,6 @@
 
 @theme {
   --breakpoint-xs: 480px;
-
-  --height-mobile-nav: var(--mobile-nav-height);
-
-  --padding-mobile-nav: var(--mobile-nav-height);
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -94,28 +90,28 @@
 
 /* Custom Utilities */
 @utility glass-effect {
-  @apply border-white/20 bg-white/95 backdrop-blur-[3px] dark:border-gray-800/20 dark:bg-gray-900/95;
+  @apply bg-white/95 dark:bg-gray-900/95 backdrop-blur-[3px] border-white/20 dark:border-gray-800/20;
 }
 @utility shadow-soft {
   @apply shadow-[0_4px_25px_-5px_rgba(0,0,0,0.08)];
 }
 @utility shadow-soft-hover {
-  @apply transition-shadow duration-300 hover:shadow-[0_8px_35px_-8px_rgba(0,0,0,0.12)];
+  @apply hover:shadow-[0_8px_35px_-8px_rgba(0,0,0,0.12)] transition-shadow duration-300;
 }
 @utility gradient-text {
-  @apply from-primary via-primary/90 to-accent bg-linear-to-r bg-clip-text text-transparent;
+  @apply bg-linear-to-r from-primary via-primary/90 to-accent bg-clip-text text-transparent;
 }
 @utility glass-card {
-  @apply border border-white/10 bg-white/90 backdrop-blur-[2px] dark:border-gray-800/50 dark:bg-gray-900/90;
+  @apply bg-white/90 dark:bg-gray-900/90 backdrop-blur-[2px] border border-white/10 dark:border-gray-800/50;
 }
 @utility animate-in {
   @apply transition-all duration-300 ease-in-out;
 }
 @utility hover-lift {
-  @apply transition-transform duration-200 hover:-translate-y-0.5;
+  @apply hover:-translate-y-0.5 transition-transform duration-200;
 }
 @utility text-gradient {
-  @apply from-primary to-accent bg-linear-to-r via-purple-500 bg-clip-text text-transparent;
+  @apply bg-linear-to-r from-primary via-purple-500 to-accent bg-clip-text text-transparent;
 }
 @utility touch-target {
   @apply min-h-[48px] min-w-[48px] md:min-h-[44px] md:min-w-[44px];
@@ -248,17 +244,17 @@
 }
 @layer base {
   html {
-    font-size: 13px;
+    font-size: 15px;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
     @media (width >= theme(--breakpoint-sm)) {
-      font-size: 13.5px;
+      font-size: 15.5px;
     }
 
     @media (width >= theme(--breakpoint-lg)) {
-      font-size: 14px;
+      font-size: 16px;
     }
   }
 }

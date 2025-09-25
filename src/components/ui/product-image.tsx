@@ -1,13 +1,15 @@
+'use client';
+
 import Image from 'next/image';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils/format';
 
-interface ProductImageProps {
+type ProductImageProps = {
   src: string;
   alt: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-}
+};
 
 const sizes = {
   sm: 'h-8 w-8',
@@ -27,13 +29,13 @@ export function ProductImage({ src, alt, size = 'md', className }: ProductImageP
   return (
     <div className={containerClasses}>
       <Image
-        src={src}
         alt={alt}
-        fill
         className="rounded-md object-contain"
-        sizes={imageSizes[size]}
-        quality={90}
+        fill
         priority={size === 'lg'}
+        quality={90}
+        sizes={imageSizes[size]}
+        src={src}
       />
     </div>
   );

@@ -1,55 +1,86 @@
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
-import type { NextRequest } from 'next/server';
+import { API_ERROR_MESSAGES } from '@/lib/constants';
+import {
+  createApiClient,
+  errorResponse,
+  handleApiError,
+  successResponse,
+} from '@/lib/utils/api-utils';
 
-import { errorResponse, handleApiError, successResponse } from '@/lib/api-utils';
+const BYTES_IN_A_KILOBYTE = 1024;
+const KILOBYTES_IN_A_MEGABYTE = 1024;
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * KILOBYTES_IN_A_MEGABYTE * BYTES_IN_A_KILOBYTE; // 5MB
 
-export async function POST(request: NextRequest) {
+const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
+export const runtime = 'edge';
+
+export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file');
 
-    if (!file) {
-      return errorResponse('Απαιτείται αρχείο εικόνας.', 400);
+    if (!(file && file instanceof Blob)) {
+      return errorResponse(API_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Έλεγχος τύπου αρχείου
-    if (!file.type.startsWith('image/')) {
-      return errorResponse('Μη έγκυρος τύπος αρχείου εικόνας.', 400);
+    // Validate file type
+    if (!(file as File).type.startsWith('image/')) {
+      return errorResponse(API_ERROR_MESSAGES.INVALID_IMAGE_TYPE, HTTP_STATUS_BAD_REQUEST);
     }
 
-    // Έλεγχος μεγέθους αρχείου (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return errorResponse('Το αρχείο εικόνας είναι πολύ μεγάλο (μέγιστο 5MB).', 400);
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return errorResponse(API_ERROR_MESSAGES.IMAGE_TOO_LARGE, HTTP_STATUS_BAD_REQUEST);
     }
+
+    // Convert File to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = new Uint8Array(arrayBuffer);
 
     // Generate unique filename
-    const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
-    const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
+    const explicitExt = (file as File).name.includes('.')
+      ? (file as File).name.split('.').pop() || ''
+      : '';
+    const mimeExt = MIME_TO_EXT[(file as File).type] || explicitExt || 'bin';
+    const RANDOM_STRING_LENGTH = 2;
+    const BASE_36_RADIX = 36;
+    const uniqueId = (globalThis.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(BASE_36_RADIX).slice(RANDOM_STRING_LENGTH)}`) as string;
+    const fileName = `new-${uniqueId}.${mimeExt}`;
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadDir, { recursive: true });
+    // Upload to Supabase
+    const supabase = await createApiClient();
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, fileBuffer, {
+        contentType: (file as File).type,
+        cacheControl: '3600',
+        upsert: false,
+      });
 
-    // Save file
-    const filePath = join(uploadDir, fileName);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    if (uploadError) {
+      return errorResponse(
+        API_ERROR_MESSAGES.UPLOAD_ERROR,
+        HTTP_STATUS_INTERNAL_SERVER_ERROR,
+        uploadError
+      );
+    }
 
-    await writeFile(filePath, buffer);
+    // Get the public URL
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('product-images').getPublicUrl(fileName);
 
-    // Return the public URL
-    const publicUrl = `/uploads/${fileName}`;
-
-    return successResponse({
-      url: publicUrl,
-      originalName: file.name,
-      size: file.size,
-      type: file.type,
-    });
+    return successResponse({ url: publicUrl });
   } catch (error) {
-    (await import('@/lib/utils/logger')).logger.error('File upload error:', error);
     return handleApiError(error);
   }
 }

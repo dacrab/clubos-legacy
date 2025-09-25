@@ -1,59 +1,78 @@
+import { createServerClient } from '@supabase/ssr';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
-import type { UserProfile } from '@/types/users';
-import { stackServerApp } from '@/lib/auth';
-import { getUserById } from '@/lib/db/services/users';
-import { cn } from '@/lib/utils';
-import { logger } from '@/lib/utils/logger';
-import DashboardLayoutClient from '@/components/dashboard/layout/DashboardLayoutClient';
-import Header from '@/components/dashboard/layout/Header';
-import { DashboardProvider } from '@/components/dashboard/provider/DashboardProvider';
+import DashboardLayoutClient from '@/components/dashboard/layout/dashboard-layout-client';
+import type { UserRole } from '@/lib/constants';
+import { env } from '@/lib/env';
+import type { Database } from '@/types/supabase';
 
 export const metadata: Metadata = {
-  title: 'Dashboard',
+  title: 'Dashboard | clubOS',
+  description: 'clubOS Dashboard',
 };
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const user = await stackServerApp.getUser();
+  const cookieStore = await cookies();
 
-  if (!user) {
-    return redirect('/');
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!(supabaseUrl && supabaseAnonKey)) {
+    // Handle missing environment variables, maybe redirect to an error page
+    return redirect('/error');
   }
 
-  const profile = await getUserById(user.id);
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value ?? '';
+      },
+    },
+  });
 
-  if (!profile) {
-    logger.error('Error fetching user profile');
+  try {
+    // Authentication check
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return redirect('/');
+    }
+
+    // Get user data
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('username, role, id, created_at, updated_at')
+      .eq('id', user.id)
+      .single();
+
+    if (userDataError) {
+      // Throw an error or redirect to an error page
+      // For now, we'll redirect to the home page
+      return redirect('/');
+    }
+
+    const profile: {
+      username: string;
+      role: UserRole;
+      id: string;
+      created_at: string;
+      updated_at: string;
+    } = {
+      username: userData.username,
+      role: userData.role,
+      id: userData.id,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+    };
+
+    return <DashboardLayoutClient profile={profile}>{children}</DashboardLayoutClient>;
+  } catch (_error) {
     return redirect('/');
   }
-
-  const isAdmin = profile.role === 'admin';
-
-  // Transform profile to match UserProfile interface
-  const userProfile: UserProfile = {
-    id: profile.id,
-    username: profile.username,
-    role: profile.role,
-    email: profile.email,
-    displayName: user.displayName,
-    isActive: true, // Assuming logged-in users are active
-    profileImageUrl: user.profileImageUrl,
-  };
-
-  // Create a compatible profile object for Header
-  const headerProfile = {
-    username: profile.username,
-  };
-
-  return (
-    <DashboardProvider>
-      <div className={cn('flex flex-1 flex-col', isAdmin && 'lg:pl-72')}>
-        <Header user={user} profile={headerProfile} />
-        <DashboardLayoutClient profile={userProfile}>{children}</DashboardLayoutClient>
-      </div>
-    </DashboardProvider>
-  );
 }

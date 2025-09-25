@@ -1,77 +1,45 @@
-import { redirect } from 'next/navigation';
-import { endOfMonth, format, startOfMonth } from 'date-fns';
+'use client';
+
 import { History } from 'lucide-react';
+import { useState } from 'react';
+import { PageHeader } from '@/components/dashboard/common/page-header';
+import SalesFilter from '@/components/dashboard/sales/sales-filter';
+import SalesTable from '@/components/dashboard/sales/sales-table';
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { useAuth } from '@/hooks/use-auth';
+import type { SalesDateRange, SalesFilters, TimeRange } from '@/hooks/use-sales-data';
+import { useSalesData } from '@/hooks/use-sales-data';
 
-import { stackServerApp } from '@/lib/auth';
-import { DATE_FORMAT } from '@/lib/constants';
-import { getSalesWithDetails } from '@/lib/db/services/sales';
-import SalesFilter from '@/components/dashboard/sales/SalesFilter';
-import SalesTable from '@/components/dashboard/sales/SalesTable';
+export default function HistoryPage() {
+  const { loading: authLoading } = useAuth({
+    redirectOnUnauthorized: true,
+  });
 
-interface HistoryPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
+  const [filters, setFilters] = useState<SalesFilters>({});
+  const { sales: filteredSales, isLoading: dataLoading } = useSalesData(filters);
 
-async function validateUser() {
-  const user = await stackServerApp.getUser();
-  if (!user) {
-    redirect('/');
-  }
-  return user;
-}
+  const handleFilterChange = (dateRange: SalesDateRange, timeRange: TimeRange) => {
+    setFilters({ dateRange, timeRange });
+  };
 
-export default async function HistoryPage({ searchParams }: HistoryPageProps) {
-  const params = await searchParams;
-  const { from } = params;
+  const isLoading = authLoading || dataLoading;
 
-  // Redirect if no date range provided
-  if (!from) {
-    const start = format(startOfMonth(new Date()), DATE_FORMAT.API);
-    const end = format(endOfMonth(new Date()), DATE_FORMAT.API);
-    redirect(`/dashboard/history?from=${start}&to=${end}&startTime=00:00&endTime=23:59`);
+  if (isLoading) {
+    return <LoadingSkeleton className="h-10 w-full" count={4} />;
   }
 
-  try {
-    await validateUser();
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      <PageHeader
+        description="Προβολή και φιλτράρισμα του ιστορικού πωλήσεων"
+        icon={History}
+        title="Ιστορικό Πωλήσεων"
+      />
 
-    // Fetch sales using Drizzle service
-    const sales = await getSalesWithDetails();
-
-    return (
-      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-primary/10 rounded-full p-3">
-              <History className="text-primary h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Ιστορικό Πωλήσεων</h1>
-              <p className="text-muted-foreground">
-                Προβολή και ανάλυση ιστορικών δεδομένων πωλήσεων
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <SalesFilter />
-            <SalesTable initialSales={sales} />
-          </div>
-        </div>
+      <div className="space-y-5 sm:space-y-6">
+        <SalesFilter onFilterChange={handleFilterChange} />
+        <SalesTable initialSales={filteredSales || []} />
       </div>
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      if (process.env.NODE_ENV === 'development') {
-        (await import('@/lib/utils/logger')).logger.error('Error fetching sales data:', error);
-      }
-    }
-
-    return (
-      <div className="bg-background flex flex-1 flex-col p-4 sm:p-6">
-        <div className="py-12 text-center">
-          <p className="text-destructive">Σφάλμα κατά τη φόρτωση των δεδομένων</p>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 }

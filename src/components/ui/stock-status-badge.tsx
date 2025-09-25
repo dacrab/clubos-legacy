@@ -1,12 +1,12 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils/format';
 
-interface StockStatusBadgeProps {
+type StockStatusBadgeProps = {
   status: {
     text: string;
     className: string;
   };
   size?: 'sm' | 'md';
-}
+};
 
 export function StockStatusBadge({ status, size = 'md' }: StockStatusBadgeProps) {
   return (
