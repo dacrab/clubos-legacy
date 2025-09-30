@@ -1,4 +1,4 @@
-# 🚀 clubos-legacay — Modern Sports Facility Dashboard (Next.js)
+# 🚀 clubOS-legacy — Historical Version (Next.js)
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -6,6 +6,11 @@
 ![React](https://img.shields.io/badge/React-19.1.x-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.x-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-2.x-green)
+
+> **⚠️ Legacy Project - See Current Version**  
+> This repository is the **historical Next.js implementation** of clubOS. It has been superseded by a complete rewrite in **SvelteKit** for improved performance, maintainability, and developer experience.  
+>   
+> **👉 View the current, actively maintained SvelteKit version here:** [**dacrab/clubOS**](https://github.com/dacrab/clubOS)
 
 A comprehensive, role‑based dashboard for sports facility operations: sales, inventory, register sessions, party and football bookings, and analytics — built with Next.js App Router and Supabase.
 
@@ -78,6 +83,8 @@ src/
 - Roles: `admin`, `staff`, `secretary` with UI translations and guarded flows
 
 ## ⚙️ Getting Started
+
+> **Note**: This is provided for historical reference. For new development, use the [current SvelteKit version](https://github.com/dacrab/clubOS).
 
 ### 1) Clone
 
@@ -170,6 +177,17 @@ Created users:
 
 Passwords are set in `scripts/seed.ts`.
 
+## 📜 Lessons Learned
+
+This repository represents an important step in my development journey. While fully functional, it taught me valuable lessons that led to the complete rewrite in SvelteKit:
+
+- **Complexity Management**: The codebase grew complex with some legacy patterns and duplications 【turn0view0】
+- **Framework Choice**: Discovered that for this use case, SvelteKit's compiler-first approach provides better performance and developer experience 【turn0view0】
+- **Code Organization**: Learned the importance of consistent architectural patterns from the start
+- **Bundle Optimization**: Gained insights into how different frameworks handle bundle size and runtime performance
+
+The current SvelteKit version addresses these lessons with cleaner architecture, better performance, and improved maintainability.
+
 ## 📜 License
 
 MIT © Contributors. See `LICENSE`.
@@ -181,4 +199,4 @@ MIT © Contributors. See `LICENSE`.
 - [shadcn/ui](https://ui.shadcn.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Radix UI](https://www.radix-ui.com/)
-- [Recharts](https://recharts.org/) 
+- [Recharts](https://recharts.org/)
